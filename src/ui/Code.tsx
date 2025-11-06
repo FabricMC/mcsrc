@@ -11,7 +11,7 @@ const Code = () => {
             defaultLanguage="java"
             theme="vs-dark"
             value={src}
-            options={{ readOnly: true }} />
+            options={{ readOnly: true, tabSize: 3 }} />
     );
 }
 
