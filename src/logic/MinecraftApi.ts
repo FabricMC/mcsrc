@@ -2,6 +2,7 @@ import { BehaviorSubject, from, Subject, switchMap } from "rxjs";
 import JSZip from 'jszip';
 import { agreedEula } from "./Settings";
 
+const CACHE_NAME = 'mcsrc-v1';
 const MINECRAFT_JAR_URL = "https://piston-data.mojang.com/v1/objects/26551033b7b935436f3407b85d14cac835e65640/client.jar";
 
 export const minecraftVersions = new BehaviorSubject<string[]>(["25w45a"]);
@@ -11,8 +12,26 @@ export const minecraftJar = minecraftJarBlob.pipe(
     switchMap(blob => from(JSZip.loadAsync(blob)))
 );
 
+async function cachedFetch(url: string): Promise<Response> {
+    if (!('caches' in window)) {
+        return fetch(url);
+    }
+
+    const cache = await caches.open(CACHE_NAME);
+    const cachedResponse = await cache.match(url);
+    if (cachedResponse) {
+        return cachedResponse
+    };
+
+    const response = await fetch(url);
+    if (response.ok) {
+        cache.put(url, response.clone());
+    }
+    return response;
+}
+
 export async function downloadMinecraftJar(): Promise<Blob> {
-    const response = await fetch(MINECRAFT_JAR_URL);
+    const response = await cachedFetch(MINECRAFT_JAR_URL);
     if (!response.ok) {
         throw new Error(`Failed to download Minecraft jar: ${response.statusText}`);
     }
