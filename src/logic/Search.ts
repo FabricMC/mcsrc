@@ -18,7 +18,10 @@ export const searchResults: Observable<string[]> = combineLatest([classesList, d
         const lowerQuery = query.toLowerCase();
 
         return from(classes).pipe(
-            filter(className => className.toLowerCase().includes(lowerQuery)),
+            filter(className => {
+                const simpleClassName = className.split('/').pop() || className;
+                return simpleClassName.toLowerCase().includes(lowerQuery);
+            }),
             take(100),
             toArray(),
         );

@@ -6,8 +6,6 @@ import { setSelectedFile } from "../logic/State";
 const SearchResults = () => {
     const results = useObservable(searchResults);
 
-    console.log("SearchResults component rendered.");
-
     return (
         <List
             size="small"
@@ -15,9 +13,16 @@ const SearchResults = () => {
             renderItem={(item) => (
                 <List.Item
                     onClick={() => setSelectedFile(item)}
-                    style={{ cursor: "pointer", padding: "4px 8px" }}
+                    style={{
+                        cursor: "pointer",
+                        padding: "2px 8px",
+                        fontSize: "12px",
+                        transition: "background-color 0.2s"
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                 >
-                    {item}
+                    {item.replace(/\.class$/, '')}
                 </List.Item>
             )}
         />

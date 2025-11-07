@@ -15,7 +15,7 @@ const SideBar = () => {
 
     return (
         <Card cover={<Header />} variant="borderless" style={{ height: '100vh' }}>
-            <Search placeholder="Search" allowClear onChange={onChange}></Search>
+            <Search placeholder="Search classes" allowClear onChange={onChange}></Search>
             <Divider size="small" />
             <FileListOrSearchResults />
         </Card>
@@ -24,9 +24,6 @@ const SideBar = () => {
 
 const FileListOrSearchResults = () => {
     const showSearchResults = useObservable(isSearching);
-
-    console.log("FileListOrSearchResults component rendered. showSearchResults =", showSearchResults);
-
     if (showSearchResults) {
         return <SearchResults />;
     } else {
