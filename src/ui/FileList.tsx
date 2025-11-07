@@ -1,13 +1,13 @@
-import { Card, Tree } from 'antd';
+import { Tree } from 'antd';
 import type { TreeDataNode, TreeProps } from 'antd';
 import { DownOutlined } from '@ant-design/icons';
 import { map, type Observable } from 'rxjs';
 import { classesList } from '../logic/JarFile';
 import { useObservable } from '../utils/UseObservable';
-import Header from './Header';
 import { selectedFile, setSelectedFile } from '../logic/State';
 import { useState } from 'react';
 import type { Key } from 'antd/es/table/interface';
+
 
 // Sorts nodes with children first (directories before files), then alphabetically
 const sortTreeNodes = (nodes: TreeDataNode[] = []) => {
@@ -90,20 +90,15 @@ const FileList = () => {
     }
 
     return (
-        <div>
-            <Card cover={<Header />} variant="borderless" style={{ height: '100vh' }}>
-                <Tree
-                    showLine
-                    switcherIcon={<DownOutlined />}
-                    selectedKeys={selectedKeys}
-                    onSelect={onSelect}
-                    treeData={treeData}
-                    expandedKeys={[...expandedKeys || []]}
-                    onExpand={onExpand}
-                />
-            </Card>
-
-        </div>
+        <Tree
+            showLine
+            switcherIcon={<DownOutlined />}
+            selectedKeys={selectedKeys}
+            onSelect={onSelect}
+            treeData={treeData}
+            expandedKeys={[...expandedKeys || []]}
+            onExpand={onExpand}
+        />
     );
 };
 

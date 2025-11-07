@@ -1,8 +1,8 @@
 
 import { ConfigProvider, Splitter, theme } from 'antd';
-import FileList from "./FileList.tsx";
 import Code from "./Code.tsx";
 import ProgressModal from './ProgressModal.tsx';
+import SideBar from './Sidebar.tsx';
 
 
 const App = () => (
@@ -19,7 +19,7 @@ const App = () => (
         <ProgressModal />
         <Splitter>
             <Splitter.Panel collapsible defaultSize="200px" min="5%">
-                <FileList />
+                <SideBar />
             </Splitter.Panel>
             <Splitter.Panel>
                 <Code />

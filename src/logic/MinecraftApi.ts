@@ -1,4 +1,4 @@
-import { BehaviorSubject, from, Subject, switchMap } from "rxjs";
+import { BehaviorSubject, from, ReplaySubject, switchMap } from "rxjs";
 import JSZip from 'jszip';
 import { agreedEula } from "./Settings";
 
@@ -7,7 +7,7 @@ const MINECRAFT_JAR_URL = "https://piston-data.mojang.com/v1/objects/26551033b7b
 
 export const minecraftVersions = new BehaviorSubject<string[]>(["25w45a"]);
 export const downloadProgress = new BehaviorSubject<number | undefined>(undefined);
-export const minecraftJarBlob = new Subject<Blob>();
+export const minecraftJarBlob = new ReplaySubject<Blob>(1);
 export const minecraftJar = minecraftJarBlob.pipe(
     switchMap(blob => from(JSZip.loadAsync(blob)))
 );
