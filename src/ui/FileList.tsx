@@ -27,6 +27,7 @@ const sortTreeNodes = (nodes: TreeDataNode[] = []) => {
 // Given a list of class files, create a tree structure
 const data: Observable<TreeDataNode[]> = classesList.pipe(
     map(classFiles => {
+        console.log('Building file tree');
         const root: TreeDataNode[] = [];
 
         classFiles.forEach(filePath => {
@@ -88,6 +89,8 @@ const FileList = () => {
     if (!expandedKeys && selectedKeys) {
         setExpandedKeys(getPathKeys(selectedKeys[0]));
     }
+
+    console.log('Rendering FileList');
 
     return (
         <Tree

@@ -2,8 +2,7 @@ import { map } from 'rxjs';
 import { minecraftJar } from './MinecraftApi';
 
 export const fileList = minecraftJar.pipe(
-    map(jar => Object.keys(jar.files)
-    )
+    map(jar => Object.keys(jar.files))
 );
 
 // File list that only contains outer class files

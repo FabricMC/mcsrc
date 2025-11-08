@@ -1,5 +1,5 @@
 import { Divider, Flex, Select, Space } from "antd"
-import { minecraftVersions } from "../logic/MinecraftApi";
+import { minecraftVersionIds, selectedMinecraftVersion } from "../logic/MinecraftApi";
 import { useObservable } from "../utils/UseObservable";
 import AboutModal from "./AboutModal";
 import SettingsModal from "./SettingsModal";
@@ -16,10 +16,17 @@ const Header = () => {
 };
 
 export const HeaderBody = () => {
-    const versions = useObservable(minecraftVersions)
+    const versions = useObservable(minecraftVersionIds)
+    const currentVersion = useObservable(selectedMinecraftVersion)
     return (
         <Space align="center">
-            <Select value={versions?.[0]}>
+            <Select
+                value={currentVersion || versions?.[0]}
+                onChange={(v) => {
+                    console.log(`Selected Minecraft version: ${v}`);
+                    selectedMinecraftVersion.next(v);
+                }}
+            >
                 {versions?.map(v => (
                     <Select.Option key={v} value={v}>{v}</Select.Option>
                 ))}

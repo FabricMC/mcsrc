@@ -1,4 +1,5 @@
 import { BehaviorSubject, map } from "rxjs";
+import { selectedMinecraftVersion } from "./MinecraftApi";
 
 export interface State {
   version: number; // Allows us to change the permalink structure in the future
@@ -7,9 +8,9 @@ export interface State {
 }
 
 const DEFAULT_STATE: State = {
-  version: 1,
-  minecraftVersion: "25w45a",
-  file: "net/minecraft/ChatFormatting.class"
+  version: 0,
+  minecraftVersion: "",
+  file: ""
 };
 
 const getInitialState = (): State => {
@@ -22,8 +23,13 @@ const getInitialState = (): State => {
   }
 
   const version = parseInt(segments[0], 10);
-  const minecraftVersion = decodeURIComponent(segments[1]);
+  var minecraftVersion = decodeURIComponent(segments[1]);
   const filePath = segments.slice(2).join('/');
+
+  // Backwards compatibility with the incorrect version name used previously
+  if (minecraftVersion == "25w45a") {
+    minecraftVersion = "25w45a_unobfuscated";
+  }
 
   return {
     version,
@@ -38,16 +44,20 @@ export const selectedFile = state.pipe(
 );
 
 state.subscribe(s => {
-  const url = `#/${s.version}/${s.minecraftVersion}/${s.file.replace(".class", "")}`;
+  if (s.version == 0) {
+    return;
+  }
+
+  const url = `#${s.version}/${s.minecraftVersion}/${s.file.replace(".class", "")}`;
   window.history.replaceState({}, '', url);
 
   document.title = s.file.replace('.class', '');
 });
 
 export function setSelectedFile(file: string) {
-  const currentState = state.getValue();
   state.next({
-    ...currentState,
+    version: 1,
+    minecraftVersion: selectedMinecraftVersion.value || "",
     file
   });
 }
