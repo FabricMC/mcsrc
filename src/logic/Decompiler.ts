@@ -1,10 +1,26 @@
-import { combineLatest, distinctUntilChanged, from, map, Observable, switchMap, throttleTime } from "rxjs";
+/* eslint-disable @typescript-eslint/no-unused-vars */
+import { combineLatest, distinctUntilChanged, from, map, Observable, shareReplay, switchMap, throttleTime } from "rxjs";
 import { minecraftJar } from "./MinecraftApi";
 import type JSZip from "jszip";
-import { decompile, type Options } from "./vf";
+import { decompile, type Options, type TokenCollector } from "./vf";
 import { selectedFile } from "./State";
 import { removeImports } from "./Settings";
 
+export interface DecompileResult {
+    className: string;
+    source: string;
+    classTokens: ClassToken[];
+}
+
+export interface ClassToken {
+    // The number of characters from the start of the source
+    start: number;
+    // The length of the token in characters
+    length: number;
+    // The name of the class this token represents
+    className: string;
+    declaration: boolean
+}
 
 const decompilerOptions: Observable<Options> = removeImports.observable.pipe(
     map(removeImports => (
@@ -12,27 +28,33 @@ const decompilerOptions: Observable<Options> = removeImports.observable.pipe(
     ))
 );
 
-export const currentSource = combineLatest([
+export const currentResult = combineLatest([
     selectedFile,
     minecraftJar,
     decompilerOptions
 ]).pipe(
     distinctUntilChanged(),
     throttleTime(250),
-    switchMap(([className, jar, options]) => from(decompileClass(className, jar, options)))
+    switchMap(([className, jar, options]) => from(decompileClass(className, jar, options))),
+    shareReplay({ bufferSize: 1, refCount: false })
 );
 
-async function decompileClass(className: string, jar: JSZip, options: Options): Promise<string> {
+export const currentSource = currentResult.pipe(
+    map(result => result.source)
+);
+
+async function decompileClass(className: string, jar: JSZip, options: Options): Promise<DecompileResult> {
     console.log(`Decompiling class: '${className}'`);
 
     const files = Object.keys(jar.files);
 
     if (!files.includes(className)) {
         console.error(`Class not found in Minecraft jar: ${className}`);
-        return `// Class not found: ${className}`;
+        return { className, source: `// Class not found: ${className}`, classTokens: [] };
     }
 
     try {
+        const classTokens: ClassToken[] = [];
         const source = await decompile(className.replace(".class", ""), {
             source: async (name: string) => {
                 const file = jar.file(name + ".class");
@@ -45,11 +67,35 @@ async function decompileClass(className: string, jar: JSZip, options: Options): 
                 return null;
             },
             resources: files.filter(f => f.endsWith('.class')).map(f => f.replace(".class", "")),
-            options
+            options,
+            tokenCollector: tokenCollector(classTokens)
         });
-        return source;
+
+        classTokens.sort((a, b) => a.start - b.start);
+
+        return { className, source, classTokens };
     } catch (e) {
         console.error(`Error during decompilation of class '${className}':`, e);
-        return `// Error during decompilation: ${e}`;
+        return { className, source: `// Error during decompilation: ${(e as Error).message}`, classTokens: [] };
+    }
+}
+
+function tokenCollector(classTokens: ClassToken[]): TokenCollector {
+    return {
+        start: function (content: string): void {
+        },
+        visitClass: function (start: number, length: number, declaration: boolean, name: string): void {
+            classTokens.push({ start, length, className: name, declaration });
+        },
+        visitField: function (start: number, length: number, declaration: boolean, className: string, name: string, descriptor: string): void {
+        },
+        visitMethod: function (start: number, length: number, declaration: boolean, className: string, name: string, descriptor: string): void {
+        },
+        visitParameter: function (start: number, length: number, declaration: boolean, className: string, methodName: string, methodDescriptor: string, index: number, name: string): void {
+        },
+        visitLocal: function (start: number, length: number, declaration: boolean, className: string, methodName: string, methodDescriptor: string, index: number, name: string): void {
+        },
+        end: function (): void {
+        }
     }
 }
