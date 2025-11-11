@@ -8,7 +8,7 @@ export interface DiffSide {
     selectedVersion: BehaviorSubject<string | null>;
     blob: Observable<JarBlob>;
     jar: Observable<Jar>;
-    entries: Observable<Map<string, number>>;
+    entries: Observable<Map<string, number[]>>;
     result: Observable<DecompileResult>;
 }
 
@@ -72,8 +72,8 @@ interface FileData {
 
 export type ChangeState = "added" | "deleted" | "modified";
 
-async function getEntriesWithCRC(jar: Jar): Promise<Map<string, number>> {
-    const entries = new Map<string, number>();
+async function getEntriesWithCRC(jar: Jar): Promise<Map<string, number[]>> {
+    const entries = new Map<string, number[]>();
 
     for (const [path, file] of Object.entries(jar.zip.files)) {
         if (!path.endsWith('.class')) {
@@ -87,12 +87,11 @@ async function getEntriesWithCRC(jar: Jar): Promise<Map<string, number>> {
             className = className.split('$')[0];
         }
 
-        if (entries.has(className)) {
-            const existingCRC = entries.get(className)!;
-            const combinedCRC = existingCRC ^ data.crc32; // This is likely not a good way to combine CRCs
-            entries.set(className, combinedCRC);
+        const existing = entries.get(className)
+        if (existing) {
+            insertSorted(existing, data.crc32)
         } else {
-            entries.set(className, data.crc32);
+            entries.set(className, [data.crc32]);
         }
     }
 
@@ -100,8 +99,8 @@ async function getEntriesWithCRC(jar: Jar): Promise<Map<string, number>> {
 }
 
 function getChangedEntries(
-    leftEntries: Map<string, number>,
-    rightEntries: Map<string, number>
+    leftEntries: Map<string, number[]>,
+    rightEntries: Map<string, number[]>
 ): Map<string, ChangeState> {
     const changes = new Map<string, ChangeState>();
 
@@ -118,10 +117,22 @@ function getChangedEntries(
             changes.set(key, "added");
         } else if (rightCRC === undefined) {
             changes.set(key, "deleted");
-        } else if (leftCRC !== rightCRC) {
+        } else if (!arraysEqual(leftCRC, rightCRC)) {
             changes.set(key, "modified");
         }
     }
 
     return changes;
+}
+
+function insertSorted(arr: number[], num: number) {
+    const idx = arr.findIndex(x => x > num);
+    if (idx === -1) arr.push(num);
+    else arr.splice(idx, 0, num);
+    return arr;
+}
+
+
+function arraysEqual(a: number[], b: number[]) {
+    return a.length === b.length && a.every((val, i) => val === b[i]);
 }
