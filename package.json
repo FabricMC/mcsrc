@@ -11,7 +11,7 @@
   },
   "dependencies": {
     "@monaco-editor/react": "^4.7.0",
-    "@run-slicer/vf": "^0.2.3-1.11.1",
+    "@run-slicer/vf": "^0.3.0-1.11.2",
     "antd": "^5.28.0",
     "jszip": "^3.10.1",
     "react": "^19.1.1",
