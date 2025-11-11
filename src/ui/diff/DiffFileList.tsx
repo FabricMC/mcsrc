@@ -56,13 +56,22 @@ const DiffFileList = () => {
     };
 
     return (
-        <div>
-            <div style={{ position: 'relative', marginBottom: 12, paddingTop: 12 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+            <div
+                style={{
+                    position: 'sticky',
+                    top: 0,
+                    zIndex: 10,
+                    marginBottom: 12,
+                    paddingTop: 12,
+                }}
+            >
                 <Input.Search
                     placeholder="Search classes"
                     allowClear
                     onChange={onChange}
-                    style={{ width: 220 }} />
+                    style={{ width: 220 }}
+                />
                 <Flex
                     gap={8}
                     align="center"
@@ -76,24 +85,24 @@ const DiffFileList = () => {
                     <DiffVersionSelection />
                 </Flex>
             </div>
-            <Table
-                dataSource={dataSource}
-                columns={columns}
-                pagination={false}
-                size="small"
-                bordered
-                showHeader={false}
-                scroll={{ y: 400 }}
-                style={{ maxHeight: 400 }}
-                rowClassName={(record) =>
-                    currentFile === record.file + ".class" ? 'ant-table-row-selected' : ''
-                }
-                onRow={(record) => ({
-                    onClick: () => {
-                        setSelectedFile(record.file + ".class");
+            <div style={{ flex: 1, overflowY: 'auto' }}>
+                <Table
+                    dataSource={dataSource}
+                    columns={columns}
+                    pagination={false}
+                    size="small"
+                    bordered
+                    showHeader={false}
+                    rowClassName={(record) =>
+                        currentFile === record.file + ".class" ? 'ant-table-row-selected' : ''
                     }
-                })}
-            />
+                    onRow={(record) => ({
+                        onClick: () => {
+                            setSelectedFile(record.file + ".class");
+                        }
+                    })}
+                />
+            </div>
         </div>
     );
 };
