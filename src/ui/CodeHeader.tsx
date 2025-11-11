@@ -27,9 +27,7 @@ export const CodeHeader = () => {
             }}>
                 {info.file.split("/").map((path, i, arr) => (
                     <>
-                        <span style={{
-                            color: i < arr.length - 1 ? "gray" : "white"
-                        }}>{path}</span>
+                        <span style={{ color: i < arr.length - 1 ? "gray" : "white" }}>{path}</span>
                         {i < arr.length - 1 && <span style={{ color: "gray" }}>/</span>}
                     </>
                 ))}
