@@ -1,12 +1,12 @@
 import { useObservable } from "../utils/UseObservable"
 import { isThin } from "../logic/Browser"
-import { state } from "../logic/State"
+import { selectedFile } from "../logic/State"
 import { theme } from "antd";
 
 export const CodeHeader = () => {
     const { token } = theme.useToken();
     const isMobile = useObservable(isThin);
-    const info = useObservable(state);
+    const info = useObservable(selectedFile);
 
     return info ? (
         <div style={{
@@ -25,7 +25,7 @@ export const CodeHeader = () => {
                 direction: "rtl",
                 color: "white"
             }}>
-                {info.file.split("/").map((path, i, arr) => (
+                {info.replace(".class", "").split("/").map((path, i, arr) => (
                     <>
                         <span style={{ color: i < arr.length - 1 ? "gray" : "white" }}>{path}</span>
                         {i < arr.length - 1 && <span style={{ color: "gray" }}>/</span>}
