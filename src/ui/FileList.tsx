@@ -4,10 +4,10 @@ import { DownOutlined } from '@ant-design/icons';
 import { map, type Observable } from 'rxjs';
 import { classesList } from '../logic/JarFile';
 import { useObservable } from '../utils/UseObservable';
-import { selectedFile, setSelectedFile } from '../logic/State';
-import { useState } from 'react';
+import { selectedFile } from '../logic/State';
+import { useContext, useRef, useState } from 'react';
 import type { Key } from 'antd/es/table/interface';
-
+import { TabsContext } from './tabs/TabsContext';
 
 // Sorts nodes with children first (directories before files), then alphabetically
 const sortTreeNodes = (nodes: TreeDataNode[] = []) => {
@@ -71,17 +71,21 @@ function getPathKeys(filePath: string): Key[] {
 }
 
 const FileList = () => {
+    const { openPersistentTab, openPreviewTab } = useContext(TabsContext);
+    const lastClick = useRef<number>(0);
+
     const [expandedKeys, setExpandedKeys] = useState<Key[]>();
     const onExpand = (newExpandedKeys: Key[]) => {
         setExpandedKeys(newExpandedKeys);
     };
 
     const selectedKeys = useObservable(selectedFileKeys);
-    const classes = useObservable(classesList);
-    const onSelect: TreeProps['onSelect'] = (selectedKeys) => {
-        if (selectedKeys.length === 0) return;
-        if (!classes || !classes.includes(selectedKeys[0] as string)) return;
-        setSelectedFile(selectedKeys.join('/'));
+    const onSelect: TreeProps['onSelect'] = (_, info) => {
+        // Detect double click and if so, open initial persistent tab
+        const now = Date.now();
+        if (now - lastClick.current < 300) openPersistentTab(info.node.key.toString());
+        else openPreviewTab(info.node.key.toString())
+        lastClick.current = now;
     };
 
     const treeData = useObservable(data);
@@ -101,6 +105,9 @@ const FileList = () => {
             treeData={treeData}
             expandedKeys={[...expandedKeys || []]}
             onExpand={onExpand}
+            titleRender={(nodeData) => (
+                <span style={{ userSelect: "none" }}>{nodeData.title?.toString()}</span>
+            )}
         />
     );
 };

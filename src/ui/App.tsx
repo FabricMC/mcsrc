@@ -9,7 +9,7 @@ import { MenuFoldOutlined } from '@ant-design/icons';
 import { HeaderBody } from './Header.tsx';
 import { diffView } from '../logic/Diff.ts';
 import DiffView from './diff/DiffView.tsx';
-
+import { TabsProvider } from './tabs/TabsProvider.tsx';
 
 const App = () => {
     const isSmall = useObservable(isThin);
@@ -23,11 +23,16 @@ const App = () => {
                     Card: {
                         bodyPadding: 4,
                     },
+                    Tabs: {
+                        horizontalMargin: "0",
+                    }
                 },
             }}
         >
             <ProgressModal />
-            {enableDiff ? <DiffView /> : isSmall ? <MobileApp /> : <LargeApp />}
+            <TabsProvider>
+                {enableDiff ? <DiffView /> : isSmall ? <MobileApp /> : <LargeApp />}
+            </TabsProvider>
         </ConfigProvider>
     )
 };
