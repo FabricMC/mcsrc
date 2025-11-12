@@ -1,13 +1,12 @@
 import { BehaviorSubject, combineLatest, from, map, Observable, switchMap } from "rxjs";
-import { minecraftJar, minecraftJarBlob, minecraftJarBlobPipeline, minecraftJarPipeline, selectedMinecraftVersion, type Jar, type JarBlob } from "./MinecraftApi";
+import { minecraftJar, minecraftJarPipeline, selectedMinecraftVersion, type MinecraftJar } from "./MinecraftApi";
 import { currentResult, decompileResultPipeline, type DecompileResult } from "./Decompiler";
 
 export const diffView = new BehaviorSubject<boolean>(false);
 
 export interface DiffSide {
     selectedVersion: BehaviorSubject<string | null>;
-    blob: Observable<JarBlob>;
-    jar: Observable<Jar>;
+    jar: Observable<MinecraftJar>;
     entries: Observable<Map<string, number[]>>;
     result: Observable<DecompileResult>;
 }
@@ -19,8 +18,7 @@ export function getLeftDiff(): DiffSide {
     if (!leftDiff) {
         leftDiff = {} as DiffSide;
         leftDiff.selectedVersion = new BehaviorSubject<string | null>(null);
-        leftDiff.blob = minecraftJarBlobPipeline(leftDiff.selectedVersion, leftDownloadProgress);
-        leftDiff.jar = minecraftJarPipeline(leftDiff.blob);
+        leftDiff.jar = minecraftJarPipeline(leftDiff.selectedVersion);
         leftDiff.entries = leftDiff.jar.pipe(
             switchMap(jar => from(getEntriesWithCRC(jar)))
         );
@@ -34,7 +32,6 @@ export function getRightDiff(): DiffSide {
     if (!rightDiff) {
         rightDiff = {
             selectedVersion: selectedMinecraftVersion,
-            blob: minecraftJarBlob,
             jar: minecraftJar,
             entries: minecraftJar.pipe(
                 switchMap(jar => from(getEntriesWithCRC(jar)))
@@ -72,7 +69,7 @@ interface FileData {
 
 export type ChangeState = "added" | "deleted" | "modified";
 
-async function getEntriesWithCRC(jar: Jar): Promise<Map<string, number[]>> {
+async function getEntriesWithCRC(jar: MinecraftJar): Promise<Map<string, number[]>> {
     const entries = new Map<string, number[]>();
 
     for (const [path, file] of Object.entries(jar.zip.files)) {
