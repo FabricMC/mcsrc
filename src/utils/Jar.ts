@@ -25,7 +25,6 @@ class JarImpl implements Jar {
     constructor(zip: Zip) {
         this.zip = zip;
         zip.entries.forEach(entry => {
-            console.log(`Loaded jar entry: ${entry.name}`);
             this.entries[entry.name] = entry;
         });
     }

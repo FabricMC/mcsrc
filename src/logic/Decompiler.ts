@@ -73,7 +73,7 @@ async function decompileClass(className: string, jar: Jar, options: Options): Pr
         const classTokens: ClassToken[] = [];
         const source = await decompile(className.replace(".class", ""), {
             source: async (name: string) => {
-                const file = jar.entries[name + ".class"] ?? null;
+                const file = jar.entries[name + ".class"];
                 if (file) {
                     const arrayBuffer = await file.bytes();
                     return new Uint8Array(arrayBuffer);
