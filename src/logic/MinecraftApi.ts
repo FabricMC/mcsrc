@@ -1,7 +1,7 @@
 import { BehaviorSubject, combineLatest, distinctUntilChanged, filter, from, map, shareReplay, switchMap, tap, Observable } from "rxjs";
-import JSZip from 'jszip';
 import { agreedEula } from "./Settings";
 import { state, updateSelectedMinecraftVersion } from "./State";
+import { openJar, streamJar, type Jar } from "../utils/Jar";
 
 const CACHE_NAME = 'mcsrc-v1';
 const FABRIC_EXPERIMENTAL_VERSIONS_URL = "https://maven.fabricmc.net/net/minecraft/experimental_versions.json";
@@ -29,14 +29,9 @@ interface VersionManifest {
     };
 }
 
-export interface JarBlob {
+export interface MinecraftJar {
     version: string;
-    blob: Blob;
-}
-
-export interface Jar {
-    version: string;
-    zip: JSZip;
+    jar: Jar;
 }
 
 export const minecraftVersions = new BehaviorSubject<VersionListEntry[]>([]);
@@ -47,23 +42,15 @@ export const selectedMinecraftVersion = new BehaviorSubject<string | null>(null)
 
 export const downloadProgress = new BehaviorSubject<number | undefined>(undefined);
 
-export const minecraftJarBlob = minecraftJarBlobPipeline(selectedMinecraftVersion, downloadProgress);
-export function minecraftJarBlobPipeline(source$: Observable<string | null>, progress: BehaviorSubject<number | undefined>): Observable<JarBlob> {
+export const minecraftJar = minecraftJarPipeline(selectedMinecraftVersion);
+export function minecraftJarPipeline(source$: Observable<string | null>): Observable<MinecraftJar> {
     return source$.pipe(
         filter(id => id !== null),
         distinctUntilChanged(),
-        tap(versionId => updateSelectedMinecraftVersion()),
-        map(versionId => getVersionEntryById(versionId!)!),
-        switchMap(versionEntry => from(downloadMinecraftJar(versionEntry, progress))),
-        shareReplay({ bufferSize: 1, refCount: false })
-    );
-}
-
-export const minecraftJar = minecraftJarPipeline(minecraftJarBlob);
-export function minecraftJarPipeline(source$: Observable<JarBlob>): Observable<Jar> {
-    return source$.pipe(
-        tap((blob) => console.log(`Loading Minecraft jar ${blob.version}`)),
-        switchMap(blob => from(openJar(blob))),
+        tap(version => updateSelectedMinecraftVersion()),
+        map(version => getVersionEntryById(version!)!),
+        tap((version) => console.log(`Opening Minecraft jar ${version.id}`)),
+        switchMap(version => from(downloadMinecraftJar(version, downloadProgress))),
         shareReplay({ bufferSize: 1, refCount: false })
     );
 }
@@ -110,7 +97,7 @@ async function cachedFetch(url: string): Promise<Response> {
     return response;
 }
 
-async function downloadMinecraftJar(version: VersionListEntry, progress: BehaviorSubject<number | undefined>): Promise<JarBlob> {
+async function downloadMinecraftJar(version: VersionListEntry, progress: BehaviorSubject<number | undefined>): Promise<MinecraftJar> {
     console.log(`Downloading Minecraft jar for version: ${version.id}`);
     const versionManifest = await fetchVersionManifest(version);
     const response = await cachedFetch(versionManifest.downloads.client.url);
@@ -123,8 +110,9 @@ async function downloadMinecraftJar(version: VersionListEntry, progress: Behavio
 
     if (!response.body || total === 0) {
         const blob = await response.blob();
+        const jar = await openJar(blob);
         progress.next(undefined);
-        return { version: version.id, blob };
+        return { version: version.id, jar };
     }
 
     const reader = response.body.getReader();
@@ -143,13 +131,16 @@ async function downloadMinecraftJar(version: VersionListEntry, progress: Behavio
     }
 
     const blob = new Blob(chunks);
+    const jar = await openJar(blob);
     progress.next(undefined)
-    return { version: version.id, blob };
+    return { version: version.id, jar };
 }
 
-async function openJar(blob: JarBlob): Promise<Jar> {
-    const zip = await JSZip.loadAsync(blob.blob);
-    return { version: blob.version, zip };
+// TODO add an option to stream the Minecraft jar, this may add additional latency but will remove the inital large download time
+async function streamMinecraftJar(version: VersionListEntry): Promise<MinecraftJar> {
+    const versionManifest = await fetchVersionManifest(version);
+    const jar = await streamJar(versionManifest.downloads.client.url);
+    return { version: version.id, jar };
 }
 
 async function initialize(version: string | null = null) {

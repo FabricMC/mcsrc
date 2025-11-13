@@ -3,11 +3,11 @@ import {
     BehaviorSubject,
     combineLatest, distinctUntilChanged, from, map, Observable, shareReplay, switchMap, tap, throttleTime
 } from "rxjs";
-import { minecraftJar, type Jar } from "./MinecraftApi";
-import type JSZip from "jszip";
+import { minecraftJar, type MinecraftJar } from "./MinecraftApi";
 import { decompile, type Options, type TokenCollector } from "./vf";
 import { selectedFile } from "./State";
 import { removeImports } from "./Settings";
+import type { Jar } from "../utils/Jar";
 
 export interface DecompileResult {
     className: string;
@@ -40,7 +40,7 @@ const decompilerOptions: Observable<Options> = removeImports.observable.pipe(
 );
 
 export const currentResult = decompileResultPipeline(minecraftJar);
-export function decompileResultPipeline(jar: Observable<Jar>): Observable<DecompileResult> {
+export function decompileResultPipeline(jar: Observable<MinecraftJar>): Observable<DecompileResult> {
     return combineLatest([
         selectedFile,
         jar,
@@ -49,7 +49,7 @@ export function decompileResultPipeline(jar: Observable<Jar>): Observable<Decomp
         distinctUntilChanged(),
         tap(() => decompilerCounter.next(decompilerCounter.value + 1)),
         throttleTime(250),
-        switchMap(([className, jar, options]) => from(decompileClass(className, jar.zip, options))),
+        switchMap(([className, jar, options]) => from(decompileClass(className, jar.jar, options))),
         tap(() => decompilerCounter.next(decompilerCounter.value - 1)),
         shareReplay({ bufferSize: 1, refCount: false })
     );
@@ -59,10 +59,10 @@ export const currentSource = currentResult.pipe(
     map(result => result.source)
 );
 
-async function decompileClass(className: string, jar: JSZip, options: Options): Promise<DecompileResult> {
+async function decompileClass(className: string, jar: Jar, options: Options): Promise<DecompileResult> {
     console.log(`Decompiling class: '${className}'`);
 
-    const files = Object.keys(jar.files);
+    const files = Object.keys(jar.entries);
 
     if (!files.includes(className)) {
         console.error(`Class not found in Minecraft jar: ${className}`);
@@ -73,9 +73,9 @@ async function decompileClass(className: string, jar: JSZip, options: Options): 
         const classTokens: ClassToken[] = [];
         const source = await decompile(className.replace(".class", ""), {
             source: async (name: string) => {
-                const file = jar.file(name + ".class");
+                const file = jar.entries[name + ".class"];
                 if (file) {
-                    const arrayBuffer = await file.async("arraybuffer");
+                    const arrayBuffer = await file.bytes();
                     return new Uint8Array(arrayBuffer);
                 }
 

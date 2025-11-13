@@ -3,7 +3,7 @@ import { minecraftJar } from './MinecraftApi';
 
 export const fileList = minecraftJar.pipe(
     distinctUntilChanged(),
-    map(jar => Object.keys(jar.zip.files))
+    map(jar => Object.keys(jar.jar.entries))
 );
 
 // File list that only contains outer class files

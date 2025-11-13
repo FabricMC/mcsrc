@@ -90,8 +90,6 @@ const FileList = () => {
         setExpandedKeys(getPathKeys(selectedKeys[0]));
     }
 
-    console.log('Rendering FileList');
-
     return (
         <Tree
             showLine
