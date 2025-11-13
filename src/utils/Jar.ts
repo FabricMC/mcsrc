@@ -4,9 +4,17 @@ export interface Jar {
     entries: { [key: string]: Entry };
 }
 
-export async function openJar(url: string): Promise<Jar> {
-    const reader = new HttpStreamReader(url);
+export async function openJar(blob: Blob): Promise<Jar> {
+    const reader = new BlobReader(blob);
     const zip = await read(reader);
+    return new JarImpl(zip);
+}
+
+export async function streamJar(url: string): Promise<Jar> {
+    const reader = new HttpStreamReader(url);
+    const zip = await read(reader, {
+        naive: true
+    });
     return new JarImpl(zip);
 }
 
@@ -20,6 +28,28 @@ class JarImpl implements Jar {
             console.log(`Loaded jar entry: ${entry.name}`);
             this.entries[entry.name] = entry;
         });
+    }
+}
+
+class BlobReader implements Reader {
+    private blob: Blob;
+
+    constructor(blob: Blob) {
+        this.blob = blob;
+    }
+
+    async length(): Promise<number> {
+        return this.blob.size;
+    }
+
+    async read(offset: number, size: number): Promise<Uint8Array> {
+        const slice = this.blob.slice(offset, offset + size);
+        const arrayBuffer = await slice.arrayBuffer();
+        return new Uint8Array(arrayBuffer);
+    }
+
+    async slice(offset: number, size: number): Promise<Blob> {
+        return this.blob.slice(offset, offset + size);
     }
 }
 

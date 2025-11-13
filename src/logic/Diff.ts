@@ -57,27 +57,15 @@ export function getDiffChanges(): Observable<Map<string, ChangeState>> {
     return diffChanges;
 }
 
-
-// Copied from node_modules/jszip/index.d.ts
-interface FileData {
-    compressedSize: number;
-    uncompressedSize: number;
-    crc32: number;
-    compression: object;
-    compressedContent: string | ArrayBuffer | Uint8Array | Buffer;
-}
-
 export type ChangeState = "added" | "deleted" | "modified";
 
 async function getEntriesWithCRC(jar: MinecraftJar): Promise<Map<string, number[]>> {
     const entries = new Map<string, number[]>();
 
-    for (const [path, file] of Object.entries(jar.zip.files)) {
+    for (const [path, file] of Object.entries(jar.jar.entries)) {
         if (!path.endsWith('.class')) {
             continue;
         }
-
-        const data = (file as any)._data as FileData;
 
         let className = path.substring(0, path.length - 6);
         if (path.includes('$')) {
@@ -86,9 +74,9 @@ async function getEntriesWithCRC(jar: MinecraftJar): Promise<Map<string, number[
 
         const existing = entries.get(className)
         if (existing) {
-            insertSorted(existing, data.crc32)
+            insertSorted(existing, file.crc32)
         } else {
-            entries.set(className, [data.crc32]);
+            entries.set(className, [file.crc32]);
         }
     }
 

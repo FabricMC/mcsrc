@@ -7,6 +7,7 @@ import { minecraftJar, type MinecraftJar } from "./MinecraftApi";
 import { decompile, type Options, type TokenCollector } from "./vf";
 import { selectedFile } from "./State";
 import { removeImports } from "./Settings";
+import type { Jar } from "../utils/Jar";
 
 export interface DecompileResult {
     className: string;
@@ -48,7 +49,7 @@ export function decompileResultPipeline(jar: Observable<MinecraftJar>): Observab
         distinctUntilChanged(),
         tap(() => decompilerCounter.next(decompilerCounter.value + 1)),
         throttleTime(250),
-        switchMap(([className, jar, options]) => from(decompileClass(className, jar, options))),
+        switchMap(([className, jar, options]) => from(decompileClass(className, jar.jar, options))),
         tap(() => decompilerCounter.next(decompilerCounter.value - 1)),
         shareReplay({ bufferSize: 1, refCount: false })
     );
@@ -58,11 +59,10 @@ export const currentSource = currentResult.pipe(
     map(result => result.source)
 );
 
-async function decompileClass(className: string, jar: MinecraftJar, options: Options): Promise<DecompileResult> {
-    const zip = jar.jar;
+async function decompileClass(className: string, jar: Jar, options: Options): Promise<DecompileResult> {
     console.log(`Decompiling class: '${className}'`);
 
-    const files = Object.keys(zip.entries);
+    const files = Object.keys(jar.entries);
 
     if (!files.includes(className)) {
         console.error(`Class not found in Minecraft jar: ${className}`);
@@ -73,7 +73,7 @@ async function decompileClass(className: string, jar: MinecraftJar, options: Opt
         const classTokens: ClassToken[] = [];
         const source = await decompile(className.replace(".class", ""), {
             source: async (name: string) => {
-                const file = zip.entries[name + ".class"] ?? null;
+                const file = jar.entries[name + ".class"] ?? null;
                 if (file) {
                     const arrayBuffer = await file.bytes();
                     return new Uint8Array(arrayBuffer);
