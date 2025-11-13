@@ -2,9 +2,7 @@
 
 Note: This project is not affiliated with Mojang or Microsoft in any way. It does NOT redistribute any Minecraft code or compiled bytecode. The minecraft jar is downloaded directly from Mojang's servers to your browser.
 
-I am currently not taking bug reports or feature requests for this project. If you have something you would like to see or fix, please open an PR.
-
-## How to locally
+## How to build locally
 
 - `nvm use` (or ensure you have the correct Node version, see `.nvmrc`)
 - `npm install`
