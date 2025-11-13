@@ -1,7 +1,7 @@
 import { List } from "antd";
 import { searchResults } from "../logic/Search";
 import { useObservable } from "../utils/UseObservable";
-import { setSelectedFile } from "../logic/State";
+import { openTab } from "../logic/Tabs";
 
 const SearchResults = () => {
     const results = useObservable(searchResults);
@@ -12,7 +12,7 @@ const SearchResults = () => {
             dataSource={results}
             renderItem={(item) => (
                 <List.Item
-                    onClick={() => setSelectedFile(item)}
+                    onClick={() => openTab(item)}
                     style={{
                         cursor: "pointer",
                         padding: "2px 8px",

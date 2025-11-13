@@ -5,9 +5,9 @@ import { map, type Observable } from 'rxjs';
 import { classesList } from '../logic/JarFile';
 import { useObservable } from '../utils/UseObservable';
 import { selectedFile } from '../logic/State';
-import { useContext, useRef, useState } from 'react';
+import { useState } from 'react';
 import type { Key } from 'antd/es/table/interface';
-import { TabsContext } from './tabs/TabsContext';
+import { openTab } from '../logic/Tabs';
 
 // Sorts nodes with children first (directories before files), then alphabetically
 const sortTreeNodes = (nodes: TreeDataNode[] = []) => {
@@ -71,21 +71,17 @@ function getPathKeys(filePath: string): Key[] {
 }
 
 const FileList = () => {
-    const { openPersistentTab, openPreviewTab } = useContext(TabsContext);
-    const lastClick = useRef<number>(0);
-
     const [expandedKeys, setExpandedKeys] = useState<Key[]>();
     const onExpand = (newExpandedKeys: Key[]) => {
         setExpandedKeys(newExpandedKeys);
     };
 
     const selectedKeys = useObservable(selectedFileKeys);
-    const onSelect: TreeProps['onSelect'] = (_, info) => {
-        // Detect double click and if so, open initial persistent tab
-        const now = Date.now();
-        if (now - lastClick.current < 300) openPersistentTab(info.node.key.toString());
-        else openPreviewTab(info.node.key.toString())
-        lastClick.current = now;
+    const classes = useObservable(classesList);
+    const onSelect: TreeProps['onSelect'] = (selectedKeys) => {
+        if (selectedKeys.length === 0) return;
+        if (!classes || !classes.includes(selectedKeys[0] as string)) return;
+        openTab(selectedKeys.join("/"));
     };
 
     const treeData = useObservable(data);

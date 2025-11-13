@@ -4,8 +4,8 @@ import { currentResult } from '../logic/Decompiler';
 import { useEffect, useRef } from 'react';
 import { editor } from "monaco-editor";
 import { isThin } from '../logic/Browser';
-import { setSelectedFile } from '../logic/State';
 import { classesList } from '../logic/JarFile';
+import { openTab } from '../logic/Tabs';
 
 const Code = () => {
     const monaco = useMonaco();
@@ -41,7 +41,7 @@ const Code = () => {
                         console.log(`Found token for definition: ${className} at offset ${token.start}`);
 
                         if (classList && classList.includes(className)) {
-                            setSelectedFile(className);
+                            openTab(className);
                             return null;
                         }
 
