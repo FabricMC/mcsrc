@@ -28,3 +28,4 @@ export class BooleanSetting {
 
 export const removeImports = new BooleanSetting('remove_imports', false);
 export const agreedEula = new BooleanSetting('eula', false);
+export const enableTabs = new BooleanSetting('enable_tabs', true);
