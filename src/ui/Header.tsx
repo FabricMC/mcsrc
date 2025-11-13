@@ -1,4 +1,4 @@
-import { Divider, Flex, Select, Space } from "antd"
+import { Divider, Flex, Select, Space } from "antd";
 import { minecraftVersionIds, selectedMinecraftVersion } from "../logic/MinecraftApi";
 import { useObservable } from "../utils/UseObservable";
 import AboutModal from "./AboutModal";
@@ -13,12 +13,12 @@ const Header = () => {
             </Flex>
             <Divider size="small" />
         </div>
-    )
+    );
 };
 
 export const HeaderBody = () => {
-    const versions = useObservable(minecraftVersionIds)
-    const currentVersion = useObservable(selectedMinecraftVersion)
+    const versions = useObservable(minecraftVersionIds);
+    const currentVersion = useObservable(selectedMinecraftVersion);
     return (
         <Space align="center">
             <Select
@@ -41,7 +41,7 @@ export const HeaderBody = () => {
             <SettingsModal />
             <AboutModal />
         </Space>
-    )
-}
+    );
+};
 
 export default Header;

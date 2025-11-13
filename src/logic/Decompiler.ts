@@ -22,7 +22,7 @@ export interface ClassToken {
     length: number;
     // The name of the class this token represents
     className: string;
-    declaration: boolean
+    declaration: boolean;
 }
 
 const decompilerCounter = new BehaviorSubject<number>(0);
@@ -31,7 +31,7 @@ export const isDecompiling = decompilerCounter.pipe(
     map(count => count > 0),
     distinctUntilChanged(),
     shareReplay({ bufferSize: 1, refCount: true })
-)
+);
 
 const decompilerOptions: Observable<Options> = removeImports.observable.pipe(
     map(removeImports => (
@@ -113,5 +113,5 @@ function tokenCollector(classTokens: ClassToken[]): TokenCollector {
         },
         end: function (): void {
         }
-    }
+    };
 }

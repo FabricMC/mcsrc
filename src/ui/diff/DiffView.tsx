@@ -34,7 +34,7 @@ const DiffView = () => {
                 </Splitter.Panel>
             </Splitter>
         </>
-    )
+    );
 };
 
 export default DiffView;

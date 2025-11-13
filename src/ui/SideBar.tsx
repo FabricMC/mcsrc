@@ -14,7 +14,7 @@ const SideBar = () => {
 
     const onChange: SearchProps['onChange'] = (e) => {
         searchQuery.next(e.target.value);
-    }
+    };
 
     return (
         <Card cover={isSmall ? undefined : <Header />} variant="borderless" style={{ height: '100vh' }}>
@@ -22,8 +22,8 @@ const SideBar = () => {
             <Divider size="small" />
             <FileListOrSearchResults />
         </Card>
-    )
-}
+    );
+};
 
 const FileListOrSearchResults = () => {
     const showSearchResults = useObservable(isSearching);
@@ -32,6 +32,6 @@ const FileListOrSearchResults = () => {
     } else {
         return <FileList />;
     }
-}
+};
 
 export default SideBar;

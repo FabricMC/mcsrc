@@ -24,7 +24,7 @@ const SettingsModal = () => {
             </Modal>
         </>
     );
-}
+};
 
 interface SettingProps {
     setting: BooleanSetting;
@@ -40,6 +40,6 @@ const Setting: React.FC<SettingProps> = ({ setting, title }) => {
     return (
         <div> <Checkbox checked={value} onChange={onChange}>{title}</Checkbox> </div>
     );
-}
+};
 
 export default SettingsModal;

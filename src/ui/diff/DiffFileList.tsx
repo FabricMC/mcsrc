@@ -1,4 +1,4 @@
-import {Table, Tag, Input, Button, Flex, theme} from 'antd';
+import { Table, Tag, Input, Button, Flex, theme } from 'antd';
 import DiffVersionSelection from './DiffVersionSelection';
 import { getDiffChanges, type ChangeState } from '../../logic/Diff';
 import { BehaviorSubject, map, combineLatest } from 'rxjs';
@@ -34,7 +34,7 @@ const searchQuery = new BehaviorSubject("");
 
 const entries = combineLatest([getDiffChanges(), searchQuery]).pipe(
     map(([changesMap, query]) => {
-        const entriesArray: { key: string; file: string; status: string }[] = [];
+        const entriesArray: { key: string; file: string; status: string; }[] = [];
         const lowerQuery = query.toLowerCase();
         changesMap.forEach((status, file) => {
             if (!query || file.toLowerCase().includes(lowerQuery)) {
@@ -60,8 +60,8 @@ const DiffFileList = () => {
     };
 
     const handleExitDiff = () => {
-      diffView.next(false);
-    }
+        diffView.next(false);
+    };
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', height: '100%', marginLeft: 8, marginRight: 8 }}>
@@ -98,9 +98,9 @@ const DiffFileList = () => {
                     variant={"outlined"}
                     onClick={handleExitDiff}
                     style={{
-                      position: 'absolute',
-                      top: 12,
-                      right: 0
+                        position: 'absolute',
+                        top: 12,
+                        right: 0
                     }}
                 >
                     Exit Diff
@@ -126,8 +126,8 @@ const DiffFileList = () => {
                     }
                     onRow={(record) => ({
                         onClick: () => {
-                            if(loading) return;
-                            if(currentFile === record.file + ".class") return;
+                            if (loading) return;
+                            if (currentFile === record.file + ".class") return;
 
                             setSelectedFile(record.file + ".class");
                         }

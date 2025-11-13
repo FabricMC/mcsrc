@@ -39,13 +39,13 @@ const AboutModal = () => {
             </Modal>
         </>
     );
-}
+};
 
-const Eula = ({ onAccept }: { onAccept: () => void }) => {
+const Eula = ({ onAccept }: { onAccept: () => void; }) => {
     const accepted = useObservable(agreedEula.observable);
 
     if (accepted) {
-        return <></>
+        return <></>;
     }
 
     return (
@@ -57,7 +57,7 @@ const Eula = ({ onAccept }: { onAccept: () => void }) => {
         }}>
             I agree to the Minecraft <a href="https://www.minecraft.net/en-us/eula" target="_blank" rel="noreferrer">EULA</a> before using this website.
         </Checkbox>);
-}
+};
 
 
 export default AboutModal;

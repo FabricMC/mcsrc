@@ -34,7 +34,7 @@ const App = () => {
             <ProgressModal />
             {enableDiff ? <DiffView /> : isSmall ? <MobileApp /> : <LargeApp />}
         </ConfigProvider>
-    )
+    );
 };
 
 const LargeApp = () => {
@@ -52,7 +52,7 @@ const LargeApp = () => {
                 <Code />
             </Splitter.Panel>
         </Splitter>
-    )
+    );
 };
 
 
@@ -95,8 +95,8 @@ const MobileApp = () => {
             <FilepathHeader />
             <Code />
         </Flex>
-    )
-}
+    );
+};
 
 
-export default App
+export default App;

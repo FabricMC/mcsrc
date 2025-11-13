@@ -4,9 +4,9 @@ import { minecraftVersionIds } from "../../logic/MinecraftApi";
 import { getLeftDiff, getRightDiff } from "../../logic/Diff";
 
 const DiffVersionSelection = () => {
-    const versions = useObservable(minecraftVersionIds)
-    const leftVersion = useObservable(getLeftDiff().selectedVersion)
-    const rightVersion = useObservable(getRightDiff().selectedVersion)
+    const versions = useObservable(minecraftVersionIds);
+    const leftVersion = useObservable(getLeftDiff().selectedVersion);
+    const rightVersion = useObservable(getRightDiff().selectedVersion);
 
     if (!leftVersion) {
         // This will trigger the jar to load
@@ -37,7 +37,7 @@ const DiffVersionSelection = () => {
                 ))}
             </Select>
         </>
-    )
+    );
 };
 
 export default DiffVersionSelection;

@@ -15,6 +15,6 @@ const ProcesModal = () => {
             <Progress percent={progress ?? 0} />
         </Modal>
     );
-}
+};
 
 export default ProcesModal;

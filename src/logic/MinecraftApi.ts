@@ -87,7 +87,7 @@ async function cachedFetch(url: string): Promise<Response> {
     const cache = await caches.open(CACHE_NAME);
     const cachedResponse = await cache.match(url);
     if (cachedResponse) {
-        return cachedResponse
+        return cachedResponse;
     };
 
     const response = await fetch(url);
@@ -132,7 +132,7 @@ async function downloadMinecraftJar(version: VersionListEntry, progress: Behavio
 
     const blob = new Blob(chunks);
     const jar = await openJar(blob);
-    progress.next(undefined)
+    progress.next(undefined);
     return { version: version.id, jar };
 }
 

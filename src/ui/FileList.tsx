@@ -106,4 +106,4 @@ const FileList = () => {
     );
 };
 
-export default FileList
+export default FileList;

@@ -6,5 +6,6 @@
   "[typescriptreact]": {
     "editor.formatOnSave": true,
     "editor.defaultFormatter": "vscode.typescript-language-features"
-  }
+  },
+  "typescript.format.semicolons": "insert"
 }

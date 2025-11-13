@@ -25,5 +25,5 @@ export const TabsComponent = () => {
                 label: key.replace(".class", "").split("/").pop()
             }))}
         />
-    )
-}
+    );
+};

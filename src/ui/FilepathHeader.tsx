@@ -31,5 +31,5 @@ export const FilepathHeader = () => {
                 ))}
             </div>
         </div>
-    )
-}
+    );
+};

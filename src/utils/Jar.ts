@@ -1,7 +1,7 @@
 import { read, type Entry, type Reader, type Zip } from "@katana-project/zip";
 
 export interface Jar {
-    entries: { [key: string]: Entry };
+    entries: { [key: string]: Entry; };
 }
 
 export async function openJar(blob: Blob): Promise<Jar> {
@@ -20,7 +20,7 @@ export async function streamJar(url: string): Promise<Jar> {
 
 class JarImpl implements Jar {
     private zip: Zip;
-    public entries: { [key: string]: Entry } = {};
+    public entries: { [key: string]: Entry; } = {};
 
     constructor(zip: Zip) {
         this.zip = zip;

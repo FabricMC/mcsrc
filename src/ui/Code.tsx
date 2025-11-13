@@ -86,6 +86,6 @@ const Code = () => {
             }}
             onMount={(editor) => { editorRef.current = editor; }} />
     );
-}
+};
 
 export default Code;

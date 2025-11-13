@@ -72,9 +72,9 @@ async function getEntriesWithCRC(jar: MinecraftJar): Promise<Map<string, number[
             className = className.split('$')[0];
         }
 
-        const existing = entries.get(className)
+        const existing = entries.get(className);
         if (existing) {
-            insertSorted(existing, file.crc32)
+            insertSorted(existing, file.crc32);
         } else {
             entries.set(className, [file.crc32]);
         }

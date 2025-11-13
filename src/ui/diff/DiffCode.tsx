@@ -8,14 +8,14 @@ import { LoadingOutlined } from '@ant-design/icons';
 import { isDecompiling } from "../../logic/Decompiler.ts";
 
 interface DiffCodeProps {
-    height?: number | string
+    height?: number | string;
 }
 
-const DiffCode = ({height}: DiffCodeProps) => {
+const DiffCode = ({ height }: DiffCodeProps) => {
     const leftResult = useObservable(getLeftDiff().result);
     const rightResult = useObservable(getRightDiff().result);
     const editorRef = useRef<editor.IStandaloneDiffEditor | null>(null);
-    const loading = useObservable(isDecompiling)
+    const loading = useObservable(isDecompiling);
 
     /* Disabled as it jumps to the line of the previous change when switching files
     useEffect(() => {
@@ -34,13 +34,13 @@ const DiffCode = ({height}: DiffCodeProps) => {
 
     return (
         <Spin
-            indicator={<LoadingOutlined spin/>}
+            indicator={<LoadingOutlined spin />}
             size={"large"}
             spinning={!!loading}
             tip="Decompiling..."
             style={{
-              height: '100%',
-              color: 'white'
+                height: '100%',
+                color: 'white'
             }}
         >
             {/*
@@ -66,6 +66,6 @@ const DiffCode = ({height}: DiffCodeProps) => {
                 }} />
         </Spin>
     );
-}
+};
 
 export default DiffCode;
