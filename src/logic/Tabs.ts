@@ -56,3 +56,18 @@ export const closeTab = (key: string) => {
 
   openTabs.next(modifiedOpenTabs);
 };
+
+export const setTabPosition = (key: string, placeIndex: number) => {
+  const tabs = [...openTabs.value];
+  const curr = tabs.indexOf(key);
+  if (curr === -1) return;
+
+  tabs.splice(curr, 1);
+
+  // Adjust index if moving right
+  let index = placeIndex;
+  if (placeIndex > curr) index -= 1;
+
+  tabs.splice(index, 0, key);
+  openTabs.next(tabs);
+};
