@@ -43,7 +43,7 @@ const LargeApp = () => {
 
     return (
         <Splitter onResize={setSizes}>
-            <Splitter.Panel collapsible defaultSize="200px" min="5%" size={sizes[0]}>
+            <Splitter.Panel collapsible defaultSize="200px" min="5%" size={sizes[0]} style={{ height: '100vh' }}>
                 <SideBar />
             </Splitter.Panel>
             <Splitter.Panel size={sizes[1]}>

@@ -17,7 +17,7 @@ const SideBar = () => {
     };
 
     return (
-        <Card cover={isSmall ? undefined : <Header />} variant="borderless" style={{ height: '100vh' }}>
+        <Card cover={isSmall ? undefined : <Header />} variant="borderless">
             <Search placeholder="Search classes" allowClear onChange={onChange}></Search>
             <Divider size="small" />
             <FileListOrSearchResults />
