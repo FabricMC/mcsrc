@@ -90,7 +90,9 @@ const MobileApp = () => {
                         margin: ".5rem .5rem .5rem 1.5rem"
                     }}
                 />
-                {tabsEnabled && <TabsComponent />}
+                {tabsEnabled &&
+                    <span style={{ overflowX: "auto" }}> <TabsComponent /> </span>
+                }
             </Flex>
             <FilepathHeader />
             <Code />
