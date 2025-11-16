@@ -87,6 +87,7 @@ async function decompileClass(className: string, jar: Jar, options: Options): Pr
             tokenCollector: tokenCollector(classTokens)
         });
 
+        classTokens.push(...generateImportTokens(source));
         classTokens.sort((a, b) => a.start - b.start);
 
         return { className, source, classTokens };
@@ -114,4 +115,28 @@ function tokenCollector(classTokens: ClassToken[]): TokenCollector {
         end: function (): void {
         }
     };
+}
+
+function generateImportTokens(source: string): ClassToken[] {
+    const importTokens: ClassToken[] = [];
+
+    const importRegex = /^\s*import\s+(?!static\b)([^\s;]+)\s*;/gm;
+
+    let match = null;
+    while ((match = importRegex.exec(source)) !== null) {
+        const importPath = match[1].replaceAll('.', '/');
+        if (importPath.endsWith('*')) {
+            continue;
+        }
+
+        const className = importPath.substring(importPath.lastIndexOf('/') + 1);
+
+        importTokens.push({
+            start: match.index + match[0].lastIndexOf(className),
+            length: importPath.length - importPath.lastIndexOf(className),
+            className: importPath,
+            declaration: false
+        });
+    }
+    return importTokens;
 }
