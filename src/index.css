@@ -9,3 +9,48 @@ html, body {margin: 0; height: 100%; overflow: hidden}
 .webkit-scrollbar-hide::-webkit-scrollbar {
     display: none
 }
+
+.class-token-decoration {
+  color: #71c6b1 !important;
+}
+
+.field-token-decoration {
+  color: #aadafa !important;
+}
+
+.method-token-decoration {
+  color: #dcdcaf !important;
+}
+
+.parameter-token-decoration {
+  color: #aadafa !important;
+}
+
+.local-token-decoration {
+  color: #aadafa !important;
+}
+
+.class-token-decoration-pointer {
+  color: #71c6b1 !important;
+  cursor: pointer;
+}
+
+.field-token-decoration-pointer {
+  color: #aadafa !important;
+  cursor: pointer;
+}
+
+.method-token-decoration-pointer {
+  color: #dcdcaf !important;
+  cursor: pointer;
+}
+
+.parameter-token-decoration-pointer {
+  color: #aadafa !important;
+  cursor: pointer;
+}
+
+.local-token-decoration-pointer {
+  color: #aadafa !important;
+  cursor: pointer;
+}

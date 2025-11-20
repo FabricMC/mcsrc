@@ -18,6 +18,8 @@ const Code = () => {
     const hideMinimap = useObservable(isThin);
     const decompiling = useObservable(isDecompiling);
 
+    const decorationsCollectionRef = useRef<editor.IEditorDecorationsCollection | null>(null);
+
     useEffect(() => {
         if (!monaco) return;
         const definitionProvider = monaco.languages.registerDefinitionProvider("java", {
@@ -38,7 +40,11 @@ const Code = () => {
                 }
                 targetOffset = charCount + (column - 1);
 
-                for (const token of decompileResult.classTokens) {
+                for (const token of decompileResult.tokens) {
+                    if (token.declaration) {
+                        continue;
+                    }
+
                     if (targetOffset >= token.start && targetOffset <= token.start + token.length) {
                         const className = token.className + ".class";
                         console.log(`Found token for definition: ${className} at offset ${token.start}`);
@@ -84,6 +90,32 @@ const Code = () => {
             definitionProvider.dispose();
         };
     }, [monaco, decompileResult, classList]);
+
+    useEffect(() => {
+        if (!editorRef.current || !decompileResult) return;
+
+        const editor = editorRef.current;
+        const model = editor.getModel();
+        if (!model) return;
+
+        const decorations = decompileResult.tokens.map(token => {
+            const startPos = model.getPositionAt(token.start);
+            const endPos = model.getPositionAt(token.start + token.length);
+            const canGoTo = !token.declaration && classList && classList.includes(token.className + ".class");
+
+            return {
+                range: new Range(startPos.lineNumber, startPos.column, endPos.lineNumber, endPos.column),
+                options: {
+                    //hoverMessage: { value: `Class: ${token.className}` },
+                    inlineClassName: token.type + '-token-decoration' + (canGoTo ? "-pointer" : "")
+                }
+            };
+        }, [classList]);
+
+        // Clean up previous collection
+        decorationsCollectionRef.current?.clear();
+        decorationsCollectionRef.current = editor.createDecorationsCollection(decorations);
+    }, [decompileResult]);
 
     // Scroll to top when source changes
     useEffect(() => {
