@@ -8,7 +8,6 @@ import { decompile, type Options, type TokenCollector } from "./vf";
 import { selectedFile } from "./State";
 import type { Jar } from "../utils/Jar";
 import type { Token } from "./Tokens";
-import { decompilationCache } from "./DecompilationCache";
 
 export interface DecompileResult {
     className: string;
@@ -25,6 +24,8 @@ export const isDecompiling = decompilerCounter.pipe(
 
 const DECOMPILER_OPTIONS: Options = {};
 
+const decompilationCache = new Map<string, DecompileResult>();
+
 export const currentResult = decompileResultPipeline(minecraftJar);
 export function decompileResultPipeline(jar: Observable<MinecraftJar>): Observable<DecompileResult> {
     return combineLatest([
@@ -35,11 +36,18 @@ export function decompileResultPipeline(jar: Observable<MinecraftJar>): Observab
         tap(() => decompilerCounter.next(decompilerCounter.value + 1)),
         throttleTime(250),
         switchMap(([className, jar]) => {
-            const cached = decompilationCache.get(jar.version, className);
+            const cached = decompilationCache.get(`${jar.version}:${className}`);
             if (cached) return of(cached);
 
             return from(decompileClass(className, jar.jar, DECOMPILER_OPTIONS)).pipe(
-                tap(result => decompilationCache.put(jar.version, className, result))
+                tap(result => {
+                    // Store DecompilationResult in in-memory cache
+                    if (decompilationCache.size >= 2) {
+                        const firstKey = decompilationCache.keys().next().value;
+                        if (firstKey) decompilationCache.delete(firstKey);
+                    }
+                    decompilationCache.set(`${jar.version}:${className}`, result);
+                })
             );
         }),
         tap(() => decompilerCounter.next(decompilerCounter.value - 1)),
