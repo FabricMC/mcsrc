@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import {
     BehaviorSubject,
-    combineLatest, distinctUntilChanged, from, map, Observable, shareReplay, switchMap, tap, throttleTime
+    combineLatest, distinctUntilChanged, from, map, Observable, of, shareReplay, switchMap, tap, throttleTime
 } from "rxjs";
 import { minecraftJar, type MinecraftJar } from "./MinecraftApi";
 import { decompile, type Options, type TokenCollector } from "./vf";
@@ -24,6 +24,8 @@ export const isDecompiling = decompilerCounter.pipe(
 
 const DECOMPILER_OPTIONS: Options = {};
 
+const decompilationCache = new Map<string, DecompileResult>();
+
 export const currentResult = decompileResultPipeline(minecraftJar);
 export function decompileResultPipeline(jar: Observable<MinecraftJar>): Observable<DecompileResult> {
     return combineLatest([
@@ -33,7 +35,27 @@ export function decompileResultPipeline(jar: Observable<MinecraftJar>): Observab
         distinctUntilChanged(),
         tap(() => decompilerCounter.next(decompilerCounter.value + 1)),
         throttleTime(250),
-        switchMap(([className, jar]) => from(decompileClass(className, jar.jar, DECOMPILER_OPTIONS))),
+        switchMap(([className, jar]) => {
+            const key = `${jar.version}:${className}`;
+            const cached = decompilationCache.get(key);
+            if (cached) {
+                // Re-insert at end
+                decompilationCache.delete(key);
+                decompilationCache.set(key, cached);
+                return of(cached);
+            }
+
+            return from(decompileClass(className, jar.jar, DECOMPILER_OPTIONS)).pipe(
+                tap(result => {
+                    // Store DecompilationResult in in-memory cache
+                    if (decompilationCache.size >= 75) {
+                        const firstKey = decompilationCache.keys().next().value;
+                        if (firstKey) decompilationCache.delete(firstKey);
+                    }
+                    decompilationCache.set(`${jar.version}:${className}`, result);
+                })
+            );
+        }),
         tap(() => decompilerCounter.next(decompilerCounter.value - 1)),
         shareReplay({ bufferSize: 1, refCount: false })
     );
