@@ -2,14 +2,24 @@ import Editor, { useMonaco } from '@monaco-editor/react';
 import { useObservable } from '../utils/UseObservable';
 import { currentResult, isDecompiling } from '../logic/Decompiler';
 import { useEffect, useRef } from 'react';
-import { editor, languages, Range, Uri, type CancellationToken, type IPosition, type IRange } from "monaco-editor";
+import {
+    type CancellationToken,
+    editor,
+    type IDisposable,
+    type IPosition,
+    type IRange,
+    languages,
+    Range,
+    Uri
+} from "monaco-editor";
 import { isThin } from '../logic/Browser';
 import { classesList } from '../logic/JarFile';
-import { openTab } from '../logic/Tabs';
-import { Spin, message } from 'antd';
+import { activeTabKey, openTab } from '../logic/Tabs';
+import { message, Spin } from 'antd';
 import { LoadingOutlined } from '@ant-design/icons';
-import { state, setSelectedFile } from '../logic/State';
+import { setSelectedFile, state } from '../logic/State';
 import type { Token } from '../logic/Tokens';
+import { filter, take } from "rxjs";
 
 const IS_DEFINITION_CONTEXT_KEY_NAME = "is_definition";
 
@@ -116,7 +126,12 @@ const Code = () => {
                             const range = new Range(lineNumber, column, lineNumber, column + token.length);
 
                             return {
-                                uri: Uri.parse(`goto://class/${className}`),
+                                uri: "descriptor" in token ?
+                                    Uri.parse(`goto://class/${className}#${token.type}:${
+                                        token.type === "method" ?
+                                            token.descriptor : token.name
+                                    }`) :
+                                    Uri.parse(`goto://class/${className}`),
                                 range
                             };
                         }
@@ -136,13 +151,49 @@ const Code = () => {
         });
 
         const editorOpener = monaco.editor.registerEditorOpener({
-            openCodeEditor: function (source: editor.ICodeEditor, resource: Uri, selectionOrPosition?: IRange | IPosition): boolean | Promise<boolean> {
+            openCodeEditor: function (editor: editor.ICodeEditor, resource: Uri, selectionOrPosition?: IRange | IPosition): boolean | Promise<boolean> {
                 if (!resource.scheme.startsWith("goto")) {
                     return false;
                 }
 
                 const className = resource.path.substring(1);
                 console.log(className);
+
+                const jumpInSameFile = className === activeTabKey.value;
+                const fragment = resource.fragment.split(":") as ['method' | 'field', string];
+                if (fragment.length === 2) {
+                    const [targetType, target] = fragment;
+                    currentResult.pipe(filter(value => value.className === className), take(1)).subscribe(value => {
+                        for (const token of value.tokens) {
+                            if (token.declaration && token.type == targetType) {
+                                if (
+                                    (targetType === "method" && token.descriptor === target) ||
+                                    (targetType === "field" && token.name === target)
+                                ) {
+                                    const sourceUpTo = value.source.slice(0, token.start);
+                                    const lineNumber = sourceUpTo.match(/\n/g)!.length + 1;
+                                    const column = sourceUpTo.length - sourceUpTo.lastIndexOf("\n");
+                                    console.log(token, lineNumber, column);
+                                    let listener: IDisposable;
+                                    const updateSelection = () => {
+                                        if (listener) listener.dispose();
+                                        editor.setSelection(new Range(lineNumber, column, lineNumber, column + token.length));
+                                    }
+                                    if (jumpInSameFile) {
+                                        updateSelection();
+                                        editor.revealLineInCenter(lineNumber, 0);
+                                    } else {
+                                        listener = editor.onDidChangeModelContent(() => {
+                                            // Wait for DOM to settle
+                                            queueMicrotask(updateSelection)
+                                        });
+                                    }
+                                    break;
+                                }
+                            }
+                        }
+                    });
+                }
                 openTab(className);
                 return true;
             }
