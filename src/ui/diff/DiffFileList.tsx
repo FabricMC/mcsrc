@@ -64,7 +64,7 @@ const DiffFileList = () => {
     };
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', marginLeft: 8, marginRight: 8 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', marginLeft: 8, marginRight: 8, overflow: 'hidden' }}>
             <div
                 style={{
                     position: 'sticky',
@@ -107,11 +107,9 @@ const DiffFileList = () => {
                 </Button>
             </div>
             <div
-                className={"webkit-scrollbar-hide"}
                 style={{
                     flex: 1,
-                    overflowY: 'auto',
-                    scrollbarWidth: "none"
+                    overflowY: 'auto'
                 }}
             >
                 <Table

@@ -9,7 +9,7 @@ const DiffView = () => {
     return (
         <>
             <FilepathHeader />
-            <Splitter layout="vertical" onResize={setSizes} style={{ height: "100vh" }}>
+            <Splitter layout="vertical" onResize={setSizes} style={{ height: "calc(100vh - 26px)" }}>
                 <Splitter.Panel min="5%" size={sizes[0]} style={{ overflow: 'hidden' }}>
                     <div style={{ display: 'flex', flexDirection: 'column' }}>
                         {/*
