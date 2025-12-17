@@ -3,7 +3,7 @@ import { useState } from "react";
 import { SettingOutlined } from '@ant-design/icons';
 import { Checkbox } from 'antd';
 import { useObservable } from "../utils/UseObservable";
-import { BooleanSetting, enableTabs } from "../logic/Settings";
+import { BooleanSetting, enableTabs, enableLambdaDisplay } from "../logic/Settings";
 
 const SettingsModal = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -20,6 +20,7 @@ const SettingsModal = () => {
                 footer={null}
             >
                 <Setting setting={enableTabs} title={"Enable Tabs"} />
+                <Setting setting={enableLambdaDisplay} title={"Enable Lambda Name Display"} />
             </Modal>
         </>
     );

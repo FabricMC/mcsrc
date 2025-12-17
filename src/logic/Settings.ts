@@ -28,3 +28,4 @@ export class BooleanSetting {
 
 export const agreedEula = new BooleanSetting('eula', false);
 export const enableTabs = new BooleanSetting('enable_tabs', true);
+export const enableLambdaDisplay = new BooleanSetting('enable_lambda_display', true);

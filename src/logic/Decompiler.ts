@@ -8,6 +8,7 @@ import { decompile, type Options, type TokenCollector } from "./vf";
 import { selectedFile } from "./State";
 import type { Jar } from "../utils/Jar";
 import type { Token } from "./Tokens";
+import { enableLambdaDisplay } from "./Settings";
 
 export interface DecompileResult {
     className: string;
@@ -31,12 +32,13 @@ export function decompileResultPipeline(jar: Observable<MinecraftJar>): Observab
     return combineLatest([
         selectedFile,
         jar,
+        enableLambdaDisplay.observable,
     ]).pipe(
         distinctUntilChanged(),
         tap(() => decompilerCounter.next(decompilerCounter.value + 1)),
         throttleTime(250),
-        switchMap(([className, jar]) => {
-            const key = `${jar.version}:${className}`;
+        switchMap(([className, jar, lambdaDisplay]) => {
+            const key = `${jar.version}:${className}:${lambdaDisplay}`;
             const cached = decompilationCache.get(key);
             if (cached) {
                 // Re-insert at end
@@ -52,7 +54,7 @@ export function decompileResultPipeline(jar: Observable<MinecraftJar>): Observab
                         const firstKey = decompilationCache.keys().next().value;
                         if (firstKey) decompilationCache.delete(firstKey);
                     }
-                    decompilationCache.set(`${jar.version}:${className}`, result);
+                    decompilationCache.set(`${jar.version}:${className}:${lambdaDisplay}`, result);
                 })
             );
         }),
@@ -73,6 +75,10 @@ async function decompileClass(className: string, jar: Jar, options: Options): Pr
     if (!files.includes(className)) {
         console.error(`Class not found in Minecraft jar: ${className}`);
         return { className, source: `// Class not found: ${className}`, tokens: [] };
+    }
+
+    if (enableLambdaDisplay.value) {
+        options["mark-corresponding-synthetics"] = "1";
     }
 
     try {

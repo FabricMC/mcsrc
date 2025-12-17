@@ -35,6 +35,18 @@ html, body {margin: 0; height: 100%; overflow: hidden}
   cursor: pointer;
 }
 
+/* Control comment marker color, eg "/*" */
+.mtk7 {
+  color: #ff9d00 !important;
+  font-style: italic;
+}
+
+/* Control comment color, eg what is inside "/*" */
+.mtk7.method-token-decoration {
+  color: #ffb53d !important;
+  font-style: italic;
+}
+
 .field-token-decoration-pointer {
   color: #aadafa !important;
   cursor: pointer;
