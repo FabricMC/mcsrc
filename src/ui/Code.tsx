@@ -400,7 +400,7 @@ const Code = () => {
 
             // Fold imports when content changes: `foldingImportsByDefault` has a bug where it only folds once.
             editorRef.current.getAction('editor.foldAll')?.run().then(() => {
-                editorRef.current!.setScrollTop(targetScroll);
+                editorRef.current!.setScrollTop(currentLine);
             })
 
             if (currentLine) {
