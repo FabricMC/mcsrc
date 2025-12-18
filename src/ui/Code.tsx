@@ -50,7 +50,8 @@ function findTokenAtPosition(
 
     for (const token of decompileResult.tokens) {
         if (targetOffset >= token.start && targetOffset <= token.start + token.length) {
-            const className = token.className + ".class";
+            const baseClassName = token.className.split('$')[0];
+            const className = baseClassName + ".class";
             if (classList.includes(className)) {
                 return token;
             }
