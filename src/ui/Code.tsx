@@ -69,12 +69,13 @@ async function setClipboard(text: string): Promise<void> {
     await navigator.clipboard.writeText(text);
 }
 
-function jumpToToken(result: DecompileResult, targetType: 'method' | 'field', target: string, editor: editor.ICodeEditor, sameFile = false) {
+function jumpToToken(result: DecompileResult, targetType: 'method' | 'field' | 'class', target: string, editor: editor.ICodeEditor, sameFile = false) {
     for (const token of result.tokens) {
         if (!(token.declaration && token.type == targetType)) continue;
         if (
             !(targetType === "method" && token.descriptor === target) &&
-            !(targetType === "field" && token.name === target)
+            !(targetType === "field" && token.name === target) &&
+            !(targetType === "class" && token.className === target)
         ) continue;
 
         const sourceUpTo = result.source.slice(0, token.start);
@@ -157,9 +158,11 @@ const Code = () => {
 
                     if (targetOffset >= token.start && targetOffset <= token.start + token.length) {
                         const className = token.className + ".class";
+                        const baseClassName = token.className.split('$')[0] + ".class";
                         console.log(`Found token for definition: ${className} at offset ${token.start}`);
 
-                        if (classList && classList.includes(className)) {
+                        if (classList && (classList.includes(className) || classList.includes(baseClassName))) {
+                            const targetClass = className;
                             const range = new Range(lineNumber, column, lineNumber, column + token.length);
 
                             return {
@@ -194,22 +197,35 @@ const Code = () => {
                 }
 
                 const className = resource.path.substring(1);
+                const baseClassName = className.includes('$') ? className.split('$')[0] + ".class" : className;
                 console.log(className);
+                console.log(baseClassName);
 
-                const jumpInSameFile = className === activeTabKey.value;
+                const jumpInSameFile = baseClassName === activeTabKey.value;
                 const fragment = resource.fragment.split(":") as ['method' | 'field', string];
                 if (fragment.length === 2) {
                     const [targetType, target] = fragment;
                     if (jumpInSameFile) {
                         jumpToToken(decompileResult!, targetType, target, editor, true);
                     } else {
-                        const subscription = currentResult.pipe(filter(value => value.className === className), take(1)).subscribe(value => {
+                        const subscription = currentResult.pipe(filter(value => value.className === baseClassName), take(1)).subscribe(value => {
                             subscription.unsubscribe();
                             jumpToToken(value, targetType, target, editor);
                         });
                     }
+                } else if (baseClassName != className) {
+                    // Handle inner class navigation
+                    const innerClassName = className.replace('.class', '');
+                    if (jumpInSameFile) {
+                        jumpToToken(decompileResult!, 'class', innerClassName, editor, true);
+                    } else {
+                        const subscription = currentResult.pipe(filter(value => value.className === baseClassName), take(1)).subscribe(value => {
+                            subscription.unsubscribe();
+                            jumpToToken(value, 'class', innerClassName, editor);
+                        });
+                    }
                 }
-                openTab(className);
+                openTab(baseClassName);
                 return true;
             }
         });
