@@ -14,7 +14,7 @@ globalThis.MonacoEnvironment = {
     getWorker() {
         return new MonacoWorker();
     }
-}
+};
 
 createRoot(document.getElementById('root')!).render(
     <StrictMode>

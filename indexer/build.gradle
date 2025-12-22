@@ -1,0 +1,31 @@
+plugins {
+    id 'java-library'
+    alias(libs.plugins.teavm)
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation libs.asm
+    implementation libs.teavm.core
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(25)
+    }
+}
+
+teavm {
+    all {
+        mainClass = "mcsrc.Indexer"
+    }
+    wasmGC {
+        addedToWebApp = true
+        modularRuntime = true
+//        obfuscated = false
+        optimization = org.teavm.gradle.api.OptimizationLevel.AGGRESSIVE
+    }
+}
