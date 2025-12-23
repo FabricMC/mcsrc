@@ -1,14 +1,27 @@
-interface UsageEntry {
+import Dexie, { type Table } from 'dexie';
+
+export interface UsageEntry {
     key: string;
     value: string;
+}
+
+class UsageIndexDatabase extends Dexie {
+    [tableName: string]: any;
+
+    constructor(dbName: string, version: string) {
+        super(dbName);
+
+        this.version(1).stores({
+            [version]: '[key+value], key'
+        });
+    }
 }
 
 export class UsageIndexDB {
     private dbName = 'UsageIndexDB';
     private storeName: string;
     private version: string;
-    private dbVersion = 1;
-    private db: IDBDatabase | null = null;
+    private db: UsageIndexDatabase | null = null;
 
     constructor(version: string) {
         this.version = version;
@@ -16,49 +29,17 @@ export class UsageIndexDB {
     }
 
     async open(): Promise<void> {
-        return new Promise((resolve, reject) => {
-            const request = indexedDB.open(this.dbName, this.dbVersion);
-
-            request.onerror = () => reject(request.error);
-            request.onsuccess = () => {
-                this.db = request.result;
-                resolve();
-            };
-
-            request.onupgradeneeded = (event) => {
-                const db = (event.target as IDBOpenDBRequest).result;
-
-                if (db.objectStoreNames.contains(this.storeName)) {
-                    db.deleteObjectStore(this.storeName);
-                }
-
-                const store = db.createObjectStore(this.storeName, {
-                    keyPath: ['key', 'value']
-                });
-
-                store.createIndex('key', 'key', { unique: false });
-            };
-        });
+        this.db = new UsageIndexDatabase(this.dbName, this.version);
+        await this.db.open();
     }
 
-    async batchWrite(entries: Map<string, Set<string>>): Promise<void> {
+    async batchWrite(entries: UsageEntry[]): Promise<void> {
         if (!this.db) {
             throw new Error('Database not opened');
         }
 
-        const transaction = this.db.transaction(this.storeName, 'readwrite', { durability: 'relaxed' });
-        const store = transaction.objectStore(this.storeName);
-
-        for (const [key, values] of entries) {
-            for (const value of values) {
-                store.put({ key, value });
-            }
-        }
-
-        return new Promise((resolve, reject) => {
-            transaction.oncomplete = () => resolve();
-            transaction.onerror = () => reject(transaction.error);
-        });
+        const table: Table<UsageEntry> = this.db.table(this.storeName);
+        await table.bulkPut(entries);
     }
 
     async read(key: string): Promise<string[]> {
@@ -66,21 +47,9 @@ export class UsageIndexDB {
             throw new Error('Database not opened');
         }
 
-        return new Promise((resolve, reject) => {
-            const transaction = this.db!.transaction(this.storeName, 'readonly');
-            const store = transaction.objectStore(this.storeName);
-            const index = store.index('key');
-
-            const request = index.getAll(key);
-
-            request.onsuccess = () => {
-                const entries = request.result as UsageEntry[];
-                const values = entries.map(entry => entry.value);
-                resolve(values);
-            };
-
-            request.onerror = () => reject(request.error);
-        });
+        const table: Table<UsageEntry> = this.db.table(this.storeName);
+        const entries = await table.where('key').equals(key).toArray();
+        return entries.map(entry => entry.value);
     }
 
     async clear(): Promise<void> {
@@ -88,14 +57,8 @@ export class UsageIndexDB {
             throw new Error('Database not opened');
         }
 
-        return new Promise((resolve, reject) => {
-            const transaction = this.db!.transaction(this.storeName, 'readwrite');
-            const store = transaction.objectStore(this.storeName);
-            const request = store.clear();
-
-            request.onsuccess = () => resolve();
-            request.onerror = () => reject(request.error);
-        });
+        const table: Table<UsageEntry> = this.db.table(this.storeName);
+        await table.clear();
     }
 
     close(): void {

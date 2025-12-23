@@ -1,20 +1,22 @@
 import { load } from "../../indexer/build/generated/teavm/wasm-gc/indexer.wasm-runtime.js";
 import indexerWasm from '../../indexer/build/generated/teavm/wasm-gc/indexer.wasm?url';
-import { UsageIndexDB } from './UsageIndexDB';
+import { UsageIndexDB, type UsageEntry } from './UsageIndexDB';
+
+let teavm: Awaited<ReturnType<typeof load>> | null = null;
 
 export const index = async (data: ArrayBufferLike, version: string): Promise<void> => {
-    const teavm = await load(indexerWasm);
+    if (!teavm) {
+        teavm = await load(indexerWasm);
+    }
+
     const indexer = teavm.exports as Indexer;
     const db = new UsageIndexDB(version);
     await db.open();
 
-    const usageMap = new Map<string, Set<string>>();
+    const entries: UsageEntry[] = [];
 
     const addUsage = (key: string, value: string) => {
-        if (!usageMap.has(key)) {
-            usageMap.set(key, new Set());
-        }
-        usageMap.get(key)!.add(value);
+        entries.push({ key, value });
     };
 
     const context: Context = {
@@ -30,7 +32,8 @@ export const index = async (data: ArrayBufferLike, version: string): Promise<voi
     };
 
     indexer.index(data, context);
-    await db.batchWrite(usageMap);
+
+    await db.batchWrite(entries);
 
     db.close();
 };

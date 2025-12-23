@@ -1,9 +1,12 @@
 import { Modal, Progress } from "antd";
 import { useObservable } from "../utils/UseObservable";
 import { indexProgress } from "../logic/UsageIndex";
+import { distinctUntilChanged } from "rxjs";
+
+const distinctProgress = indexProgress.pipe(distinctUntilChanged());
 
 const IndexProgressModal = () => {
-    const progress = useObservable(indexProgress);
+    const progress = useObservable(distinctProgress);
     const percent = progress ?? -1;
 
     return (
