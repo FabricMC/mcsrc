@@ -33,7 +33,7 @@ export const HeaderBody = () => {
                     selectedMinecraftVersion.next(v);
                 }}
             >
-                <Select.Option key={"diff"} value={"diff"}>Compare (beta)</Select.Option>
+                <Select.Option key={"diff"} value={"diff"}>Compare</Select.Option>
                 {versions?.map(v => (
                     <Select.Option key={v} value={v}>{v}</Select.Option>
                 ))}

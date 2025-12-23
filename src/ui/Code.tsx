@@ -20,16 +20,18 @@ import { LoadingOutlined } from '@ant-design/icons';
 import { setSelectedFile, state } from '../logic/State';
 import type { Token } from '../logic/Tokens';
 import { filter, take } from "rxjs";
+import { getNextJumpToken, nextUsageNavigation, usageQuery } from '../logic/FindUsages';
 
 const IS_DEFINITION_CONTEXT_KEY_NAME = "is_definition";
 
 function findTokenAtPosition(
     editor: editor.ICodeEditor,
     decompileResult: { tokens: Token[]; } | undefined,
-    classList: string[] | undefined
+    classList: string[] | undefined,
+    useClassList = true
 ): Token | null {
     const model = editor.getModel();
-    if (!model || !decompileResult || !classList) {
+    if (!model || !decompileResult || (useClassList && !classList)) {
         return null;
     }
 
@@ -50,8 +52,9 @@ function findTokenAtPosition(
 
     for (const token of decompileResult.tokens) {
         if (targetOffset >= token.start && targetOffset <= token.start + token.length) {
-            const className = token.className + ".class";
-            if (classList.includes(className)) {
+            const baseClassName = token.className.split('$')[0];
+            const className = baseClassName + ".class";
+            if (!useClassList || classList!.includes(className)) {
                 return token;
             }
         }
@@ -68,33 +71,45 @@ async function setClipboard(text: string): Promise<void> {
     await navigator.clipboard.writeText(text);
 }
 
-function jumpToToken(result: DecompileResult, targetType: 'method' | 'field', target: string, editor: editor.ICodeEditor, sameFile = false) {
+function jumpToToken(result: DecompileResult, targetType: 'method' | 'field' | 'class', target: string, editor: editor.ICodeEditor, sameFile = false) {
     for (const token of result.tokens) {
         if (!(token.declaration && token.type == targetType)) continue;
         if (
-            !(targetType === "method" && token.descriptor === target) &&
-            !(targetType === "field" && token.name === target)
+            !(targetType === "method" && "descriptor" in token && token.descriptor === target) &&
+            !(targetType === "field" && "name" in token && token.name === target) &&
+            !(targetType === "class" && token.className === target)
         ) continue;
 
-        const sourceUpTo = result.source.slice(0, token.start);
-        const lineNumber = sourceUpTo.match(/\n/g)!.length + 1;
-        const column = sourceUpTo.length - sourceUpTo.lastIndexOf("\n");
+        const { line, column } = getTokenLocation(result, token);
         let listener: IDisposable;
         const updateSelection = () => {
             if (listener) listener.dispose();
-            editor.setSelection(new Range(lineNumber, column, lineNumber, column + token.length));
-        }
+            editor.setSelection(new Range(line, column, line, column + token.length));
+        };
         if (sameFile) {
             updateSelection();
-            editor.revealLineInCenter(lineNumber, 0);
+            editor.revealLineInCenter(line, 0);
         } else {
             listener = editor.onDidChangeModelContent(() => {
                 // Wait for DOM to settle
-                queueMicrotask(updateSelection)
+                queueMicrotask(updateSelection);
             });
         }
         break;
     }
+}
+
+interface TokenLocation {
+    line: number,
+    column: number;
+    length: number;
+}
+
+function getTokenLocation(result: DecompileResult, token: Token): TokenLocation {
+    const sourceUpTo = result.source.slice(0, token.start);
+    const line = sourceUpTo.match(/\n/g)!.length + 1;
+    const column = sourceUpTo.length - sourceUpTo.lastIndexOf("\n");
+    return { line, column, length: token.length };
 }
 
 function onEditorChangeTo(className: string, callback: () => void) {
@@ -113,6 +128,7 @@ const Code = () => {
     const hideMinimap = useObservable(isThin);
     const decompiling = useObservable(isDecompiling);
     const currentState = useObservable(state);
+    const nextUsage = useObservable(nextUsageNavigation);
 
     const decorationsCollectionRef = useRef<editor.IEditorDecorationsCollection | null>(null);
     const lineHighlightRef = useRef<editor.IEditorDecorationsCollection | null>(null);
@@ -156,17 +172,18 @@ const Code = () => {
 
                     if (targetOffset >= token.start && targetOffset <= token.start + token.length) {
                         const className = token.className + ".class";
+                        const baseClassName = token.className.split('$')[0] + ".class";
                         console.log(`Found token for definition: ${className} at offset ${token.start}`);
 
-                        if (classList && classList.includes(className)) {
+                        if (classList && (classList.includes(className) || classList.includes(baseClassName))) {
+                            const targetClass = className;
                             const range = new Range(lineNumber, column, lineNumber, column + token.length);
 
                             return {
                                 uri: "descriptor" in token ?
-                                    Uri.parse(`goto://class/${className}#${token.type}:${
-                                        token.type === "method" ?
-                                            token.descriptor : token.name
-                                    }`) :
+                                    Uri.parse(`goto://class/${className}#${token.type}:${token.type === "method" ?
+                                        token.descriptor : token.name
+                                        }`) :
                                     Uri.parse(`goto://class/${className}`),
                                 range
                             };
@@ -193,22 +210,35 @@ const Code = () => {
                 }
 
                 const className = resource.path.substring(1);
+                const baseClassName = className.includes('$') ? className.split('$')[0] + ".class" : className;
                 console.log(className);
+                console.log(baseClassName);
 
-                const jumpInSameFile = className === activeTabKey.value;
+                const jumpInSameFile = baseClassName === activeTabKey.value;
                 const fragment = resource.fragment.split(":") as ['method' | 'field', string];
                 if (fragment.length === 2) {
                     const [targetType, target] = fragment;
                     if (jumpInSameFile) {
                         jumpToToken(decompileResult!, targetType, target, editor, true);
                     } else {
-                        const subscription = currentResult.pipe(filter(value => value.className === className), take(1)).subscribe(value => {
+                        const subscription = currentResult.pipe(filter(value => value.className === baseClassName), take(1)).subscribe(value => {
                             subscription.unsubscribe();
                             jumpToToken(value, targetType, target, editor);
                         });
                     }
+                } else if (baseClassName != className) {
+                    // Handle inner class navigation
+                    const innerClassName = className.replace('.class', '');
+                    if (jumpInSameFile) {
+                        jumpToToken(decompileResult!, 'class', innerClassName, editor, true);
+                    } else {
+                        const subscription = currentResult.pipe(filter(value => value.className === baseClassName), take(1)).subscribe(value => {
+                            subscription.unsubscribe();
+                            jumpToToken(value, 'class', innerClassName, editor);
+                        });
+                    }
                 }
-                openTab(className);
+                openTab(baseClassName);
                 return true;
             }
         });
@@ -330,8 +360,38 @@ const Code = () => {
             }
         });
 
+        const viewUsages = monaco.editor.addEditorAction({
+            id: 'find_usages',
+            label: 'Find Usages',
+            contextMenuGroupId: 'navigation',
+            precondition: IS_DEFINITION_CONTEXT_KEY_NAME, // TODO this does not contain references to none Minecraft classes 
+            run: async function (editor: editor.ICodeEditor, ...args: any[]): Promise<void> {
+                const token = findTokenAtPosition(editor, decompileResultRef.current, classListRef.current);
+                if (!token) {
+                    messageApi.error("Failed to find token for usages.");
+                    return;
+                }
+
+                switch (token.type) {
+                    case "class":
+                        usageQuery.next(token.className);
+                        break;
+                    case "field":
+                        usageQuery.next(`${token.className}:${token.name}:${token.descriptor}`);
+                        break;
+                    case "method":
+                        usageQuery.next(`${token.className}:${token.name}:${token.descriptor}`);
+                        break;
+                    default:
+                        messageApi.error("Token is not a class, field, or method.");
+                        return;
+                }
+            }
+        });
+
         return () => {
             // Dispose in the oppsite order
+            viewUsages.dispose();
             copyMixin.dispose();
             copyAw.dispose();
             foldingRange.dispose();
@@ -368,44 +428,74 @@ const Code = () => {
 
     // Scroll to top when source changes, or to specific line if specified
     useEffect(() => {
-        if (editorRef.current) {
+        if (editorRef.current && decompileResult) {
+            const editor = editorRef.current;
             const currentTab = openTabs.value.find(tab => tab.key === activeTabKey.value);
             const prevTab = openTabs.value.find(tab => tab.key === tabHistory.value.at(-2));
             if (prevTab) {
-                prevTab.scroll = editorRef.current.getScrollTop();
+                prevTab.scroll = editor.getScrollTop();
             }
-            const currentLine = currentState?.line;
-            editorRef.current.setPosition({ lineNumber: currentLine ?? 1, column: 1 });
+
             lineHighlightRef.current?.clear();
 
-            // Default: scroll to top
-            let targetScroll = 0;
+            const executeScroll = () => {
+                const currentLine = state.value?.line;
+                if (currentLine) {
+                    const lineEnd = state.value?.lineEnd ?? currentLine;
+                    editor.setSelection(new Range(currentLine, 1, currentLine, 1));
+                    editor.revealLinesInCenterIfOutsideViewport(currentLine, lineEnd);
 
-            // Fold imports when content changes: `foldingImportsByDefault` has a bug where it only folds once.
-            editorRef.current.getAction('editor.foldAll')?.run().then(() => {
-                editorRef.current!.setScrollTop(targetScroll);
-            })
+                    // Highlight the line range
+                    lineHighlightRef.current = editor.createDecorationsCollection([{
+                        range: new Range(currentLine, 1, lineEnd, 1),
+                        options: {
+                            isWholeLine: true,
+                            className: 'highlighted-line',
+                            glyphMarginClassName: 'highlighted-line-glyph'
+                        }
+                    }]);
+                } else if (currentTab && currentTab.scroll > 0) {
+                    editor.setScrollTop(currentTab.scroll);
+                } else {
+                    editor.setScrollTop(0);
+                }
+            };
 
-            if (currentLine) {
-                const lineEnd = currentState?.lineEnd ?? currentLine;
-
-                // Scroll to the specified lines
-                editorRef.current.revealLinesInCenterIfOutsideViewport(currentLine, lineEnd);
-
-                // Highlight the line range
-                lineHighlightRef.current = editorRef.current.createDecorationsCollection([{
-                    range: new Range(currentLine, 1, lineEnd, 1),
-                    options: {
-                        isWholeLine: true,
-                        className: 'highlighted-line',
-                        glyphMarginClassName: 'highlighted-line-glyph'
-                    }
-                }]);
-            } else if (currentTab && currentTab.scroll > 0) {
-                targetScroll = currentTab.scroll;
-            }
+            // Wait for folding to complete and DOM to settle
+            editor.getAction('editor.foldAll')?.run().then(() => {
+                // Use requestAnimationFrame to ensure Monaco has finished layout
+                requestAnimationFrame(() => {
+                    executeScroll();
+                });
+            });
         }
     }, [decompileResult, currentState?.line, currentState?.lineEnd]);
+
+    // Scroll to a "Find usages" token
+    useEffect(() => {
+        if (editorRef.current && decompileResult) {
+            const editor = editorRef.current;
+
+            lineHighlightRef.current?.clear();
+
+            const executeScroll = () => {
+                const nextJumpToken = getNextJumpToken(decompileResult);
+                const nextJumpLocation = nextJumpToken && getTokenLocation(decompileResult, nextJumpToken);
+
+                if (nextJumpLocation) {
+                    const { line, column, length } = nextJumpLocation;
+                    editor.revealLinesInCenterIfOutsideViewport(line, line);
+                    editor.setSelection(new Range(line, column, line, column + length));
+                }
+            };
+
+            editor.getAction('editor.foldAll')?.run().then(() => {
+                requestAnimationFrame(() => {
+                    executeScroll();
+                });
+            });
+        }
+    }, [decompileResult, nextUsage]);
 
     return (
         <Spin

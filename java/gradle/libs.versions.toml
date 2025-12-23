@@ -1,0 +1,11 @@
+[versions]
+asm = "9.9.1"
+teavm = "0.13.0"
+
+[libraries]
+asm = { module = "org.ow2.asm:asm", version.ref = "asm" }
+teavm-core = { group = "org.teavm", name = "teavm-core", version.ref = "teavm" }
+teavm-jso = { group = "org.teavm", name = "teavm-jso-apis", version.ref = "teavm" }
+
+[plugins]
+teavm = { id = "org.teavm", version.ref = "teavm" }
