@@ -1,9 +1,9 @@
-import { Button, Modal, type CheckboxProps, Form } from "antd";
+import { Button, Modal, type CheckboxProps, Form, Tooltip } from "antd";
 import { useState } from "react";
 import { SettingOutlined } from '@ant-design/icons';
 import { Checkbox } from 'antd';
 import { useObservable } from "../utils/UseObservable";
-import { BooleanSetting, enableTabs, enableLambdaDisplay, focusSearch, KeybindSetting, type Key, type KeybindValue } from "../logic/Settings";
+import { BooleanSetting, enableTabs, displayLambdas, focusSearch, KeybindSetting, type Key, type KeybindValue } from "../logic/Settings";
 import { capturingKeybind, rawKeydownEvent } from "../logic/Keybinds";
 
 const SettingsModal = () => {
@@ -22,7 +22,7 @@ const SettingsModal = () => {
             >
                 <Form layout="horizontal" labelCol={{ span: 8 }} wrapperCol={{ span: 16 }}>
                     <BooleanToggle setting={enableTabs} title={"Enable Tabs"} />
-                    <BooleanToggle setting={enableLambdaDisplay} title={"Enable Lambda Name Display"} />
+                    <BooleanToggle setting={displayLambdas} title={"Lambda Names"} tooltip="Display lambda names as inline comments. Does not support permalinking." />
                     <KeybindControl setting={focusSearch} title={"Focus Search"} />
                 </Form>
             </Modal>
@@ -33,17 +33,20 @@ const SettingsModal = () => {
 interface BooleanToggleProps {
     setting: BooleanSetting;
     title: string;
+    tooltip?: string;
 }
 
-const BooleanToggle: React.FC<BooleanToggleProps> = ({ setting, title }) => {
+const BooleanToggle: React.FC<BooleanToggleProps> = ({ setting, title, tooltip }) => {
     const value = useObservable(setting.observable);
     const onChange: CheckboxProps['onChange'] = (e) => {
         setting.value = e.target.checked;
     };
 
+    const checkbox = <Checkbox checked={value} onChange={onChange} />;
+
     return (
         <Form.Item label={title}>
-            <Checkbox checked={value} onChange={onChange} />
+            {tooltip ? <Tooltip title={tooltip}>{checkbox}</Tooltip> : checkbox}
         </Form.Item>
     );
 };

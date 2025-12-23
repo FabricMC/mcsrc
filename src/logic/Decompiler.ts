@@ -8,7 +8,7 @@ import { decompile, type Options, type TokenCollector } from "./vf";
 import { selectedFile } from "./State";
 import type { Jar } from "../utils/Jar";
 import type { Token } from "./Tokens";
-import { enableLambdaDisplay } from "./Settings";
+import { displayLambdas } from "./Settings";
 
 export interface DecompileResult {
     className: string;
@@ -32,13 +32,18 @@ export function decompileResultPipeline(jar: Observable<MinecraftJar>): Observab
     return combineLatest([
         selectedFile,
         jar,
-        enableLambdaDisplay.observable,
+        displayLambdas.observable,
     ]).pipe(
         distinctUntilChanged(),
         tap(() => decompilerCounter.next(decompilerCounter.value + 1)),
         throttleTime(250),
-        switchMap(([className, jar, lambdaDisplay]) => {
-            const key = `${jar.version}:${className}:${lambdaDisplay}`;
+        switchMap(([className, jar, displayLambdas]) => {
+            let key = `${jar.version}:${className}`;
+
+            if (displayLambdas) {
+                key += ":lambdas";
+            }
+
             const cached = decompilationCache.get(key);
             if (cached) {
                 // Re-insert at end
@@ -47,14 +52,20 @@ export function decompileResultPipeline(jar: Observable<MinecraftJar>): Observab
                 return of(cached);
             }
 
-            return from(decompileClass(className, jar.jar, DECOMPILER_OPTIONS)).pipe(
+            let options = { ...DECOMPILER_OPTIONS };
+
+            if (displayLambdas) {
+                options["mark-corresponding-synthetics"] = "1";
+            }
+
+            return from(decompileClass(className, jar.jar, options)).pipe(
                 tap(result => {
                     // Store DecompilationResult in in-memory cache
                     if (decompilationCache.size >= 75) {
                         const firstKey = decompilationCache.keys().next().value;
                         if (firstKey) decompilationCache.delete(firstKey);
                     }
-                    decompilationCache.set(`${jar.version}:${className}:${lambdaDisplay}`, result);
+                    decompilationCache.set(key, result);
                 })
             );
         }),
@@ -75,10 +86,6 @@ async function decompileClass(className: string, jar: Jar, options: Options): Pr
     if (!files.includes(className)) {
         console.error(`Class not found in Minecraft jar: ${className}`);
         return { className, source: `// Class not found: ${className}`, tokens: [] };
-    }
-
-    if (enableLambdaDisplay.value) {
-        options["mark-corresponding-synthetics"] = "1";
     }
 
     try {

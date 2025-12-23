@@ -1,4 +1,4 @@
-import { BehaviorSubject, Observable } from "rxjs";
+import { BehaviorSubject, combineLatest, map, Observable, switchMap } from "rxjs";
 
 export type ModifierKey = 'Ctrl' | 'Alt' | 'Shift';
 export type Key = string;
@@ -112,5 +112,20 @@ export class KeybindSetting {
 
 export const agreedEula = new BooleanSetting('eula', false);
 export const enableTabs = new BooleanSetting('enable_tabs', true);
-export const enableLambdaDisplay = new BooleanSetting('enable_lambda_display', true);
+export const displayLambdas = new BooleanSetting('display_lambdas', false);
 export const focusSearch = new KeybindSetting('focus_search', 'Ctrl+ ');
+
+export const supportsPermalinking = combineLatest([displayLambdas.observable]).pipe(
+    map(([lambdaDisplay]) => {
+        if (lambdaDisplay) {
+            // Alters the decompilation output, so permalinks are not stable
+            return false;
+        }
+
+        return true;
+    })
+);
+
+export function resetPermalinkAffectingSettings(): void {
+    displayLambdas.value = false;
+}

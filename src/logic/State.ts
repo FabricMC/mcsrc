@@ -1,6 +1,7 @@
-import { BehaviorSubject, distinctUntilChanged, map } from "rxjs";
+import { BehaviorSubject, combineLatest, distinctUntilChanged, map } from "rxjs";
 import { selectedMinecraftVersion } from "./MinecraftApi";
 import { diffView } from "./Diff";
+import { resetPermalinkAffectingSettings, supportsPermalinking } from "./Settings";
 
 export interface State {
   version: number; // Allows us to change the permalink structure in the future
@@ -38,6 +39,8 @@ const getInitialState = (): State => {
     return DEFAULT_STATE;
   }
 
+  resetPermalinkAffectingSettings();
+
   const version = parseInt(segments[0], 10);
   let minecraftVersion = decodeURIComponent(segments[1]);
   const filePath = segments.slice(2).join('/');
@@ -62,8 +65,15 @@ export const selectedFile = state.pipe(
   distinctUntilChanged()
 );
 
-state.subscribe(s => {
+combineLatest([state, supportsPermalinking]).subscribe(([s, supported]) => {
   if (s.version == 0) {
+    return;
+  }
+
+  document.title = s.file.replace('.class', '');
+
+  if (!supported) {
+    window.history.replaceState({}, '', '');
     return;
   }
 
@@ -82,8 +92,6 @@ state.subscribe(s => {
   }
 
   window.history.replaceState({}, '', url);
-
-  document.title = s.file.replace('.class', '');
 });
 
 export function updateSelectedMinecraftVersion() {
