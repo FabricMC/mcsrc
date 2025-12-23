@@ -4,6 +4,13 @@ Note: This project is not affiliated with Mojang or Microsoft in any way. It doe
 
 ## How to build locally
 
+First you must build the wasm indexer using Gradle.
+
+- `cd indexer`
+- `./gradlew build`
+
+Then you can run the web app:
+
 - `nvm use` (or ensure you have the correct Node version, see `.nvmrc`)
 - `npm install`
 - `npm run dev`

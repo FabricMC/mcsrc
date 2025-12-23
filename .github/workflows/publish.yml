@@ -22,7 +22,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version-file: ".nvmrc"
-      - run: ./gradlew build buildWasmGC copyWasmGCRuntime
+      - run: ./gradlew build
         working-directory: indexer
       - run: npm ci
       - run: npm run build

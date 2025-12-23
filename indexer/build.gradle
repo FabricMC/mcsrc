@@ -30,3 +30,8 @@ teavm {
         optimization = org.teavm.gradle.api.OptimizationLevel.AGGRESSIVE
     }
 }
+
+tasks.named("build") {
+    dependsOn tasks.buildWasmGC
+    dependsOn tasks.copyWasmGCRuntime
+}
