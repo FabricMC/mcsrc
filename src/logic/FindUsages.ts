@@ -83,7 +83,7 @@ interface UsageNavigation {
 export const nextUsageNavigation = new BehaviorSubject<UsageNavigation | undefined>(undefined);
 
 export function goToUsage(query: UsageKey, usage: UsageString) {
-    const className = usage.slice(2).split(":")[0];
+    const className = usage.slice(2).split(":")[0].split('$')[0];
     openTab(className + ".class");
 
     if (usage.startsWith("c:")) {
