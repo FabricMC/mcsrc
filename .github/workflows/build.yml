@@ -14,6 +14,10 @@ jobs:
       - run: npm ci
       - run: npm run build
       - run: npm run test
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
 
   e2e-tests:
     needs: build
@@ -33,14 +37,11 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version-file: ".nvmrc"
-      - run: ./gradlew build
-        working-directory: java
-        if: runner.os != 'Windows'
-      - run: .\gradlew.bat build
-        working-directory: java
-        if: runner.os == 'Windows'
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
       - run: npm ci
-      - run: npm run build
       - run: npx playwright install --with-deps ${{ matrix.browser }}
       - run: npm run test:e2e -- --project=${{ matrix.browser }}
       - uses: actions/upload-artifact@v4

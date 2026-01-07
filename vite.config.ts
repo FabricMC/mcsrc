@@ -9,6 +9,9 @@ export default defineConfig({
     plugins: () => [comlink()],
     format: 'es',
   },
+  test: {
+    exclude: ['**/node_modules/**', '**/dist/**', 'tests/**'],
+  },
   // For javadoc API during development
   server: {
     proxy: {
