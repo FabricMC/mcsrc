@@ -1,4 +1,4 @@
-import { defineConfig } from 'vite';
+import { defineConfig } from 'vitest/config';
 import { comlink } from "vite-plugin-comlink";
 import react from '@vitejs/plugin-react';
 
