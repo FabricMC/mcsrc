@@ -14,3 +14,37 @@ jobs:
       - run: npm ci
       - run: npm run build
       - run: npm run test
+
+  e2e-tests:
+    needs: build
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            browser: chromium
+          - os: ubuntu-24.04
+            browser: firefox
+          - os: macos-latest
+            browser: webkit
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: ".nvmrc"
+      - run: ./gradlew build
+        working-directory: java
+        if: runner.os != 'Windows'
+      - run: .\gradlew.bat build
+        working-directory: java
+        if: runner.os == 'Windows'
+      - run: npm ci
+      - run: npm run build
+      - run: npx playwright install --with-deps ${{ matrix.browser }}
+      - run: npm run test:e2e -- --project=${{ matrix.browser }}
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: playwright-report-${{ matrix.os }}-${{ matrix.browser }}
+          path: playwright-report/

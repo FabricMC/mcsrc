@@ -9,7 +9,10 @@
     "build": "tsc -b && vite build",
     "build:javadoc": "tsc -b && vite build --mode javadoc",
     "preview": "vite preview",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:debug": "playwright test --debug"
   },
   "dependencies": {
     "@katana-project/zip": "^0.7.1",
@@ -22,6 +25,7 @@
     "rxjs": "^7.8.2"
   },
   "devDependencies": {
+    "@playwright/test": "^1.57.0",
     "@types/node": "^24.6.0",
     "@types/react": "^19.1.16",
     "@types/react-dom": "^19.1.9",
