@@ -490,7 +490,7 @@ const Code = () => {
         // Only provide a folding range if no viewState exists yet
         let foldingRange: IDisposable | undefined;
         const tab = openTabs.getValue().find(o => o.key === activeTabKey.getValue());
-        if (tab && tab.viewState === null && tab.model === null) {
+        if (tab && tab.viewState === null) {
             foldingRange = monaco.languages.registerFoldingRangeProvider("java", {
                 provideFoldingRanges: function (model: editor.ITextModel, context: languages.FoldingContext, token: CancellationToken): languages.ProviderResult<languages.FoldingRange[]> {
                     const lines = model.getLinesContent();
