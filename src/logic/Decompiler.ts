@@ -38,7 +38,6 @@ export function decompileResultPipeline(jar: Observable<MinecraftJar>): Observab
         bytecode.observable
     ]).pipe(
         distinctUntilChanged(),
-        tap(() => decompilerCounter.next(decompilerCounter.value + 1)),
         throttleTime(250),
         switchMap(([className, jar, displayLambdas, bytecode]) => {
             if (bytecode) {
@@ -76,7 +75,6 @@ export function decompileResultPipeline(jar: Observable<MinecraftJar>): Observab
                 })
             );
         }),
-        tap(() => decompilerCounter.next(decompilerCounter.value - 1)),
         shareReplay({ bufferSize: 1, refCount: false })
     );
 }
@@ -96,6 +94,8 @@ async function decompileClass(className: string, jar: Jar, options: Options): Pr
     }
 
     try {
+        decompilerCounter.next(decompilerCounter.value + 1);
+
         const tokens: Token[] = [];
         const source = await decompile(className.replace(".class", ""), {
             source: async (name: string) => {
@@ -120,6 +120,8 @@ async function decompileClass(className: string, jar: Jar, options: Options): Pr
     } catch (e) {
         console.error(`Error during decompilation of class '${className}':`, e);
         return { className, source: `// Error during decompilation: ${(e as Error).message}`, tokens: [], language: "java" };
+    } finally {
+        decompilerCounter.next(decompilerCounter.value - 1);
     }
 }
 
@@ -183,6 +185,8 @@ async function getClassBytecode(className: string, jar: Jar): Promise<DecompileR
     }
 
     try {
+        decompilerCounter.next(decompilerCounter.value + 1);
+
         const data = await jar.entries[className].bytes();
         classData.push(data.buffer);
 
@@ -200,5 +204,7 @@ async function getClassBytecode(className: string, jar: Jar): Promise<DecompileR
     } catch (e) {
         console.error(`Error during bytecode retrieval of class '${className}':`, e);
         return { className, source: `// Error during bytecode retrieval: ${(e as Error).message}`, tokens: [], language: "bytecode" };
+    } finally {
+        decompilerCounter.next(decompilerCounter.value - 1);
     }
 }

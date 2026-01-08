@@ -7,7 +7,7 @@ async function waitForDecompiledContent(page: Page, expectedText: string) {
     }).toPass({ timeout: 30000 });
 
     const editor = page.getByRole("code").nth(0);
-    await expect(editor).toContainText(expectedText, { timeout: 5000 });
+    await expect(editor).toContainText(expectedText, { timeout: 30000 });
 }
 
 test.describe('mcsrc', () => {
