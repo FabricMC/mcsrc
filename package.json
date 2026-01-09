@@ -18,8 +18,11 @@
     "@katana-project/zip": "^0.7.1",
     "@monaco-editor/react": "^4.7.0",
     "@run-slicer/vf": "^0.3.2-1.11.2",
+    "@types/dagre": "^0.7.53",
+    "@xyflow/react": "^12.10.0",
     "antd": "^5.28.0",
     "comlink": "^4.4.2",
+    "dagre": "^0.8.5",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "rxjs": "^7.8.2"

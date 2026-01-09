@@ -73,12 +73,12 @@ export class UsageIndex {
                             return;
                         }
 
-                        indexProgress.next(Math.round((++completed / classNames.length) * 100));
-
                         const entry = jar.entries[nextTask];
                         const data = await entry.bytes();
 
                         await worker.index(data.buffer);
+
+                        indexProgress.next(Math.round((++completed / classNames.length) * 100));
                     }
                 }));
             }

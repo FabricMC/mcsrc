@@ -24,6 +24,7 @@ import { getNextJumpToken, nextUsageNavigation, usageQuery } from '../logic/Find
 import { setupJavaBytecodeLanguage } from '../utils/JavaBytecode';
 import { IS_JAVADOC_EDITOR } from '../site';
 import { applyJavadocCodeExtensions } from '../javadoc/JavadocCodeExtensions';
+import { selectedInheritanceClassName } from '../logic/Inheritance';
 
 const IS_DEFINITION_CONTEXT_KEY_NAME = "is_definition";
 
@@ -372,11 +373,28 @@ const Code = () => {
             }
         });
 
+        const viewInheritance = monaco.editor.addEditorAction({
+            id: 'view_inheritance',
+            label: 'View Inheritance Hierarchy',
+            contextMenuGroupId: 'navigation',
+            run: async function (editor: editor.ICodeEditor, ...args: any[]): Promise<void> {
+                if (!decompileResultRef.current) {
+                    messageApi.error("No decompile result available for inheritance view.");
+                    return;
+                }
+
+                const className = decompileResultRef.current.className.replace('.class', '');
+                console.log(`Viewing inheritance for ${className}`);
+                selectedInheritanceClassName.next(className);
+            }
+        });
+
         const bytecode = setupJavaBytecodeLanguage(monaco);
 
         return () => {
             // Dispose in the oppsite order
             bytecode.dispose();
+            viewInheritance.dispose();
             viewUsages.dispose();
             copyMixin.dispose();
             copyAw.dispose();

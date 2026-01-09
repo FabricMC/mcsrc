@@ -22,4 +22,13 @@ export default defineConfig({
       },
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'inheritance': ['@xyflow/react', 'dagre'],
+        },
+      },
+    },
+  },
 });
