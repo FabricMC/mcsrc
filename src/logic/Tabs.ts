@@ -1,58 +1,43 @@
-import { BehaviorSubject, withLatestFrom } from "rxjs";
+import { BehaviorSubject } from "rxjs";
 import { setSelectedFile, state } from "./State";
-import { bytecode, displayLambdas, enableTabs } from "./Settings";
+import { enableTabs } from "./Settings";
 import { editor } from "monaco-editor";
-import { type DecompileResult } from "./Decompiler";
-import { selectedMinecraftVersion } from "./MinecraftApi";
 
 class Tab {
     public key: string;
     public scroll: number = 0;
 
-    public language: DecompileResult["language"];
-    private version: string | null = selectedMinecraftVersion.value;
-    private lambdas: boolean = displayLambdas.value;
     public viewState: editor.ICodeEditorViewState | null = null;
     public model: editor.ITextModel | null = null;
 
     constructor(key: string) {
         this.key = key;
-        this.language = bytecode.value ? "bytecode" : "java";
     }
 
-    /**
-     * Checks if cache is invalid.
-     * This is the case if the language or the version changed.
-     */
-    isViewValid(): boolean {
-        const lang = bytecode.value ? "bytecode" : "java";
-        if (
-            this.language === lang &&
-            this.version === selectedMinecraftVersion.value &&
-            this.lambdas === displayLambdas.value
-        ) return true;
-        return false;
-    }
+    isCachedModelEqualTo(model: editor.ITextModel): boolean {
+        if (this.model === null || this.model.isDisposed()) return false;
+        if (model === null || model.isDisposed()) return false;
+        if (this.model.getLanguageId() !== model.getLanguageId()) return false;
+        if (this.model.getLineCount() !== model.getLineCount()) return false;
 
-    invalidateView() {
-        if (this.isViewValid()) return;
-        this.language = bytecode.value ? "bytecode" : "java";
-        this.version = selectedMinecraftVersion.value;
-        this.lambdas = displayLambdas.value;
-        this.resetCachedView();
+        for (let i = 1; i <= this.model.getLineCount(); i++) {
+            if (this.model.getLineContent(i) !== model.getLineContent(i)) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     cacheView(
-        language: DecompileResult["language"],
         viewState: editor.ICodeEditorViewState | null,
         model: editor.ITextModel | null
     ) {
-        this.language = language;
         this.viewState = viewState;
         this.model = model;
     }
 
-    resetCachedView() {
+    invalidateCachedView() {
         this.viewState = null;
 
         if (!this.model) return;
@@ -108,7 +93,7 @@ export const closeTab = (key: string) => {
 
     const tab = openTabs.value.find(o => o.key === key);
 
-    tab?.resetCachedView();
+    tab?.invalidateCachedView();
     tabHistory.next(tabHistory.value.filter(v => v != key));
     const modifiedOpenTabs = openTabs.value.filter(v => v.key != key);
 

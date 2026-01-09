@@ -255,6 +255,8 @@ const Code = () => {
 
     const [messageApi, contextHolder] = message.useMessage();
 
+    const [resetViewTrigger, setResetViewTrigger] = useState(false);
+
     function applyTokenDecorations(model: editor.ITextModel) {
         if (!decompileResult) return;
 
@@ -288,6 +290,7 @@ const Code = () => {
         if (!monaco) return;
         if (!editorRef.current) return;
         const editor = editorRef.current;
+
         const definitionProvider = monaco.languages.registerDefinitionProvider("java", {
             provideDefinition(model, position, token) {
                 const { lineNumber, column } = position;
@@ -512,65 +515,61 @@ const Code = () => {
             }
         });
 
-        // provide a folding range if no viewState exists or the language changed
-        let foldingRange: IDisposable | undefined;
-        const tab = openTabs.getValue().find(o => o.key === activeTabKey.getValue());
-        if (tab && (tab.viewState === null || !tab.isViewValid())) {
-            foldingRange = monaco.languages.registerFoldingRangeProvider("java", {
-                provideFoldingRanges: function (model: editor.ITextModel, context: languages.FoldingContext, token: CancellationToken): languages.ProviderResult<languages.FoldingRange[]> {
-                    const lines = model.getLinesContent();
-                    let packageLine: number | null = null;
-                    let firstImportLine: number | null = null;
-                    let lastImportLine: number | null = null;
+        const foldingRange = monaco.languages.registerFoldingRangeProvider("java", {
+            provideFoldingRanges: function (model: editor.ITextModel, context: languages.FoldingContext, token: CancellationToken): languages.ProviderResult<languages.FoldingRange[]> {
+                const lines = model.getLinesContent();
+                let packageLine: number | null = null;
+                let firstImportLine: number | null = null;
+                let lastImportLine: number | null = null;
 
-                    for (let i = 0; i < lines.length; i++) {
-                        const trimmedLine = lines[i].trim();
-                        if (trimmedLine.startsWith('package ')) {
-                            packageLine = i + 1;
-                        } else if (trimmedLine.startsWith('import ')) {
-                            if (firstImportLine === null) {
-                                firstImportLine = i + 1;
-                            }
-                            lastImportLine = i + 1;
+                for (let i = 0; i < lines.length; i++) {
+                    const trimmedLine = lines[i].trim();
+                    if (trimmedLine.startsWith('package ')) {
+                        packageLine = i + 1;
+                    } else if (trimmedLine.startsWith('import ')) {
+                        if (firstImportLine === null) {
+                            firstImportLine = i + 1;
                         }
+                        lastImportLine = i + 1;
                     }
-
-                    // Check if there's any non-empty line after the last import
-                    // If not its likely a package-info and doesnt need folding.
-                    if (lastImportLine !== null) {
-                        let hasContentAfterImports = false;
-                        for (let i = lastImportLine; i < lines.length; i++) {
-                            if (lines[i].trim().length > 0) {
-                                hasContentAfterImports = true;
-                                break;
-                            }
-                        }
-
-                        if (!hasContentAfterImports) {
-                            return [];
-                        }
-                    }
-
-                    // Include the package line before imports to completely hide them when folded
-                    if (packageLine !== null && firstImportLine !== null && lastImportLine !== null) {
-                        return [{
-                            start: packageLine,
-                            end: lastImportLine,
-                            kind: monaco.languages.FoldingRangeKind.Imports
-                        }];
-                    } else if (firstImportLine !== null && lastImportLine !== null && firstImportLine < lastImportLine) {
-                        // Fallback if no package line exists
-                        return [{
-                            start: firstImportLine,
-                            end: lastImportLine,
-                            kind: monaco.languages.FoldingRangeKind.Imports
-                        }];
-                    }
-
-                    return [];
                 }
-            });
-        }
+
+                // Check if there's any non-empty line after the last import
+                // If not its likely a package-info and doesnt need folding.
+                if (lastImportLine !== null) {
+                    let hasContentAfterImports = false;
+                    for (let i = lastImportLine; i < lines.length; i++) {
+                        if (lines[i].trim().length > 0) {
+                            hasContentAfterImports = true;
+                            break;
+                        }
+                    }
+
+                    if (!hasContentAfterImports) {
+                        return [];
+                    }
+                }
+
+                // Include the package line before imports to completely hide them when folded
+                if (packageLine !== null && firstImportLine !== null && lastImportLine !== null) {
+                    return [{
+                        start: packageLine,
+                        end: lastImportLine,
+                        kind: monaco.languages.FoldingRangeKind.Imports
+                    }];
+                } else if (firstImportLine !== null && lastImportLine !== null && firstImportLine < lastImportLine) {
+                    // Fallback if no package line exists
+                    return [{
+                        start: firstImportLine,
+                        end: lastImportLine,
+                        kind: monaco.languages.FoldingRangeKind.Imports
+                    }];
+                }
+
+                return [];
+            }
+        });
+        // }
 
         const copyAw = monaco.editor.addEditorAction({
             id: 'copy_aw',
@@ -690,12 +689,12 @@ const Code = () => {
             viewUsages.dispose();
             copyMixin.dispose();
             copyAw.dispose();
-            foldingRange?.dispose();
+            foldingRange.dispose();
             editorOpener.dispose();
             hoverProvider.dispose();
             definitionProvider.dispose();
         };
-    }, [monaco, decompileResult, classList]);
+    }, [monaco, decompileResult, classList, resetViewTrigger]);
 
     if (IS_JAVADOC_EDITOR) {
         useEffect(() => {
@@ -788,8 +787,6 @@ const Code = () => {
         }
     }, [decompileResult, nextUsage]);
 
-    const [resetViewTrigger, setResetViewTrigger] = useState(false);
-
     // Subscribe to tab changes and store model & viewstate of previously opened tab
     useEffect(() => {
         const sub = activeTabKey.pipe(
@@ -799,9 +796,7 @@ const Code = () => {
             if (prev === curr) return;
 
             const previousTab = openTabs.getValue().find(o => o.key === prev);
-            const lang = bytecode.value ? "bytecode" : "java";
             previousTab?.cacheView(
-                lang,
                 editorRef.current?.saveViewState() || null,
                 editorRef.current?.getModel() || null
             );
@@ -811,9 +806,7 @@ const Code = () => {
         const sub2 = diffView.subscribe((open) => {
             const openTab = getOpenTab();
             if (open) {
-                const lang = bytecode.value ? "bytecode" : "java";
                 openTab?.cacheView(
-                    lang,
                     editorRef.current?.saveViewState() || null,
                     editorRef.current?.getModel() || null
                 );
@@ -821,9 +814,12 @@ const Code = () => {
                 if (!openTab) return;
                 setSelectedFile(openTab.key);
 
+                // While this is not perfect, it works because leaving the diff view
+                // makes the view invisible and doesn't apply any of the custom "extensions",
+                // manually forcing a rerender works ^-^
                 setTimeout(() => {
                     setResetViewTrigger(!resetViewTrigger);
-                }, 100); // sorry for the yank ^-^
+                }, 100);
             }
         });
 
@@ -836,29 +832,29 @@ const Code = () => {
     // Handles setting the model and viewstate of the editor
     useEffect(() => {
         if (diffView.value) return;
-
         if (!monaco || !decompileResult) return;
 
-        // Get open tab 
         const tab = getOpenTab();
         if (!tab) return;
-
         const lang = bytecode.value ? "bytecode" : "java";
 
-        if (!tab.isViewValid()) tab.invalidateView();
+        // Create new model with the current decompilation source
+        let newModel = monaco.editor.createModel(
+            decompileResult.source,
+            lang,
+            monaco.Uri.parse(`inmemory://${Date.now()}`)
+        );
 
-        let model;
-        const uri = monaco.Uri.parse(`inmemory://model/${tab.key}/${lang}`);
-        model = monaco?.editor.getModel(uri);
-
-        // Create model if it doesn't exist
-        if (!model) model = monaco.editor.createModel(decompileResult.source, lang, uri);
-        tab.model = model;
+        // Check if the model is different to the cached one. If yes -> invalidate view
+        if (!tab.isCachedModelEqualTo(newModel)) {
+            tab.invalidateCachedView();
+            tab.model = newModel;
+        } else {
+            newModel.dispose();
+        }
 
         if (editorRef.current) tab.applyViewToEditor(editorRef.current);
-
-        monaco.editor.setModelLanguage(model, bytecode.value ? "bytecode" : "java");
-        applyTokenDecorations(model);
+        applyTokenDecorations(tab.model!);
     }, [decompileResult, resetViewTrigger]);
 
     return (
@@ -885,6 +881,7 @@ const Code = () => {
                     minimap: { enabled: !hideMinimap },
                     glyphMargin: true,
                     foldingImportsByDefault: true,
+                    foldingHighlight: false
                 }}
                 onMount={(codeEditor) => {
                     editorRef.current = codeEditor;
