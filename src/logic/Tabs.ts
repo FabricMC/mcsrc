@@ -11,6 +11,7 @@ class Tab {
 
     public language: DecompileResult["language"];
     private version: string | null = selectedMinecraftVersion.value;
+    private lambdas: boolean = displayLambdas.value;
     public viewState: editor.ICodeEditorViewState | null = null;
     public model: editor.ITextModel | null = null;
 
@@ -25,7 +26,11 @@ class Tab {
      */
     isViewValid(): boolean {
         const lang = bytecode.value ? "bytecode" : "java";
-        if (this.language === lang && this.version === selectedMinecraftVersion.value) return true;
+        if (
+            this.language === lang &&
+            this.version === selectedMinecraftVersion.value &&
+            this.lambdas === displayLambdas.value
+        ) return true;
         return false;
     }
 
@@ -33,6 +38,7 @@ class Tab {
         if (this.isViewValid()) return;
         this.language = bytecode.value ? "bytecode" : "java";
         this.version = selectedMinecraftVersion.value;
+        this.lambdas = displayLambdas.value;
         this.resetCachedView();
     }
 
