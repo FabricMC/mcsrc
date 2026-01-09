@@ -56,6 +56,8 @@ const DiffCode = ({ height }: DiffCodeProps) => {
                 theme="vs-dark"
                 original={leftResult?.source}
                 modified={rightResult?.source}
+                keepCurrentModifiedModel={true}
+                keepCurrentOriginalModel={true}
                 onMount={(editor) => {
                     editorRef.current = editor;
                 }}
