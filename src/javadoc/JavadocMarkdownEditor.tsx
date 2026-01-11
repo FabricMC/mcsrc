@@ -3,7 +3,7 @@ import { useObservable } from "../utils/UseObservable";
 import { currentResult } from "../logic/Decompiler";
 import { useEffect, useRef } from "react";
 import type { editor } from "monaco-editor";
-import { JavdocCompletionProvider } from "./JavadocCmpletionProvider";
+import { JavdocCompletionProvider } from "./JavadocCompletionProvider";
 
 const JavadocMarkdownEditor = ({
     value,

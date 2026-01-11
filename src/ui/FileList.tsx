@@ -1,13 +1,14 @@
 import { Tree } from 'antd';
 import type { TreeDataNode, TreeProps } from 'antd';
-import { DownOutlined } from '@ant-design/icons';
+import { CaretDownFilled } from '@ant-design/icons';
 import { map, type Observable } from 'rxjs';
 import { classesList } from '../logic/JarFile';
 import { useObservable } from '../utils/UseObservable';
 import { selectedFile } from '../logic/State';
-import { useState } from 'react';
+import { useState, useEffect, useRef, useReducer } from 'react';
 import type { Key } from 'antd/es/table/interface';
 import { openTab } from '../logic/Tabs';
+import { showLines } from '../logic/Settings';
 
 // Sorts nodes with children first (directories before files), then alphabetically
 const sortTreeNodes = (nodes: TreeDataNode[] = []) => {
@@ -41,6 +42,7 @@ const data: Observable<TreeDataNode[]> = classesList.pipe(
                         title: part.replace('.class', ''),
                         key: parts.slice(0, index + 1).join('/'),
                         children: [],
+                        isLeaf: index === parts.length - 1,
                     };
                     currentLevel.push(existingNode);
                 }
@@ -76,8 +78,10 @@ const FileList = () => {
         setExpandedKeys(newExpandedKeys);
     };
 
+    const showLine = useObservable(showLines.observable);
     const selectedKeys = useObservable(selectedFileKeys);
     const classes = useObservable(classesList);
+
     const onSelect: TreeProps['onSelect'] = (selectedKeys) => {
         if (selectedKeys.length === 0) return;
         if (!classes || !classes.includes(selectedKeys[0] as string)) return;
@@ -90,15 +94,16 @@ const FileList = () => {
         setExpandedKeys(getPathKeys(selectedKeys[0]));
     }
 
+
     return (
-        <Tree
-            showLine
-            switcherIcon={<DownOutlined />}
+        <Tree.DirectoryTree
+            showLine={showLines.value}
+            switcherIcon={<CaretDownFilled />}
             selectedKeys={selectedKeys}
             onSelect={onSelect}
             treeData={treeData}
             expandedKeys={[...expandedKeys || []]}
-            onExpand={onExpand}
+            onExpand={setExpandedKeys}
             titleRender={(nodeData) => (
                 <span style={{ userSelect: "none" }}>{nodeData.title?.toString()}</span>
             )}
