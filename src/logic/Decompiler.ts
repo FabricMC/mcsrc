@@ -9,7 +9,7 @@ import { selectedFile } from "./State";
 import type { Jar } from "../utils/Jar";
 import type { Token } from "./Tokens";
 import { bytecode, displayLambdas } from "./Settings";
-import { getBytecode } from "../workers/UsageIndex";
+import { getBytecode } from "../workers/JarIndex";
 
 export interface DecompileResult {
     className: string;

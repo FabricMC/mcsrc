@@ -15,12 +15,15 @@ import java.util.*;
 public class Indexer {
     private static final Map<String, Set<String>> usages = new HashMap<>();
     private static int usageSize = 0;
+    
+    private static final Map<String, ClassInheritanceInfo> inheritanceData = new HashMap<>();
 
     @JSExport
     public static void index(ArrayBuffer arrayBuffer) {
         byte[] bytes = new Int8Array(arrayBuffer).copyToJavaArray();
         ClassReader classReader = new ClassReader(bytes);
-        classReader.accept(new ClassIndexVisitor(Opcodes.ASM9), 0);
+        // Use SKIP_FRAMES for faster parsing - we don't need stack map frames for indexing
+        classReader.accept(new ClassIndexVisitor(Opcodes.ASM9), ClassReader.SKIP_FRAMES);
     }
 
     @JSExport
@@ -64,5 +67,34 @@ public class Indexer {
 
     private static boolean isMinecraft(String str) {
         return str.startsWith("net/minecraft") || str.startsWith("com/mojang");
+    }
+    
+    public static void addClassData(String className, String superName, String[] interfaces, int accessFlags) {
+        ClassInheritanceInfo info = inheritanceData.computeIfAbsent(className, k -> new ClassInheritanceInfo());
+        info.className = className;
+        info.superName = superName;
+        info.interfaces = interfaces != null ? interfaces : new String[0];
+        info.accessFlags = accessFlags;
+    }
+    
+    @JSExport
+    public static String[] getClassData() {
+        List<String> result = new ArrayList<>();
+        for (ClassInheritanceInfo info : inheritanceData.values()) {
+            StringBuilder sb = new StringBuilder();
+            sb.append(info.className).append("|");
+            sb.append(info.superName != null ? info.superName : "").append("|");
+            sb.append(info.accessFlags).append("|");
+            sb.append(String.join(",", info.interfaces));
+            result.add(sb.toString());
+        }
+        return result.toArray(new String[0]);
+    }
+    
+    private static class ClassInheritanceInfo {
+        String className;
+        String superName;
+        String[] interfaces;
+        int accessFlags;
     }
 }

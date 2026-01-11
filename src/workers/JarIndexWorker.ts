@@ -1,6 +1,8 @@
 import { load } from "../../java/build/generated/teavm/wasm-gc/java.wasm-runtime.js";
 import indexerWasm from '../../java/build/generated/teavm/wasm-gc/java.wasm?url';
-import type { UsageKey, UsageString } from "./UsageIndex.js";
+import type { UsageKey, UsageString } from "./JarIndex.js";
+
+export type ClassDataString = `${string}|${string}|${number}|${string}`;
 
 let teavm: Awaited<ReturnType<typeof load>> | null = null;
 
@@ -31,9 +33,15 @@ export const getBytecode = async (classData: ArrayBufferLike[]): Promise<string>
     return indexer.getBytecode(classData);
 };
 
+export const getClassData = async (): Promise<ClassDataString[]> => {
+    const indexer = await getIndexer();
+    return indexer.getClassData();
+};
+
 interface Indexer {
     index(data: ArrayBufferLike): void;
     getUsage(key: UsageKey): [UsageString];
     getUsageSize(): number;
     getBytecode(classData: ArrayBufferLike[]): string;
+    getClassData(): ClassDataString[];
 }

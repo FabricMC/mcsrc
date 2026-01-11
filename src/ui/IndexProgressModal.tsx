@@ -1,33 +1,13 @@
 import { Modal, Progress } from "antd";
 import { useObservable } from "../utils/UseObservable";
 import { distinctUntilChanged } from "rxjs";
-import { indexProgress } from "../workers/UsageIndex";
-import { inheritanceIndexProgress } from "../logic/Inheritance";
-import { Observable } from "rxjs";
+import { indexProgress } from "../workers/JarIndex";
 
-const distinctUsageIndexProgress = indexProgress.pipe(distinctUntilChanged());
-const distinctInheritanceIndexProgress = inheritanceIndexProgress.pipe(distinctUntilChanged());
-
-const ObservableProgress = ({ observable, label }: { observable: Observable<number>; label: string; }) => {
-    const progress = useObservable(observable);
-    const percent = progress ?? -1;
-
-    if (percent < 0) {
-        return null;
-    }
-
-    return (
-        <div style={{ marginBottom: 16 }}>
-            <div style={{ marginBottom: 8 }}>{label}</div>
-            <Progress percent={percent} />
-        </div>
-    );
-};
+const distinctJarIndexProgress = indexProgress.pipe(distinctUntilChanged());
 
 const IndexProgressModal = () => {
-    const usageProgress = useObservable(distinctUsageIndexProgress) ?? -1;
-    const inheritanceProgress = useObservable(distinctInheritanceIndexProgress) ?? -1;
-    const isOpen = usageProgress >= 0 || inheritanceProgress >= 0;
+    const progress = useObservable(distinctJarIndexProgress) ?? -1;
+    const isOpen = progress >= 0;
 
     return (
         <Modal
@@ -37,14 +17,7 @@ const IndexProgressModal = () => {
             closable={false}
             width={750}
         >
-            <ObservableProgress
-                observable={distinctUsageIndexProgress}
-                label="Usage Index"
-            />
-            <ObservableProgress
-                observable={distinctInheritanceIndexProgress}
-                label="Inheritance Index"
-            />
+            <Progress percent={progress} />
         </Modal>
     );
 };

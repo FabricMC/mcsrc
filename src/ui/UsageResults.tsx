@@ -1,6 +1,6 @@
 import { useObservable } from "../utils/UseObservable";
 import { formatUsage, goToUsage, usageQuery, useageResults } from "../logic/FindUsages";
-import type { UsageString } from "../workers/UsageIndex";
+import type { UsageString } from "../workers/JarIndex";
 import { map, Observable } from "rxjs";
 import { openTab } from "../logic/Tabs";
 

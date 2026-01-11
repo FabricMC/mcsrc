@@ -1,6 +1,6 @@
-import { BehaviorSubject, distinctUntilChanged, from, map, of, shareReplay, switchMap } from "rxjs";
-import { parseClassfile } from "../utils/Classfile";
-import { minecraftJar, type MinecraftJar } from "./MinecraftApi";
+import { BehaviorSubject, combineLatest, distinctUntilChanged, map, of, shareReplay, switchMap } from "rxjs";
+import { jarIndex } from "../workers/JarIndex";
+import { minecraftJar } from "./MinecraftApi";
 
 export class ClassNode {
     readonly name: string;
@@ -55,52 +55,44 @@ export class InheritanceIndex {
     }
 }
 
-// Percent complete is total >= 0
-export const inheritanceIndexProgress = new BehaviorSubject<number>(-1);
 
-export async function buildInheritanceIndex(minecraftJar: MinecraftJar): Promise<InheritanceIndex> {
-    const index = new InheritanceIndex();
-
-    try {
-        inheritanceIndexProgress.next(0);
-
-        const jar = minecraftJar.jar;
-        const classNames = Object.keys(jar.entries)
-            .filter(name => name.endsWith(".class"));
-
-        for (const className of classNames) {
-            const entry = jar.entries[className];
-            const data = await entry.bytes();
-            const classInfo = parseClassfile(data);
-
-            const node = index.addClass(classInfo.name);
-            node.accessFlags = classInfo.accessFlags;
-
-            if (classInfo.superName) {
-                if (classNames.includes(classInfo.superName + ".class")) {
-                    index.addChildParentLink(classInfo.name, classInfo.superName);
-                }
-            }
-
-            for (const interfaceName of classInfo.interfaces) {
-                if (!classNames.includes(interfaceName + ".class")) continue;
-                index.addChildParentLink(classInfo.name, interfaceName);
-            }
-
-            inheritanceIndexProgress.next(Math.round((classNames.indexOf(className) / classNames.length) * 100));
-        }
-    } finally {
-        inheritanceIndexProgress.next(-1);
-    }
-
-    return index;
-}
 
 export const selectedInheritanceClassName = new BehaviorSubject<string | null>(null);
 
-export const inheritanceIndex = minecraftJar.pipe(
+export const inheritanceIndex = combineLatest([jarIndex, minecraftJar]).pipe(
     distinctUntilChanged(),
-    switchMap(minecraftJar => from(buildInheritanceIndex(minecraftJar))),
+    switchMap(async ([jarIndexInstance, jarInstance]) => {
+        const index = new InheritanceIndex();
+
+        const classDataArray = await jarIndexInstance.getClassData();
+        
+        const classNames = new Set(
+            Object.keys(jarInstance.jar.entries)
+                .filter(name => name.endsWith(".class"))
+                .map(name => name.slice(0, -6))
+        );
+
+        for (const classData of classDataArray) {
+            if (!classNames.has(classData.className)) {
+                continue;
+            }
+
+            const node = index.addClass(classData.className);
+            node.accessFlags = classData.accessFlags;
+
+            if (classData.superName && classData.superName.length > 0 && classNames.has(classData.superName)) {
+                index.addChildParentLink(classData.className, classData.superName);
+            }
+
+            for (const interfaceName of classData.interfaces) {
+                if (classNames.has(interfaceName)) {
+                    index.addChildParentLink(classData.className, interfaceName);
+                }
+            }
+        }
+
+        return index;
+    }),
     shareReplay({ bufferSize: 1, refCount: false })
 );
 

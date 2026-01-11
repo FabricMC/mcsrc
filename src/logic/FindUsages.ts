@@ -1,5 +1,5 @@
 import { BehaviorSubject, combineLatest, distinctUntilChanged, from, map, Observable, switchMap, throttleTime } from "rxjs";
-import { usageIndex, type UsageKey, type UsageString } from "../workers/UsageIndex";
+import { jarIndex, type UsageKey, type UsageString } from "../workers/JarIndex";
 import { openTab } from "./Tabs";
 import type { DecompileResult } from "./Decompiler";
 import type { Token } from "./Tokens";
@@ -14,7 +14,7 @@ export const useageResults = usageQuery
             if (!query) {
                 return from([[]]);
             }
-            return usageIndex.pipe(
+            return jarIndex.pipe(
                 switchMap((index) => from(index.getUsage(query)))
             );
         })

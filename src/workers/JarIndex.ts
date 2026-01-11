@@ -1,5 +1,6 @@
 import { BehaviorSubject, distinctUntilChanged, map, shareReplay } from "rxjs";
 import { minecraftJar, type MinecraftJar } from "../logic/MinecraftApi";
+import type { ClassDataString } from "./JarIndexWorker";
 
 export type Class = string;
 export type Method = `${string}:${string}:${string}`;
@@ -11,22 +12,40 @@ export type UsageString =
     | `m:${Method}`
     | `f:${Field}`;
 
-type UsageIndexWorker = typeof import("./UsageIndexWorker");
+export interface ClassData {
+    className: string;
+    superName: string;
+    accessFlags: number;
+    interfaces: string[];
+}
+
+export function parseClassData(data: ClassDataString): ClassData {
+    const [className, superName, accessFlagsStr, interfacesStr] = data.split("|");
+    return {
+        className,
+        superName,
+        accessFlags: parseInt(accessFlagsStr, 10),
+        interfaces: interfacesStr ? interfacesStr.split(",").filter(i => i.length > 0) : []
+    };
+}
+
+type JarIndexWorker = typeof import("./JarIndexWorker");
 
 // Percent complete is total >= 0
 export const indexProgress = new BehaviorSubject<number>(-1);
 
-export const usageIndex = minecraftJar.pipe(
+export const jarIndex = minecraftJar.pipe(
     distinctUntilChanged(),
-    map(jar => new UsageIndex(jar)),
+    map(jar => new JarIndex(jar)),
     shareReplay({ bufferSize: 1, refCount: false })
 );
 
-export class UsageIndex {
+export class JarIndex {
     readonly minecraftJar: MinecraftJar;
     readonly workers: ReturnType<typeof createWrorker>[];
 
     private indexPromise: Promise<void> | null = null;
+    private classDataCache: ClassData[] | null = null;
 
     constructor(minecraftJar: MinecraftJar) {
         this.minecraftJar = minecraftJar;
@@ -34,7 +53,7 @@ export class UsageIndex {
         const threads = navigator.hardwareConcurrency || 4;
         this.workers = Array.from({ length: threads }, () => createWrorker());
 
-        console.log(`Created UsageIndex with ${threads} workers`);
+        console.log(`Created JarIndex with ${threads} workers`);
     }
 
     async indexJar(): Promise<void> {
@@ -59,6 +78,7 @@ export class UsageIndex {
 
             let taskQueue = [...classNames];
             let completed = 0;
+            let lastProgressUpdate = 0;
 
             for (let i = 0; i < this.workers.length; i++) {
                 const worker = this.workers[i];
@@ -78,7 +98,14 @@ export class UsageIndex {
 
                         await worker.index(data.buffer);
 
-                        indexProgress.next(Math.round((++completed / classNames.length) * 100));
+                        completed++;
+                        
+                        // Only update progress every 1% or every 50 classes, whichever is smaller
+                        const progressThreshold = Math.max(1, Math.floor(classNames.length / 100));
+                        if (completed - lastProgressUpdate >= progressThreshold) {
+                            lastProgressUpdate = completed;
+                            indexProgress.next(Math.round((completed / classNames.length) * 100));
+                        }
                     }
                 }));
             }
@@ -108,9 +135,28 @@ export class UsageIndex {
 
         return Promise.all(results).then(arrays => arrays.flat());
     }
+
+    async getClassData(): Promise<ClassData[]> {
+        if (this.classDataCache) {
+            return this.classDataCache;
+        }
+
+        await this.indexJar();
+
+        let results: Promise<ClassDataString[]>[] = [];
+
+        for (const worker of this.workers) {
+            results.push(worker.getClassData());
+        }
+
+        const classDataStrings = await Promise.all(results).then(arrays => arrays.flat());
+        this.classDataCache = classDataStrings.map(parseClassData);
+        
+        return this.classDataCache;
+    }
 }
 
-let bytecodeWorker: UsageIndexWorker | null = null;
+let bytecodeWorker: JarIndexWorker | null = null;
 
 export async function getBytecode(classData: ArrayBufferLike[]): Promise<string> {
     if (!bytecodeWorker) {
@@ -120,8 +166,8 @@ export async function getBytecode(classData: ArrayBufferLike[]): Promise<string>
 }
 
 function createWrorker() {
-    return new ComlinkWorker<UsageIndexWorker>(
-        new URL("./UsageIndexWorker", import.meta.url),
+    return new ComlinkWorker<JarIndexWorker>(
+        new URL("./JarIndexWorker", import.meta.url),
         {
         }
     );
