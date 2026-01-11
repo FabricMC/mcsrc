@@ -1,6 +1,6 @@
 import { Tree } from 'antd';
 import type { TreeDataNode, TreeProps } from 'antd';
-import { DownOutlined } from '@ant-design/icons';
+import { CaretDownFilled } from '@ant-design/icons';
 import { map, type Observable } from 'rxjs';
 import { classesList } from '../logic/JarFile';
 import { useObservable } from '../utils/UseObservable';
@@ -41,6 +41,7 @@ const data: Observable<TreeDataNode[]> = classesList.pipe(
                         title: part.replace('.class', ''),
                         key: parts.slice(0, index + 1).join('/'),
                         children: [],
+                        isLeaf: index === parts.length - 1
                     };
                     currentLevel.push(existingNode);
                 }
@@ -72,9 +73,6 @@ function getPathKeys(filePath: string): Key[] {
 
 const FileList = () => {
     const [expandedKeys, setExpandedKeys] = useState<Key[]>();
-    const onExpand = (newExpandedKeys: Key[]) => {
-        setExpandedKeys(newExpandedKeys);
-    };
 
     const selectedKeys = useObservable(selectedFileKeys);
     const classes = useObservable(classesList);
@@ -91,14 +89,14 @@ const FileList = () => {
     }
 
     return (
-        <Tree
+        <Tree.DirectoryTree
             showLine
-            switcherIcon={<DownOutlined />}
+            switcherIcon={<CaretDownFilled />}
             selectedKeys={selectedKeys}
             onSelect={onSelect}
             treeData={treeData}
             expandedKeys={[...expandedKeys || []]}
-            onExpand={onExpand}
+            onExpand={setExpandedKeys}
             titleRender={(nodeData) => (
                 <span style={{ userSelect: "none" }}>{nodeData.title?.toString()}</span>
             )}

@@ -1,15 +1,16 @@
 import Editor, { useMonaco } from '@monaco-editor/react';
 import { useObservable } from '../utils/UseObservable';
 import { currentResult, type DecompileResult, isDecompiling } from '../logic/Decompiler';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { editor, Range } from "monaco-editor";
 import { isThin } from '../logic/Browser';
 import { classesList } from '../logic/JarFile';
-import { activeTabKey, openTabs, tabHistory } from '../logic/Tabs';
+import { activeTabKey, getOpenTab, openTabs, tabHistory } from '../logic/Tabs';
 import { message, Spin } from 'antd';
 import { LoadingOutlined } from '@ant-design/icons';
 import { setSelectedFile, state } from '../logic/State';
 import { getTokenLocation } from '../logic/Tokens';
+import { pairwise, startWith } from "rxjs";
 import { getNextJumpToken, nextUsageNavigation, usageQuery } from '../logic/FindUsages';
 import { setupJavaBytecodeLanguage } from '../utils/JavaBytecode';
 import { IS_JAVADOC_EDITOR } from '../site';
@@ -29,6 +30,8 @@ import {
     createEditorOpener,
     createFoldingRangeProvider
 } from './CodeExtensions';
+import { diffView } from '../logic/Diff';
+import { bytecode } from '../logic/Settings';
 
 const Code = () => {
     const monaco = useMonaco();
@@ -47,6 +50,31 @@ const Code = () => {
     const classListRef = useRef(classList);
 
     const [messageApi, contextHolder] = message.useMessage();
+
+    const [resetViewTrigger, setResetViewTrigger] = useState(false);
+
+    function applyTokenDecorations(model: editor.ITextModel) {
+        if (!decompileResult) return;
+
+        // Reapply token decorations for the current tab
+        if (editorRef.current && decompileResult.tokens) {
+            const decorations = decompileResult.tokens.map(token => {
+                const startPos = model.getPositionAt(token.start);
+                const endPos = model.getPositionAt(token.start + token.length);
+                const canGoTo = !token.declaration && classList && classList.includes(token.className + ".class");
+
+                return {
+                    range: new Range(startPos.lineNumber, startPos.column, endPos.lineNumber, endPos.column),
+                    options: {
+                        inlineClassName: token.type + '-token-decoration' + (canGoTo ? "-pointer" : "")
+                    }
+                };
+            });
+
+            decorationsCollectionRef.current?.clear();
+            decorationsCollectionRef.current = editorRef.current.createDecorationsCollection(decorations);
+        }
+    }
 
     // Keep refs updated
     useEffect(() => {
@@ -108,34 +136,7 @@ const Code = () => {
             hoverProvider.dispose();
             definitionProvider.dispose();
         };
-    }, [monaco, decompileResult, classList]);
-
-    useEffect(() => {
-        if (!editorRef.current || !decompileResult) return;
-
-        const editor = editorRef.current;
-        const model = editor.getModel();
-        if (!model) return;
-
-        const decorations = decompileResult.tokens.map(token => {
-            const startPos = model.getPositionAt(token.start);
-            const endPos = model.getPositionAt(token.start + token.length);
-            const canGoTo = !token.declaration && classList && classList.includes(token.className + ".class");
-
-            return {
-                range: new Range(startPos.lineNumber, startPos.column, endPos.lineNumber, endPos.column),
-                options: {
-                    //hoverMessage: { value: `Class: ${token.className}` },
-                    inlineClassName: token.type + '-token-decoration' + (canGoTo ? "-pointer" : "")
-                }
-            };
-        }, [classList]);
-
-        // Clean up previous collection
-        decorationsCollectionRef.current?.clear();
-        decorationsCollectionRef.current = editor.createDecorationsCollection(decorations);
-    }, [decompileResult]);
-
+    }, [monaco, decompileResult, classList, resetViewTrigger]);
 
     if (IS_JAVADOC_EDITOR) {
         useEffect(() => {
@@ -228,6 +229,76 @@ const Code = () => {
         }
     }, [decompileResult, nextUsage]);
 
+    // Subscribe to tab changes and store model & viewstate of previously opened tab
+    useEffect(() => {
+        const sub = activeTabKey.pipe(
+            startWith(activeTabKey.value),
+            pairwise()
+        ).subscribe(([prev, curr]) => {
+            if (prev === curr) return;
+
+            const previousTab = openTabs.getValue().find(o => o.key === prev);
+            previousTab?.cacheView(
+                editorRef.current?.saveViewState() || null,
+                editorRef.current?.getModel() || null
+            );
+        });
+
+        // Cache if diffview is opened and restore if it is closed;
+        const sub2 = diffView.subscribe((open) => {
+            const openTab = getOpenTab();
+            if (open) {
+                openTab?.cacheView(
+                    editorRef.current?.saveViewState() || null,
+                    editorRef.current?.getModel() || null
+                );
+            } else {
+                if (!openTab) return;
+                setSelectedFile(openTab.key);
+
+                // While this is not perfect, it works because leaving the diff view
+                // makes the view invisible and doesn't apply any of the custom "extensions",
+                // manually forcing a rerender works ^-^
+                setTimeout(() => {
+                    setResetViewTrigger(!resetViewTrigger);
+                }, 100);
+            }
+        });
+
+        return () => {
+            sub.unsubscribe();
+            sub2.unsubscribe();
+        };
+    }, []);
+
+    // Handles setting the model and viewstate of the editor
+    useEffect(() => {
+        if (diffView.value) return;
+        if (!monaco || !decompileResult) return;
+
+        const tab = getOpenTab();
+        if (!tab) return;
+        const lang = bytecode.value ? "bytecode" : "java";
+
+        // Create new model with the current decompilation source
+        let newModel = monaco.editor.createModel(
+            decompileResult.source,
+            lang,
+            monaco.Uri.parse(`inmemory://${Date.now()}`)
+        );
+
+        // Check if the model is different to the cached one. If yes -> invalidate view
+        if (!tab.isCachedModelEqualTo(newModel)) {
+            tab.invalidateCachedView();
+            tab.model = newModel;
+        } else {
+            newModel.dispose();
+        }
+
+        if (editorRef.current) tab.applyViewToEditor(editorRef.current);
+        applyTokenDecorations(tab.model!);
+    }, [decompileResult, resetViewTrigger]);
+
     return (
         <Spin
             indicator={<LoadingOutlined spin />}
@@ -245,7 +316,6 @@ const Code = () => {
                 defaultLanguage={"java"}
                 language={decompileResult?.language}
                 theme="vs-dark"
-                value={decompileResult?.source}
                 options={{
                     readOnly: true,
                     domReadOnly: true,
@@ -253,6 +323,7 @@ const Code = () => {
                     minimap: { enabled: !hideMinimap },
                     glyphMargin: true,
                     foldingImportsByDefault: true,
+                    foldingHighlight: false
                 }}
                 onMount={(codeEditor) => {
                     editorRef.current = codeEditor;
