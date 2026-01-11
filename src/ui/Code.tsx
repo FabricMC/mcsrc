@@ -284,7 +284,18 @@ const Code = () => {
             newModel.dispose();
         }
 
-        if (editorRef.current) tab.applyViewToEditor(editorRef.current);
+        // Only restore view state if there's no line to jump to
+        // Otherwise the line highlighting effect will handle scrolling
+        if (editorRef.current) {
+            if (!state.value?.line) {
+                tab.applyViewToEditor(editorRef.current);
+            } else {
+                // Just set the model without restoring view state
+                if (tab.model) {
+                    editorRef.current.setModel(tab.model);
+                }
+            }
+        }
         applyTokenDecorations(tab.model!);
     }, [decompileResult, resetViewTrigger]);
 
