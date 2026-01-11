@@ -41,8 +41,8 @@ export function jumpToToken(
 }
 
 export function createDefinitionProvider(
-    decompileResultRef: { current: DecompileResult | undefined },
-    classListRef: { current: string[] | undefined }
+    decompileResultRef: { current: DecompileResult | undefined; },
+    classListRef: { current: string[] | undefined; }
 ) {
     return {
         provideDefinition(model: editor.ITextModel, position: IPosition, token: CancellationToken) {
@@ -105,7 +105,7 @@ export function createDefinitionProvider(
 }
 
 export function createEditorOpener(
-    decompileResultRef: { current: DecompileResult | undefined }
+    decompileResultRef: { current: DecompileResult | undefined; }
 ) {
     return {
         openCodeEditor: function (editor: editor.ICodeEditor, resource: Uri, selectionOrPosition?: IRange | IPosition): boolean | Promise<boolean> {
@@ -149,58 +149,86 @@ export function createEditorOpener(
 }
 
 export function createFoldingRangeProvider(monaco: any) {
+    function getImportFoldingRanges(lines: string[]) {
+        let packageLine: number | null = null;
+        let firstImportLine: number | null = null;
+        let lastImportLine: number | null = null;
+
+        for (let i = 0; i < lines.length; i++) {
+            const trimmedLine = lines[i].trim();
+            if (trimmedLine.startsWith('package ')) {
+                packageLine = i + 1;
+            } else if (trimmedLine.startsWith('import ')) {
+                if (firstImportLine === null) {
+                    firstImportLine = i + 1;
+                }
+                lastImportLine = i + 1;
+            }
+        }
+
+        // Check if there's any non-empty line after the last import
+        // If not its likely a package-info and doesnt need folding.
+        if (lastImportLine !== null) {
+            let hasContentAfterImports = false;
+            for (let i = lastImportLine; i < lines.length; i++) {
+                if (lines[i].trim().length > 0) {
+                    hasContentAfterImports = true;
+                    break;
+                }
+            }
+
+            if (!hasContentAfterImports) {
+                return [];
+            }
+        }
+
+        // Include the package line before imports to completely hide them when folded
+        if (packageLine !== null && firstImportLine !== null && lastImportLine !== null) {
+            return [{
+                start: packageLine,
+                end: lastImportLine,
+                kind: monaco.languages.FoldingRangeKind.Imports
+            }];
+        } else if (firstImportLine !== null && lastImportLine !== null && firstImportLine < lastImportLine) {
+            // Fallback if no package line exists
+            return [{
+                start: firstImportLine,
+                end: lastImportLine,
+                kind: monaco.languages.FoldingRangeKind.Imports
+            }];
+        }
+
+        return [];
+    }
+
+    function getBracketFoldingRanges(lines: string[]) {
+        const ranges: languages.FoldingRange[] = [];
+
+        const stack = [];
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i];
+
+            // Note that we do start + 1, but not end + 1,
+            // so we always show the closing bracket.
+            for (const c of line) {
+                if (c === "{") {
+                    stack.push(i + 1);
+                } else if (c === "}") {
+                    const start = stack.pop();
+                    if (start !== undefined && start !== i) {
+                        ranges.push({ start: start, end: i });
+                    }
+                }
+            }
+        }
+
+        return ranges;
+    }
+
     return {
         provideFoldingRanges: function (model: editor.ITextModel, context: languages.FoldingContext, token: CancellationToken): languages.ProviderResult<languages.FoldingRange[]> {
             const lines = model.getLinesContent();
-            let packageLine: number | null = null;
-            let firstImportLine: number | null = null;
-            let lastImportLine: number | null = null;
-
-            for (let i = 0; i < lines.length; i++) {
-                const trimmedLine = lines[i].trim();
-                if (trimmedLine.startsWith('package ')) {
-                    packageLine = i + 1;
-                } else if (trimmedLine.startsWith('import ')) {
-                    if (firstImportLine === null) {
-                        firstImportLine = i + 1;
-                    }
-                    lastImportLine = i + 1;
-                }
-            }
-
-            // Check if there's any non-empty line after the last import
-            // If not its likely a package-info and doesnt need folding.
-            if (lastImportLine !== null) {
-                let hasContentAfterImports = false;
-                for (let i = lastImportLine; i < lines.length; i++) {
-                    if (lines[i].trim().length > 0) {
-                        hasContentAfterImports = true;
-                        break;
-                    }
-                }
-
-                if (!hasContentAfterImports) {
-                    return [];
-                }
-            }
-
-            // Include the package line before imports to completely hide them when folded
-            if (packageLine !== null && firstImportLine !== null && lastImportLine !== null) {
-                return [{
-                    start: packageLine,
-                    end: lastImportLine,
-                    kind: monaco.languages.FoldingRangeKind.Imports
-                }];
-            } else if (firstImportLine !== null && lastImportLine !== null && firstImportLine < lastImportLine) {
-                // Fallback if no package line exists
-                return [{
-                    start: firstImportLine,
-                    end: lastImportLine,
-                    kind: monaco.languages.FoldingRangeKind.Imports
-                }];
-            }
-
-            return [];
+            return [...getImportFoldingRanges(lines), ...getBracketFoldingRanges(lines)];
         }
     };
 }

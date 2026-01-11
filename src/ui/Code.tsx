@@ -86,9 +86,9 @@ const Code = () => {
         if (!monaco) return;
         if (!editorRef.current) return;
         const editor = editorRef.current;
-        
+
         const definitionProvider = monaco.languages.registerDefinitionProvider(
-            "java", 
+            "java",
             createDefinitionProvider(decompileResultRef, classListRef)
         );
 
@@ -185,18 +185,9 @@ const Code = () => {
                 }
             };
 
-            if (decompileResult.language !== "java") {
-                // For bytecode, no folding to wait for
+            // Use requestAnimationFrame to ensure Monaco has finished layout
+            requestAnimationFrame(() => {
                 executeScroll();
-                return;
-            }
-
-            // Wait for folding to complete and DOM to settle
-            editor.getAction('editor.foldAll')?.run().then(() => {
-                // Use requestAnimationFrame to ensure Monaco has finished layout
-                requestAnimationFrame(() => {
-                    executeScroll();
-                });
             });
         }
     }, [decompileResult, currentState?.line, currentState?.lineEnd]);
@@ -221,10 +212,8 @@ const Code = () => {
                 }
             };
 
-            editor.getAction('editor.foldAll')?.run().then(() => {
-                requestAnimationFrame(() => {
-                    executeScroll();
-                });
+            requestAnimationFrame(() => {
+                executeScroll();
             });
         }
     }, [decompileResult, nextUsage]);
@@ -327,12 +316,6 @@ const Code = () => {
                 }}
                 onMount={(codeEditor) => {
                     editorRef.current = codeEditor;
-
-                    // Fold imports by default (only for java code, not bytecode)
-                    if (decompileResult?.language === "java") {
-                        console.log("Folding imports");
-                        codeEditor.getAction('editor.foldAll')?.run();
-                    }
 
                     // Update context key when cursor position changes
                     // We use this to know when to show the options to copy AW/Mixin strings
