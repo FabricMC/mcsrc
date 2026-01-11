@@ -1,6 +1,7 @@
 import type { editor } from "monaco-editor";
-import type { DecompileResult } from '../logic/Decompiler';
-import { findTokenAtPosition } from './CodeUtils';
+import type { MinecraftJar } from "../logic/MinecraftApi";
+import { getUriDecompilationResult } from "./CodeExtensions";
+import { findTokenAtEditorPosition } from "./CodeUtils";
 
 export const IS_DEFINITION_CONTEXT_KEY_NAME = "is_definition";
 
@@ -9,9 +10,9 @@ async function setClipboard(text: string): Promise<void> {
 }
 
 export function createCopyAwAction(
-    decompileResultRef: { current: DecompileResult | undefined },
-    classListRef: { current: string[] | undefined },
-    messageApi: { error: (msg: string) => void; success: (msg: string) => void }
+    jar: MinecraftJar,
+    classListRef: { current: string[] | undefined; },
+    messageApi: { error: (msg: string) => void; success: (msg: string) => void; }
 ) {
     return {
         id: 'copy_aw',
@@ -19,7 +20,11 @@ export function createCopyAwAction(
         contextMenuGroupId: '9_cutcopypaste',
         precondition: IS_DEFINITION_CONTEXT_KEY_NAME,
         run: async function (editor: editor.ICodeEditor, ...args: any[]): Promise<void> {
-            const token = findTokenAtPosition(editor, decompileResultRef.current, classListRef.current);
+            const model = editor.getModel();
+            if (!model) return;
+            const result = await getUriDecompilationResult(jar, model.uri);
+
+            const token = findTokenAtEditorPosition(result, editor, classListRef.current);
             if (!token) {
                 messageApi.error("Failed to find token for Class Tweaker entry.");
                 return;
@@ -46,9 +51,9 @@ export function createCopyAwAction(
 }
 
 export function createCopyMixinAction(
-    decompileResultRef: { current: DecompileResult | undefined },
-    classListRef: { current: string[] | undefined },
-    messageApi: { error: (msg: string) => void; success: (msg: string) => void }
+    jar: MinecraftJar,
+    classListRef: { current: string[] | undefined; },
+    messageApi: { error: (msg: string) => void; success: (msg: string) => void; }
 ) {
     return {
         id: 'copy_mixin',
@@ -56,7 +61,11 @@ export function createCopyMixinAction(
         contextMenuGroupId: '9_cutcopypaste',
         precondition: IS_DEFINITION_CONTEXT_KEY_NAME,
         run: async function (editor: editor.ICodeEditor, ...args: any[]): Promise<void> {
-            const token = findTokenAtPosition(editor, decompileResultRef.current, classListRef.current);
+            const model = editor.getModel();
+            if (!model) return;
+            const result = await getUriDecompilationResult(jar, model.uri);
+
+            const token = findTokenAtEditorPosition(result, editor, classListRef.current);
             if (!token) {
                 messageApi.error("Failed to find token for Mixin target.");
                 return;
@@ -83,9 +92,9 @@ export function createCopyMixinAction(
 }
 
 export function createFindUsagesAction(
-    decompileResultRef: { current: DecompileResult | undefined },
-    classListRef: { current: string[] | undefined },
-    messageApi: { error: (msg: string) => void },
+    jar: MinecraftJar,
+    classListRef: { current: string[] | undefined; },
+    messageApi: { error: (msg: string) => void; },
     usageQueryNext: (value: string) => void
 ) {
     return {
@@ -95,7 +104,11 @@ export function createFindUsagesAction(
         contextMenuOrder: 1,
         precondition: IS_DEFINITION_CONTEXT_KEY_NAME,
         run: async function (editor: editor.ICodeEditor, ...args: any[]): Promise<void> {
-            const token = findTokenAtPosition(editor, decompileResultRef.current, classListRef.current);
+            const model = editor.getModel();
+            if (!model) return;
+            const result = await getUriDecompilationResult(jar, model.uri);
+
+            const token = findTokenAtEditorPosition(result, editor, classListRef.current);
             if (!token) {
                 messageApi.error("Failed to find token for usages.");
                 return;
@@ -120,8 +133,8 @@ export function createFindUsagesAction(
 }
 
 export function createViewInheritanceAction(
-    decompileResultRef: { current: DecompileResult | undefined },
-    messageApi: { error: (msg: string) => void },
+    jar: MinecraftJar,
+    messageApi: { error: (msg: string) => void; },
     selectedInheritanceClassNameNext: (value: string) => void
 ) {
     return {
@@ -130,12 +143,11 @@ export function createViewInheritanceAction(
         contextMenuGroupId: 'navigation',
         contextMenuOrder: 2,
         run: async function (editor: editor.ICodeEditor, ...args: any[]): Promise<void> {
-            if (!decompileResultRef.current) {
-                messageApi.error("No decompile result available for inheritance view.");
-                return;
-            }
+            const model = editor.getModel();
+            if (!model) return;
+            const result = await getUriDecompilationResult(jar, model.uri);
 
-            const className = decompileResultRef.current.className.replace('.class', '');
+            const className = result.className.replace('.class', '');
             console.log(`Viewing inheritance for ${className}`);
             selectedInheritanceClassNameNext(className);
         }

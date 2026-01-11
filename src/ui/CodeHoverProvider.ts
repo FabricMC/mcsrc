@@ -1,7 +1,7 @@
 import { editor, type IMarkdownString, type IPosition, Range } from "monaco-editor";
-import { type Token } from '../logic/Tokens';
-import type { DecompileResult } from '../logic/Decompiler';
-import { findTokenAtPosition } from './CodeUtils';
+import { findTokenAt } from './CodeUtils';
+import type { MinecraftJar } from "../logic/MinecraftApi";
+import { getUriDecompilationResult } from "./CodeExtensions";
 
 interface IntegerLiteral {
     value: number;
@@ -135,13 +135,13 @@ function parseDescriptor(descriptor: string): string {
 }
 
 export function createHoverProvider(
-    editorRef: { current: editor.ICodeEditor | null },
-    decompileResultRef: { current: DecompileResult | undefined },
-    classListRef: { current: string[] | undefined }
+    jar: MinecraftJar,
+    classListRef: { current: string[] | undefined; }
 ) {
     return {
-        provideHover(model: editor.ITextModel, position: IPosition) {
-            const token = findTokenAtPosition(editorRef.current!, decompileResultRef.current, classListRef.current, false);
+        async provideHover(model: editor.ITextModel, position: IPosition) {
+            const result = await getUriDecompilationResult(jar, model.uri);
+            const token = findTokenAt(result, model.getOffsetAt(position), classListRef.current, false);
 
             // Check for tokens first (classes, methods, fields, etc.)
             if (token) {

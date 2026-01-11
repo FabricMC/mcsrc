@@ -4,23 +4,28 @@ import {
     type CancellationToken,
     type IDisposable,
 } from "monaco-editor";
-import type { DecompileResult } from "../logic/Decompiler";
 import { getTokenLocation, type Token, type TokenLocation } from "../logic/Tokens";
 import { activeJavadocToken, getJavadocForToken, javadocData, refreshJavadocDataForClass, type JavadocData, type JavadocString } from "./Javadoc";
+import type { MinecraftJar } from "../logic/MinecraftApi";
+import { getUriDecompilationResult } from "../ui/CodeExtensions";
 
 type monaco = typeof import("monaco-editor");
 
 const EDIT_JAVADOC_COMMAND_ID = 'editor.action.editJavadoc';
 
-export function applyJavadocCodeExtensions(monaco: monaco, editor: editor.IStandaloneCodeEditor, decompile: DecompileResult): IDisposable {
+export function applyJavadocCodeExtensions(monaco: monaco, editor: editor.IStandaloneCodeEditor, jar: MinecraftJar): IDisposable {
     const viewZoneIds: string[] = [];
     const javadocDataSub = javadocData.subscribe((javadoc) => {
-        editor.changeViewZones((accessor) => {
+        editor.changeViewZones(async (accessor) => {
             // Remove any existing zones
             viewZoneIds.forEach(id => accessor.removeZone(id));
             viewZoneIds.length = 0;
 
-            decompile.tokens
+            const model = editor.getModel();
+            if (!model) return;
+            const result = await getUriDecompilationResult(jar, model.uri);
+
+            result.tokens
                 .filter(token => token.declaration)
                 .forEach(token => {
                     const mdValue = getJavadocForToken(token, javadoc);
@@ -31,7 +36,7 @@ export function applyJavadocCodeExtensions(monaco: monaco, editor: editor.IStand
                     const domNode = document.createElement('div');
                     domNode.innerHTML = `<span style="color: #6A9955;">${formatMarkdownAsHtml(mdValue, token)}</span>`;
 
-                    const location = getTokenLocation(decompile, token);
+                    const location = getTokenLocation(result, token);
                     const zoneId = accessor.addZone({
                         afterLineNumber: location.line - 1,
                         heightInPx: cacluateHeightInPx(domNode),
@@ -44,15 +49,17 @@ export function applyJavadocCodeExtensions(monaco: monaco, editor: editor.IStand
     });
 
     const codeLense = monaco.languages.registerCodeLensProvider("java", {
-        provideCodeLenses: function (model: editor.ITextModel, token: CancellationToken): languages.ProviderResult<languages.CodeLensList> {
+        provideCodeLenses: async function (model: editor.ITextModel, token: CancellationToken): Promise<languages.CodeLensList> {
+            const result = await getUriDecompilationResult(jar, model.uri);
+
             const lenses: languages.CodeLens[] = [];
 
-            for (const token of decompile.tokens) {
+            for (const token of result.tokens) {
                 if (!token.declaration || token.type == 'parameter' || token.type == 'local') {
                     continue;
                 }
 
-                const location = getTokenLocation(decompile, token);
+                const location = getTokenLocation(result, token);
                 lenses.push({
                     range: {
                         startLineNumber: location.line,
@@ -83,10 +90,6 @@ export function applyJavadocCodeExtensions(monaco: monaco, editor: editor.IStand
             const token: Token = args[0];
             activeJavadocToken.next(token);
         }
-    });
-
-    refreshJavadocDataForClass(decompile.className.replace(".class", "")).catch(err => {
-        console.error("Failed to refresh Javadoc data for class:", err);
     });
 
     return {

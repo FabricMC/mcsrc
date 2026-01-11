@@ -18,16 +18,55 @@ export interface DecompileResult {
     language: 'java' | 'bytecode';
 }
 
-const decompilerCounter = new BehaviorSubject<number>(0);
-
-export const isDecompiling = decompilerCounter.pipe(
-    map(count => count > 0),
-    distinctUntilChanged()
-);
+export const decompiling = new BehaviorSubject<string[]>([]);
+export const decompilerCounter = decompiling.pipe(map(classes => classes.length));
+export const isDecompiling = decompiling.pipe(map(classes => classes.length > 0));
 
 const DECOMPILER_OPTIONS: Options = {};
+const decompilationCache = new Map<string, Promise<DecompileResult>>();
 
-const decompilationCache = new Map<string, DecompileResult>();
+function makeCacheKey(version: string, className: string, option?: "bytecode" | "lambdas"): string {
+    let key = `${version}:${className}`;
+    if (option === "lambdas") key += ":lambdas";
+    if (option === "bytecode") key += ":bytecode";
+    return key;
+}
+
+export async function getDecompilationResult(
+    jar: MinecraftJar, className: string,
+    option?: "bytecode" | "lambdas"
+): Promise<DecompileResult> {
+    const key = makeCacheKey(jar.version, className, option);
+    const cached = decompilationCache.get(key);
+
+    if (cached) {
+        // Re-insert at end to refresh the cache.
+        decompilationCache.delete(key);
+        decompilationCache.set(key, cached);
+        return await cached;
+    }
+
+    try {
+        decompiling.next([...decompiling.value, key]);
+
+        if (option === "bytecode") {
+            const result = getClassBytecode(className, jar.jar);
+            decompilationCache.set(key, result);
+            return await result;
+        } else {
+            let options = { ...DECOMPILER_OPTIONS };
+            if (option === "lambdas") {
+                options["mark-corresponding-synthetics"] = "1";
+            }
+
+            const result = decompileClass(className, jar.jar, options);
+            decompilationCache.set(key, result);
+            return await result;
+        }
+    } finally {
+        decompiling.next(decompiling.value.filter(it => it !== key));
+    }
+}
 
 export const currentResult = decompileResultPipeline(minecraftJar);
 export function decompileResultPipeline(jar: Observable<MinecraftJar>): Observable<DecompileResult> {
@@ -39,42 +78,8 @@ export function decompileResultPipeline(jar: Observable<MinecraftJar>): Observab
     ]).pipe(
         distinctUntilChanged(),
         throttleTime(250),
-        switchMap(([className, jar, displayLambdas, bytecode]) => {
-            if (bytecode) {
-                return from(getClassBytecode(className, jar.jar));
-            }
-
-            let key = `${jar.version}:${className}`;
-
-            if (displayLambdas) {
-                key += ":lambdas";
-            }
-
-            const cached = decompilationCache.get(key);
-            if (cached) {
-                // Re-insert at end
-                decompilationCache.delete(key);
-                decompilationCache.set(key, cached);
-                return of(cached);
-            }
-
-            let options = { ...DECOMPILER_OPTIONS };
-
-            if (displayLambdas) {
-                options["mark-corresponding-synthetics"] = "1";
-            }
-
-            return from(decompileClass(className, jar.jar, options)).pipe(
-                tap(result => {
-                    // Store DecompilationResult in in-memory cache
-                    if (decompilationCache.size >= 75) {
-                        const firstKey = decompilationCache.keys().next().value;
-                        if (firstKey) decompilationCache.delete(firstKey);
-                    }
-                    decompilationCache.set(key, result);
-                })
-            );
-        }),
+        switchMap(([className, jar, displayLambdas, bytecode]) =>
+            from(getDecompilationResult(jar, className, bytecode ? "bytecode" : displayLambdas ? "lambdas" : undefined))),
         shareReplay({ bufferSize: 1, refCount: false })
     );
 }
@@ -94,8 +99,6 @@ async function decompileClass(className: string, jar: Jar, options: Options): Pr
     }
 
     try {
-        decompilerCounter.next(decompilerCounter.value + 1);
-
         const tokens: Token[] = [];
         const source = await decompile(className.replace(".class", ""), {
             source: async (name: string) => {
@@ -120,8 +123,6 @@ async function decompileClass(className: string, jar: Jar, options: Options): Pr
     } catch (e) {
         console.error(`Error during decompilation of class '${className}':`, e);
         return { className, source: `// Error during decompilation: ${(e as Error).message}`, tokens: [], language: "java" };
-    } finally {
-        decompilerCounter.next(decompilerCounter.value - 1);
     }
 }
 
@@ -185,8 +186,6 @@ async function getClassBytecode(className: string, jar: Jar): Promise<DecompileR
     }
 
     try {
-        decompilerCounter.next(decompilerCounter.value + 1);
-
         const data = await jar.entries[className].bytes();
         classData.push(data.buffer);
 
@@ -204,7 +203,5 @@ async function getClassBytecode(className: string, jar: Jar): Promise<DecompileR
     } catch (e) {
         console.error(`Error during bytecode retrieval of class '${className}':`, e);
         return { className, source: `// Error during bytecode retrieval: ${(e as Error).message}`, tokens: [], language: "bytecode" };
-    } finally {
-        decompilerCounter.next(decompilerCounter.value - 1);
     }
 }

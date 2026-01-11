@@ -1,34 +1,33 @@
 import { editor } from "monaco-editor";
 import { type Token } from '../logic/Tokens';
 
-export function findTokenAtPosition(
-    editor: editor.ICodeEditor,
+export function findTokenAtEditorPosition(
     decompileResult: { tokens: Token[]; } | undefined,
+    editor: editor.ICodeEditor,
     classList: string[] | undefined,
     useClassList = true
 ): Token | null {
     const model = editor.getModel();
-    if (!model || !decompileResult || (useClassList && !classList)) {
-        return null;
-    }
-
     const position = editor.getPosition();
-    if (!position) {
+    if (!model || !position) {
         return null;
     }
 
-    const { lineNumber, column } = position;
-    const lines = model.getLinesContent();
-    let charCount = 0;
-    let targetOffset = 0;
+    return findTokenAt(decompileResult, model.getOffsetAt(position), classList, useClassList);
+}
 
-    for (let i = 0; i < lineNumber - 1; i++) {
-        charCount += lines[i].length + 1; // +1 for \n
+export function findTokenAt(
+    decompileResult: { tokens: Token[]; } | undefined,
+    offset: number,
+    classList: string[] | undefined,
+    useClassList = true
+): Token | null {
+    if (!decompileResult || (useClassList && !classList)) {
+        return null;
     }
-    targetOffset = charCount + (column - 1);
 
     for (const token of decompileResult.tokens) {
-        if (targetOffset >= token.start && targetOffset <= token.start + token.length) {
+        if (offset >= token.start && offset <= token.start + token.length) {
             const baseClassName = token.className.split('$')[0];
             const className = baseClassName + ".class";
             if (!useClassList || classList!.includes(className)) {
@@ -36,7 +35,7 @@ export function findTokenAtPosition(
             }
         }
 
-        if (token.start > targetOffset) {
+        if (token.start > offset) {
             break;
         }
     }

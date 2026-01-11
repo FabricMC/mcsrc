@@ -1,18 +1,30 @@
 import type { CancellationToken, IDisposable, IPosition, IRange, languages } from "monaco-editor";
 import { editor, Range, Uri } from "monaco-editor";
 import type { DecompileResult } from '../logic/Decompiler';
-import { currentResult } from '../logic/Decompiler';
+import { currentResult, getDecompilationResult } from '../logic/Decompiler';
 import { activeTabKey, openTab } from '../logic/Tabs';
-import { getTokenLocation, type Token } from '../logic/Tokens';
+import { getTokenLocation } from '../logic/Tokens';
 import { filter, take } from "rxjs";
+import type { MinecraftJar } from "../logic/MinecraftApi";
 
-export function jumpToToken(
-    result: DecompileResult,
+export async function getUriDecompilationResult(jar: MinecraftJar, uri: Uri): Promise<DecompileResult> {
+    const options = new URLSearchParams(uri.query);
+    const option = options.has("bytecode") ? "bytecode" : options.has("lambdas") ? "lambdas" : undefined;
+
+    return await getDecompilationResult(jar, uri.path, option);
+}
+
+export async function jumpToToken(
+    jar: MinecraftJar,
     targetType: 'method' | 'field' | 'class',
     target: string,
     editor: editor.ICodeEditor,
     sameFile = false
 ) {
+    const model = editor.getModel();
+    if (!model) return;
+    const result = await getUriDecompilationResult(jar, model.uri);
+
     for (const token of result.tokens) {
         if (!(token.declaration && token.type == targetType)) continue;
         if (
@@ -41,19 +53,16 @@ export function jumpToToken(
 }
 
 export function createDefinitionProvider(
-    decompileResultRef: { current: DecompileResult | undefined; },
+    jar: MinecraftJar,
     classListRef: { current: string[] | undefined; }
 ) {
     return {
-        provideDefinition(model: editor.ITextModel, position: IPosition, token: CancellationToken) {
+        async provideDefinition(model: editor.ITextModel, position: IPosition, token: CancellationToken) {
             const { lineNumber, column } = position;
 
-            if (!decompileResultRef.current) {
-                console.error("No decompile result available for definition provider.");
-                return null;
-            }
+            const result = await getUriDecompilationResult(jar, model.uri);
+            if (!result) return;
 
-            const decompileResult = decompileResultRef.current;
             const classList = classListRef.current;
 
             const lines = model.getLinesContent();
@@ -65,7 +74,7 @@ export function createDefinitionProvider(
             }
             targetOffset = charCount + (column - 1);
 
-            for (const token of decompileResult.tokens) {
+            for (const token of result.tokens) {
                 if (token.declaration) {
                     continue;
                 }
@@ -104,11 +113,9 @@ export function createDefinitionProvider(
     };
 }
 
-export function createEditorOpener(
-    decompileResultRef: { current: DecompileResult | undefined; }
-) {
+export function createEditorOpener(jar: MinecraftJar) {
     return {
-        openCodeEditor: function (editor: editor.ICodeEditor, resource: Uri, selectionOrPosition?: IRange | IPosition): boolean | Promise<boolean> {
+        openCodeEditor: async function (editor: editor.ICodeEditor, resource: Uri, selectionOrPosition?: IRange | IPosition): Promise<boolean> {
             if (!resource.scheme.startsWith("goto")) {
                 return false;
             }
@@ -123,22 +130,22 @@ export function createEditorOpener(
             if (fragment.length === 2) {
                 const [targetType, target] = fragment;
                 if (jumpInSameFile) {
-                    jumpToToken(decompileResultRef.current!, targetType, target, editor, true);
+                    jumpToToken(jar, targetType, target, editor, true);
                 } else {
                     const subscription = currentResult.pipe(filter(value => value.className === baseClassName), take(1)).subscribe(value => {
                         subscription.unsubscribe();
-                        jumpToToken(value, targetType, target, editor);
+                        jumpToToken(jar, targetType, target, editor);
                     });
                 }
             } else if (baseClassName != className) {
                 // Handle inner class navigation
                 const innerClassName = className.replace('.class', '');
                 if (jumpInSameFile) {
-                    jumpToToken(decompileResultRef.current!, 'class', innerClassName, editor, true);
+                    jumpToToken(jar, 'class', innerClassName, editor, true);
                 } else {
                     const subscription = currentResult.pipe(filter(value => value.className === baseClassName), take(1)).subscribe(value => {
                         subscription.unsubscribe();
-                        jumpToToken(value, 'class', innerClassName, editor);
+                        jumpToToken(jar, 'class', innerClassName, editor);
                     });
                 }
             }
