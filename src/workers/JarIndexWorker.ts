@@ -4,13 +4,19 @@ import type { UsageKey, UsageString } from "./JarIndex.js";
 
 export type ClassDataString = `${string}|${string}|${number}|${string}`;
 
-let teavm: Awaited<ReturnType<typeof load>> | null = null;
+let indexerFunc: Indexer | null = null;
 
 const getIndexer = async (): Promise<Indexer> => {
-    if (!teavm) {
-        teavm = await load(indexerWasm);
+    if (!indexerFunc) {
+        try {
+            const teavm = await load(indexerWasm);
+            indexerFunc = teavm.exports as Indexer;
+        } catch (e) {
+            console.warn("Failed to load WASM module (non-compliant browser?), falling back to JS implementation", e);
+            indexerFunc = await import("../../java/build/generated/teavm/js/java.js") as unknown as Indexer;
+        }
     }
-    return teavm.exports as Indexer;
+    return indexerFunc;
 };
 
 export const index = async (data: ArrayBufferLike): Promise<void> => {

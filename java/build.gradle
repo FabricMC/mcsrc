@@ -24,6 +24,10 @@ teavm {
     all {
         mainClass = "mcsrc.Indexer"
     }
+    js {
+        moduleType = org.teavm.gradle.api.JSModuleType.ES2015
+        optimization = org.teavm.gradle.api.OptimizationLevel.AGGRESSIVE
+    }
     wasmGC {
         addedToWebApp = true
         modularRuntime = true
@@ -33,6 +37,7 @@ teavm {
 }
 
 tasks.named("build") {
-    dependsOn tasks.buildWasmGC
+    dependsOn tasks.generateJavaScript
+    dependsOn tasks.generateWasmGC
     dependsOn tasks.copyWasmGCRuntime
 }
