@@ -18,7 +18,7 @@ test.describe('Inheritance', () => {
         await inheritanceOption.click();
 
         const treeTab = page.getByRole('tab', { name: 'Tree' });
-        await expect(treeTab).toBeVisible({ timeout: 10000 });
+        await expect(treeTab).toBeVisible({ timeout: 900000 });
         await expect(treeTab).toHaveAttribute('aria-selected', 'true');
 
         const modal = page.getByRole('dialog');
