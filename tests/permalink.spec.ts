@@ -1,36 +1,9 @@
-import { test, expect, Page } from '@playwright/test';
+import { test, expect } from '@playwright/test';
+import { waitForDecompiledContent, setupTest } from './test-utils';
 
-async function waitForDecompiledContent(page: Page, expectedText: string) {
-    await expect(async () => {
-        const decompiling = page.getByText('Decompiling...');
-        await expect(decompiling).toBeHidden();
-    }).toPass({ timeout: 30000 });
-
-    const editor = page.getByRole("code").nth(0);
-    await expect(editor).toContainText(expectedText, { timeout: 30000 });
-}
-
-test.describe('mcsrc', () => {
+test.describe('Permalinks and Line Highlighting', () => {
     test.beforeEach(async ({ page }) => {
-        await page.addInitScript(() => {
-            localStorage.setItem('setting_eula', 'true');
-        });
-    });
-
-    test('Decompiles class', async ({ page }) => {
-        await page.goto('/');
-        await waitForDecompiledContent(page, 'enum ChatFormatting');
-    });
-
-    test('Searches and decompiles Minecraft class', async ({ page }) => {
-        await page.goto('/');
-        const searchBox = page.getByRole('searchbox', { name: 'Search classes' });
-        await searchBox.fill('Minecraft');
-
-        const searchResult = page.getByText('net/minecraft/client/Minecraft', { exact: true });
-        await searchResult.click();
-
-        await waitForDecompiledContent(page, 'class Minecraft');
+        await setupTest(page);
     });
 
     test('Permalink with line range highlights multiple lines', async ({ page }) => {
