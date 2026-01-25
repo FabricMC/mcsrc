@@ -32,6 +32,7 @@ interface VersionManifest {
 export interface MinecraftJar {
     version: string;
     jar: Jar;
+    blob: Blob;
 }
 
 export const minecraftVersions = new BehaviorSubject<VersionListEntry[]>([]);
@@ -124,7 +125,7 @@ async function downloadMinecraftJar(version: VersionListEntry, progress: Behavio
         const blob = await response.blob();
         const jar = await openJar(blob);
         progress.next(undefined);
-        return { version: version.id, jar };
+        return { version: version.id, jar, blob };
     }
 
     const reader = response.body.getReader();
@@ -145,14 +146,7 @@ async function downloadMinecraftJar(version: VersionListEntry, progress: Behavio
     const blob = new Blob(chunks);
     const jar = await openJar(blob);
     progress.next(undefined);
-    return { version: version.id, jar };
-}
-
-// TODO add an option to stream the Minecraft jar, this may add additional latency but will remove the inital large download time
-async function streamMinecraftJar(version: VersionListEntry): Promise<MinecraftJar> {
-    const versionManifest = await fetchVersionManifest(version);
-    const jar = await streamJar(versionManifest.downloads.client.url);
-    return { version: version.id, jar };
+    return { version: version.id, jar, blob };
 }
 
 async function initialize(version: string | null = null) {
