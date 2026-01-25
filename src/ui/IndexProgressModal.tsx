@@ -1,9 +1,12 @@
 import { Modal, Progress } from "antd";
 import { useObservable } from "../utils/UseObservable";
-import { distinctUntilChanged } from "rxjs";
+import { distinctUntilChanged, map } from "rxjs";
 import { indexProgress } from "../workers/JarIndex";
 
-const distinctJarIndexProgress = indexProgress.pipe(distinctUntilChanged());
+const distinctJarIndexProgress = indexProgress.pipe(
+    map(Math.round),
+    distinctUntilChanged()
+);
 
 const IndexProgressModal = () => {
     const progress = useObservable(distinctJarIndexProgress) ?? -1;

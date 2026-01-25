@@ -40,6 +40,9 @@ export const jarIndex = minecraftJar.pipe(
     shareReplay({ bufferSize: 1, refCount: false })
 );
 
+// Number of classes to send to each worker in a single batch
+const batchSize = 25;
+
 export class JarIndex {
     readonly minecraftJar: MinecraftJar;
     readonly workers: ReturnType<typeof createWrorker>[];
@@ -70,6 +73,9 @@ export class JarIndex {
             indexProgress.next(0);
             console.log(`Indexing minecraft jar using ${this.workers.length} workers`);
 
+            // Initialize all workers in parallel
+            await Promise.all(this.workers.map(worker => worker.setWorkerJar(this.minecraftJar.blob)));
+
             const jar = this.minecraftJar.jar;
             const classNames = Object.keys(jar.entries)
                 .filter(name => name.endsWith(".class"));
@@ -78,34 +84,24 @@ export class JarIndex {
 
             let taskQueue = [...classNames];
             let completed = 0;
-            let lastProgressUpdate = 0;
 
             for (let i = 0; i < this.workers.length; i++) {
                 const worker = this.workers[i];
 
                 promises.push(new Promise(async (resolve) => {
                     while (true) {
-                        const nextTask = taskQueue.pop();
+                        const batch = taskQueue.splice(0, batchSize);
 
-                        if (!nextTask) {
-                            const indexed = worker.getUsageSize();
+                        if (batch.length === 0) {
+                            const indexed = await worker.getUsageSize();
                             resolve(indexed);
                             return;
                         }
 
-                        const entry = jar.entries[nextTask];
-                        const data = await entry.bytes();
+                        await worker.indexBatch(batch);
+                        completed += batch.length;
 
-                        await worker.index(data.buffer);
-
-                        completed++;
-                        
-                        // Only update progress every 1% or every 50 classes, whichever is smaller
-                        const progressThreshold = Math.max(1, Math.floor(classNames.length / 100));
-                        if (completed - lastProgressUpdate >= progressThreshold) {
-                            lastProgressUpdate = completed;
-                            indexProgress.next(Math.round((completed / classNames.length) * 100));
-                        }
+                        indexProgress.next(Math.round((completed / classNames.length) * 100));
                     }
                 }));
             }
@@ -151,7 +147,7 @@ export class JarIndex {
 
         const classDataStrings = await Promise.all(results).then(arrays => arrays.flat());
         this.classDataCache = classDataStrings.map(parseClassData);
-        
+
         return this.classDataCache;
     }
 }
