@@ -74,7 +74,7 @@ function formatColorPreview(rgba: { r: number; g: number; b: number; a: number; 
     return `<span style="color:${hexColor};">rgba(${r}, ${g}, ${b}, ${alpha})</span>`;
 }
 
-function parseDescriptor(descriptor: string): string {
+export function parseDescriptor(descriptor: string): string {
     // Parse method descriptor like "(Ljava/lang/String;I)V" or field descriptor like "Ljava/lang/String;"
     const typeMap: Record<string, string> = {
         'V': 'void',

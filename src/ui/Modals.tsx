@@ -5,6 +5,7 @@ import InheritanceModal from "./inheritance/InheritanceModal";
 import ProgressModal from "./ProgressModal";
 import AboutModal from "./AboutModal";
 import SettingsModal from "./SettingsModal";
+import StructureModal from "./StructureModal";
 
 const Modals = () => {
     return (
@@ -16,6 +17,7 @@ const Modals = () => {
             <InheritanceModal />
             <AboutModal />
             <SettingsModal />
+            <StructureModal />
         </>
     );
 };

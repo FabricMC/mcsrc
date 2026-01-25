@@ -87,3 +87,8 @@ html, body {margin: 0; height: 100%; overflow: hidden}
 .ant-tree-title {
     white-space: nowrap;
 }
+
+/* Don't have text overflow in the structure dialog */
+.structure-tree {
+  overflow: auto;
+}

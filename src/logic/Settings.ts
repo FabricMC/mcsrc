@@ -115,6 +115,7 @@ export const enableTabs = new BooleanSetting('enable_tabs', true);
 export const displayLambdas = new BooleanSetting('display_lambdas', false);
 export const bytecode = new BooleanSetting('bytecode', false);
 export const focusSearch = new KeybindSetting('focus_search', 'Ctrl+ ');
+export const showStructure = new KeybindSetting('show_structure', 'Ctrl+F12');
 
 export const supportsPermalinking = combineLatest([displayLambdas.observable, bytecode.observable]).pipe(
     map(([lambdaDisplay, bytecode]) => {

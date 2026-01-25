@@ -2,7 +2,7 @@ import { Button, Modal, type CheckboxProps, Form, Tooltip } from "antd";
 import { SettingOutlined } from '@ant-design/icons';
 import { Checkbox } from 'antd';
 import { useObservable } from "../utils/UseObservable";
-import { BooleanSetting, enableTabs, displayLambdas, focusSearch, KeybindSetting, type KeybindValue, bytecode } from "../logic/Settings";
+import { BooleanSetting, enableTabs, displayLambdas, focusSearch, KeybindSetting, type KeybindValue, bytecode, showStructure } from "../logic/Settings";
 import { capturingKeybind, rawKeydownEvent } from "../logic/Keybinds";
 import { BehaviorSubject } from "rxjs";
 
@@ -32,7 +32,8 @@ const SettingsModal = () => {
                 <BooleanToggle setting={enableTabs} title={"Enable Tabs"} />
                 <BooleanToggle setting={displayLambdas} title={"Lambda Names"} tooltip="Display lambda names as inline comments. Does not support permalinking." disabled={bytecodeValue} />
                 <BooleanToggle setting={bytecode} title={"Show Bytecode"} tooltip="Show bytecode instructions alongside decompiled source. Does not support permalinking." disabled={displayLambdasValue} />
-                <KeybindControl setting={focusSearch} title={"Focus Search"} />
+                <KeybindControl setting={focusSearch} title={"Focus Search"} captureId="focus_search" />
+                <KeybindControl setting={showStructure} title={"Show Structure"} captureId="show_structure" />
             </Form>
         </Modal>
     );
@@ -63,14 +64,19 @@ const BooleanToggle: React.FC<BooleanToggleProps> = ({ setting, title, tooltip, 
 interface KeybindProps {
     setting: KeybindSetting;
     title: string;
+    captureId: string;
 }
 
-const KeybindControl: React.FC<KeybindProps> = ({ setting, title }) => {
+const KeybindControl: React.FC<KeybindProps> = ({ setting, title, captureId }) => {
     const value = useObservable(setting.observable);
     const capturing = useObservable(capturingKeybind);
+    const isCapturing = capturing === captureId;
 
     const startCapture = () => {
-        capturingKeybind.next(true);
+        if (capturingKeybind.value !== null) {
+            return;
+        }
+        capturingKeybind.next(captureId);
         const subscription = rawKeydownEvent.subscribe((event) => {
             event.preventDefault();
 
@@ -78,7 +84,7 @@ const KeybindControl: React.FC<KeybindProps> = ({ setting, title }) => {
             const modifierKeys = ['Control', 'Alt', 'Shift', 'Meta'];
             if (!modifierKeys.includes(event.key)) {
                 setting.setFromEvent(event);
-                capturingKeybind.next(false);
+                capturingKeybind.next(null);
                 subscription.unsubscribe();
             }
         });
@@ -97,9 +103,9 @@ const KeybindControl: React.FC<KeybindProps> = ({ setting, title }) => {
         <Form.Item label={title}>
             <Button
                 onClick={startCapture}
-                type={capturing ? 'primary' : 'default'}
+                type={isCapturing ? 'primary' : 'default'}
             >
-                {capturing ? 'Press keys...' : formatKeybind(value)}
+                {isCapturing ? 'Press keys...' : formatKeybind(value)}
             </Button>
             <Button
                 onClick={() => setting.reset()}
