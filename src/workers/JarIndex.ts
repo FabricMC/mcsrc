@@ -1,4 +1,5 @@
 import { BehaviorSubject, distinctUntilChanged, map, shareReplay } from "rxjs";
+import { endpointSymbol } from "vite-plugin-comlink/symbol";
 import { minecraftJar, type MinecraftJar } from "../logic/MinecraftApi";
 import type { ClassDataString } from "./JarIndexWorker";
 
@@ -34,9 +35,20 @@ type JarIndexWorker = typeof import("./JarIndexWorker");
 // Percent complete is total >= 0
 export const indexProgress = new BehaviorSubject<number>(-1);
 
+let currentJarIndex: JarIndex | null = null;
+
 export const jarIndex = minecraftJar.pipe(
     distinctUntilChanged(),
-    map(jar => new JarIndex(jar)),
+    map(jar => {
+        // Clean up the previous JarIndex instance
+        if (currentJarIndex) {
+            currentJarIndex.destroy();
+        }
+
+        const newIndex = new JarIndex(jar);
+        currentJarIndex = newIndex;
+        return newIndex;
+    }),
     shareReplay({ bufferSize: 1, refCount: false })
 );
 
@@ -57,6 +69,15 @@ export class JarIndex {
         this.workers = Array.from({ length: threads }, () => createWrorker());
 
         console.log(`Created JarIndex with ${threads} workers`);
+    }
+
+    destroy(): void {
+        for (const worker of this.workers) {
+            worker[endpointSymbol].terminate();
+        }
+        this.workers.length = 0;
+        this.classDataCache = null;
+        this.indexPromise = null;
     }
 
     async indexJar(): Promise<void> {
@@ -117,6 +138,8 @@ export class JarIndex {
             // Reset promise on error so indexing can be retried
             this.indexPromise = null;
             throw error;
+        } finally {
+            await Promise.all(this.workers.map(worker => worker.setWorkerJar(null)));
         }
     }
 

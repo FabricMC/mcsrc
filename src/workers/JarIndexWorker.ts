@@ -22,7 +22,12 @@ const getIndexer = async (): Promise<Indexer> => {
 
 let jar: Jar | null = null;
 
-export const setWorkerJar = async (blob: Blob) => {
+export const setWorkerJar = async (blob: Blob | null) => {
+    if (!blob) {
+        jar = null;
+        return;
+    }
+
     jar = await openJar(blob);
 };
 
