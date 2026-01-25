@@ -39,11 +39,12 @@ const fileTree: Observable<TreeDataNode[]> = classesList.pipe(
             parts.forEach((part, index) => {
                 let existingNode = currentLevel.find(node => node.title === part);
                 if (!existingNode) {
+                    const isLeaf = index === parts.length - 1;
                     existingNode = {
                         title: part.replace('.class', ''),
                         key: parts.slice(0, index + 1).join('/'),
-                        children: [],
-                        isLeaf: index === parts.length - 1
+                        children: isLeaf ? undefined : [],
+                        isLeaf: isLeaf
                     };
                     currentLevel.push(existingNode);
                 }
@@ -101,6 +102,7 @@ const getMenuItems = (
     if (!contextMenu) return [];
 
     const path = contextMenu.key;
+    const isFile = path.endsWith('.class');
     const packagePath = path.replace(/\//g, '.').replace('.class', '');
     const filename = path.split('/').pop() || '';
     const linkPath = path.replace('.class', '');
@@ -158,13 +160,13 @@ const getMenuItems = (
                     message.success('Link copied');
                 }
             },
-            disabled: !link || !contextMenu.isLeaf
+            disabled: !link || !isFile
         },
         {
             key: 'copy-content',
             label: 'Copy File Content',
             onClick: () => handleCopyItem(contextMenu.key),
-            disabled: !contextMenu.isLeaf
+            disabled: !isFile
         },
         {
             key: 'find-usages',
@@ -173,7 +175,7 @@ const getMenuItems = (
                 const cleanPath = path.replace('.class', '');
                 usageQuery.next(cleanPath);
             },
-            disabled: !contextMenu.isLeaf
+            disabled: !isFile
         },
     ];
 };
