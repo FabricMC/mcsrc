@@ -2,7 +2,7 @@ import { Button, Modal, type CheckboxProps, Form, Tooltip } from "antd";
 import { SettingOutlined } from '@ant-design/icons';
 import { Checkbox } from 'antd';
 import { useObservable } from "../utils/UseObservable";
-import { BooleanSetting, enableTabs, displayLambdas, focusSearch, KeybindSetting, type KeybindValue, bytecode } from "../logic/Settings";
+import { BooleanSetting, enableTabs, showLines, displayLambdas, focusSearch, KeybindSetting, type KeybindValue, bytecode } from "../logic/Settings";
 import { capturingKeybind, rawKeydownEvent } from "../logic/Keybinds";
 import { BehaviorSubject } from "rxjs";
 
@@ -30,6 +30,7 @@ const SettingsModal = () => {
         >
             <Form layout="horizontal" labelCol={{ span: 8 }} wrapperCol={{ span: 16 }}>
                 <BooleanToggle setting={enableTabs} title={"Enable Tabs"} />
+                <BooleanToggle setting={showLines} title={"Show Lines"} />
                 <BooleanToggle setting={displayLambdas} title={"Lambda Names"} tooltip="Display lambda names as inline comments. Does not support permalinking." disabled={bytecodeValue} />
                 <BooleanToggle setting={bytecode} title={"Show Bytecode"} tooltip="Show bytecode instructions alongside decompiled source. Does not support permalinking." disabled={displayLambdasValue} />
                 <KeybindControl setting={focusSearch} title={"Focus Search"} />

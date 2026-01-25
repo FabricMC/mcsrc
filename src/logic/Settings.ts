@@ -114,6 +114,7 @@ export const agreedEula = new BooleanSetting('eula', false);
 export const enableTabs = new BooleanSetting('enable_tabs', true);
 export const displayLambdas = new BooleanSetting('display_lambdas', false);
 export const bytecode = new BooleanSetting('bytecode', false);
+export const showLines = new BooleanSetting('showLines', true);
 export const focusSearch = new KeybindSetting('focus_search', 'Ctrl+ ');
 
 export const supportsPermalinking = combineLatest([displayLambdas.observable, bytecode.observable]).pipe(

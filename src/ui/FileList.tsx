@@ -8,6 +8,7 @@ import { selectedFile } from '../logic/State';
 import { useState } from 'react';
 import type { Key } from 'antd/es/table/interface';
 import { openTab } from '../logic/Tabs';
+import { showLines } from '../logic/Settings';
 
 // Sorts nodes with children first (directories before files), then alphabetically
 const sortTreeNodes = (nodes: TreeDataNode[] = []) => {
@@ -41,7 +42,7 @@ const data: Observable<TreeDataNode[]> = classesList.pipe(
                         title: part.replace('.class', ''),
                         key: parts.slice(0, index + 1).join('/'),
                         children: [],
-                        isLeaf: index === parts.length - 1
+                        isLeaf: index === parts.length - 1,
                     };
                     currentLevel.push(existingNode);
                 }
@@ -74,8 +75,10 @@ function getPathKeys(filePath: string): Key[] {
 const FileList = () => {
     const [expandedKeys, setExpandedKeys] = useState<Key[]>();
 
+    const showLine = useObservable(showLines.observable);
     const selectedKeys = useObservable(selectedFileKeys);
     const classes = useObservable(classesList);
+
     const onSelect: TreeProps['onSelect'] = (selectedKeys) => {
         if (selectedKeys.length === 0) return;
         if (!classes || !classes.includes(selectedKeys[0] as string)) return;
@@ -88,9 +91,10 @@ const FileList = () => {
         setExpandedKeys(getPathKeys(selectedKeys[0]));
     }
 
+
     return (
         <Tree.DirectoryTree
-            showLine
+            showLine={showLine}
             switcherIcon={<CaretDownFilled />}
             selectedKeys={selectedKeys}
             onSelect={onSelect}
