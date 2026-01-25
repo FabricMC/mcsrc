@@ -1,14 +1,14 @@
 import { BehaviorSubject, filter, fromEvent, Observable, tap } from "rxjs";
-import { focusSearch, type KeybindSetting } from "./Settings";
+import { focusSearch, showStructure, type KeybindSetting } from "./Settings";
 
 // Set to true when the user is currently capturing a keybind
-export const capturingKeybind = new BehaviorSubject<boolean>(false);
+export const capturingKeybind = new BehaviorSubject<string | null>(null);
 
 export const rawKeydownEvent = fromEvent<KeyboardEvent>(document, 'keydown');
 
 // Keydown events that should be listened to for general operation
 export const keyDownEvent = rawKeydownEvent.pipe(
-    filter(() => !capturingKeybind.value)
+    filter(() => capturingKeybind.value === null)
 );
 
 function keyBindEvent(setting: KeybindSetting): Observable<KeyboardEvent> {
@@ -19,3 +19,4 @@ function keyBindEvent(setting: KeybindSetting): Observable<KeyboardEvent> {
 }
 
 export const focusSearchEvent = keyBindEvent(focusSearch);
+export const showStructureEvent = keyBindEvent(showStructure);
