@@ -95,7 +95,7 @@ export class JarIndex {
             console.log(`Indexing minecraft jar using ${this.workers.length} workers`);
 
             // Initialize all workers in parallel
-            await Promise.all(this.workers.map(worker => worker.setWorkerJar(this.minecraftJar.blob)));
+            await Promise.all(this.workers.map(worker => worker.setWorkerJar(this.minecraftJar.version, this.minecraftJar.blob)));
 
             const jar = this.minecraftJar.jar;
             const classNames = Object.keys(jar.entries)
