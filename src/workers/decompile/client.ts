@@ -1,4 +1,4 @@
-import type { DecompileResult } from ".";
+import { DecompileJar, type DecompileResult } from ".";
 import type { Jar } from "../../utils/Jar";
 
 type DecompileWorker = typeof import("./worker");
@@ -8,7 +8,7 @@ function createWrorker() {
     );
 }
 
-const threads = navigator.hardwareConcurrency || 4;
+const threads = navigator.hardwareConcurrency - 1 || 4;
 const workers = Array.from({ length: threads }, () => createWrorker());
 
 export async function decompileClass(className: string, jar: Jar): Promise<DecompileResult> {
@@ -17,20 +17,15 @@ export async function decompileClass(className: string, jar: Jar): Promise<Decom
 }
 
 export async function decompileEntireJar(jar: Jar) {
-    const entries = await Promise.all(Object
-        .entries(jar.entries)
-        .filter(([f, _]) => f.endsWith(".class"))
-        .map(([f, e]) => e.bytes().then(b => [f.replace(".class", ""), b] as [string, Uint8Array])));
-    const entryLength = entries.length;
+    await Promise.all(workers.map(w => w.registerJar(jar.name, jar.blob)));
 
-    const data = Object.fromEntries(entries);
-    await Promise.all(workers.map(w => w.registerJar(jar.name, data)));
-
-    entries.reverse();
+    const jarClasses = new DecompileJar(jar).classes
+    const entryLength = jarClasses.length;
+    jarClasses.reverse();
     async function decompile(worker: ReturnType<typeof createWrorker>) {
-        if (entries.length === 0) return;
+        if (jarClasses.length === 0) return;
 
-        const [className, _] = entries.pop()!;
+        const className = jarClasses.pop()!;
         await worker
             .decompileClassNoReturn(jar.name, null, className, null)
             .then(async () => await decompile(worker));

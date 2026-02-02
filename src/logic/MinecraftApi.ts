@@ -1,7 +1,7 @@
 import { BehaviorSubject, combineLatest, distinctUntilChanged, filter, from, map, shareReplay, switchMap, tap, Observable } from "rxjs";
 import { agreedEula } from "./Settings";
 import { state, updateSelectedMinecraftVersion } from "./State";
-import { openJar, streamJar, type Jar } from "../utils/Jar";
+import { openJar, type Jar } from "../utils/Jar";
 
 const CACHE_NAME = 'mcsrc-v1';
 const VERSIONS_URL = "https://piston-meta.mojang.com/mc/game/version_manifest_v2.json";

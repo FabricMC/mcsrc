@@ -2,7 +2,8 @@ import Dexie, { type EntityTable, type Table } from "dexie";
 import { decompile, type Options, type TokenCollector } from "../../logic/vf";
 import type { Token } from "../../logic/Tokens";
 import { getBytecode } from "../JarIndexWorker";
-import type { DecompileResult, DecompileOption, DecompileData } from ".";
+import { type DecompileResult, type DecompileOption, type DecompileData, DecompileJar } from ".";
+import { openJar, type Jar } from "../../utils/Jar";
 
 const db = new Dexie("decompiler") as Dexie & {
     options: EntityTable<DecompileOption, "key">,
@@ -41,10 +42,10 @@ export const setOptions = async (options: Options): Promise<void> => {
     await db.options.bulkAdd(Object.entries(options).map(([k, v]) => ({ key: k, value: v })));
 }
 
-const jars: Record<string, DecompileData> = {}
-export const registerJar = (jarName: string, classData: DecompileData | null) => {
-    if (classData) {
-        jars[jarName] = classData;
+const jars: Record<string, DecompileJar> = {}
+export const registerJar = async (jarName: string, blob: Blob | null) => {
+    if (blob) {
+        jars[jarName] = new DecompileJar(await openJar(jarName, blob))
     } else {
         delete jars[jarName];
     }
@@ -59,8 +60,8 @@ export const decompileClassNoReturn = async (jarName: string, jarClasses: string
 }
 
 export const decompileClass = async (jarName: string, jarClasses: string[] | null, className: string, classData: DecompileData | null): Promise<DecompileResult> => {
-    if (!jarClasses) jarClasses = Object.keys(jars[jarName]);
-    if (!classData) classData = jars[jarName];
+    if (!jarClasses) jarClasses = jars[jarName].classes;
+    if (!classData) classData = jars[jarName].proxy;
 
     try {
         _promiseCount++;
