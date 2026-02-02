@@ -5,11 +5,11 @@ export interface Jar {
     entries: { [key: string]: Entry; };
 }
 
-export async function openJar(blob: Blob): Promise<Jar> {
+export async function openJar(name: string, blob: Blob): Promise<Jar> {
     const zip = await readBlob(blob, {
         naive: true
     });
-    return new JarImpl(zip);
+    return new JarImpl(name, zip);
 }
 
 export async function streamJar(name: string, url: string): Promise<Jar> {
