@@ -1,6 +1,6 @@
 import { editor, languages, Position, Token, type CancellationToken } from 'monaco-editor';
-import type { DecompileResult } from '../logic/Decompiler';
 import type { MemberToken } from '../logic/Tokens';
+import type { DecompileResult } from '../workers/decompile';
 
 export class JavdocCompletionProvider implements languages.CompletionItemProvider {
     readonly decompileResult: DecompileResult;

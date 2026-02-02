@@ -1,18 +1,10 @@
-import type { Token } from "../logic/Tokens";
-import type { Jar } from "../utils/Jar";
+import type { DecompileResult } from ".";
+import type { Jar } from "../../utils/Jar";
 
-export interface DecompileResult {
-    owner: string;
-    className: string;
-    source: string;
-    tokens: Token[];
-    language: 'java' | 'bytecode';
-}
-
-type DecompileWorker = typeof import("./DecompileWorker");
+type DecompileWorker = typeof import("./worker");
 function createWrorker() {
     return new ComlinkWorker<DecompileWorker>(
-        new URL("./DecompileWorker", import.meta.url),
+        new URL("./worker", import.meta.url),
     );
 }
 
@@ -20,7 +12,40 @@ const threads = navigator.hardwareConcurrency || 4;
 const workers = Array.from({ length: threads }, () => createWrorker());
 
 export async function decompileClass(className: string, jar: Jar): Promise<DecompileResult> {
-    const worker = workers.find(w => !w.isBusy()) ?? workers[0];
+    await decompileEntireJar(jar);
+    return decompileClass0(className, jar);
+}
+
+export async function decompileEntireJar(jar: Jar) {
+    const entries = await Promise.all(Object
+        .entries(jar.entries)
+        .filter(([f, _]) => f.endsWith(".class"))
+        .map(([f, e]) => e.bytes().then(b => [f.replace(".class", ""), b] as [string, Uint8Array])));
+    const entryLength = entries.length;
+
+    const data = Object.fromEntries(entries);
+    await Promise.all(workers.map(w => w.registerJar(jar.name, data)));
+
+    entries.reverse();
+    async function decompile(worker: ReturnType<typeof createWrorker>) {
+        if (entries.length === 0) return;
+
+        const [className, _] = entries.pop()!;
+        await worker
+            .decompileClassNoReturn(jar.name, null, className, null)
+            .then(async () => await decompile(worker));
+    }
+
+    const start = performance.now();
+    await Promise.all(workers.map(w => decompile(w)));
+    const elapsedMs = performance.now() - start;
+    console.log(`Decompiled ${entryLength} classes in ${elapsedMs.toFixed(3)} ms`);
+
+    await Promise.all(workers.map(w => w.registerJar(jar.name, null)));
+}
+
+export async function decompileClass0(className: string, jar: Jar): Promise<DecompileResult> {
+    const worker = workers.reduce((a, b) => a.promiseCount() < b.promiseCount() ? a : b);
     className = className.replace(".class", "");
 
     const jarClasses = Object
@@ -46,7 +71,7 @@ export async function decompileClass(className: string, jar: Jar): Promise<Decom
 }
 
 export async function getClassBytecode(className: string, jar: Jar): Promise<DecompileResult> {
-    const worker = workers.find(w => !w.isBusy()) ?? workers[0];
+    const worker = workers.reduce((a, b) => a.promiseCount() < b.promiseCount() ? a : b);
     className = className.replace(".class", "");
 
     const jarClasses = Object

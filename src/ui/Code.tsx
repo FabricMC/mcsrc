@@ -1,6 +1,6 @@
 import Editor, { useMonaco } from '@monaco-editor/react';
 import { useObservable } from '../utils/UseObservable';
-import { currentResult, type DecompileResult, isDecompiling } from '../logic/Decompiler';
+import { currentResult, isDecompiling } from '../logic/Decompiler';
 import { useEffect, useRef, useState } from 'react';
 import { editor, Range } from "monaco-editor";
 import { isThin } from '../logic/Browser';

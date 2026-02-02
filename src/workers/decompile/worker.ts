@@ -1,13 +1,11 @@
 import Dexie, { type EntityTable, type Table } from "dexie";
-import { decompile, type Options, type TokenCollector } from "../logic/vf";
-import type { Token } from "../logic/Tokens";
-import { getBytecode } from "./JarIndexWorker";
-import type { DecompileResult } from "./Decompile";
-
-type Option = { key: string, value: string };
+import { decompile, type Options, type TokenCollector } from "../../logic/vf";
+import type { Token } from "../../logic/Tokens";
+import { getBytecode } from "../JarIndexWorker";
+import type { DecompileResult, DecompileOption, DecompileData } from ".";
 
 const db = new Dexie("decompiler") as Dexie & {
-    options: EntityTable<Option, "key">,
+    options: EntityTable<DecompileOption, "key">,
     results: Table<DecompileResult, [string, string, string]>,
 };
 db.version(1).stores({
@@ -43,24 +41,47 @@ export const setOptions = async (options: Options): Promise<void> => {
     await db.options.bulkAdd(Object.entries(options).map(([k, v]) => ({ key: k, value: v })));
 }
 
-let busy = false;
-export const isBusy = () => busy;
-
-export const decompileClass = async (jarName: string, jarClasses: string[], className: string, classData: Record<string, Uint8Array>): Promise<DecompileResult> => {
-    try {
-        busy = true;
-        let result = await db.results.get([jarName, className, "java"]);
-        if (result) return result;
-
-        result = await decompileClass0(jarName, jarClasses, className, classData, await getOptions());
-        await db.results.put(result);
-        return result;
-    } finally {
-        busy = false;
+const jars: Record<string, DecompileData> = {}
+export const registerJar = (jarName: string, classData: DecompileData | null) => {
+    if (classData) {
+        jars[jarName] = classData;
+    } else {
+        delete jars[jarName];
     }
 }
 
-async function decompileClass0(jarName: string, jarClasses: string[], className: string, classData: Record<string, Uint8Array>, options: Options): Promise<DecompileResult> {
+let lastPromise: Promise<DecompileResult> | undefined = undefined
+let _promiseCount = 0;
+export const promiseCount = () => _promiseCount;
+
+export const decompileClassNoReturn = async (jarName: string, jarClasses: string[] | null, className: string, classData: DecompileData | null) => {
+    await decompileClass(jarName, jarClasses, className, classData);
+}
+
+export const decompileClass = async (jarName: string, jarClasses: string[] | null, className: string, classData: DecompileData | null): Promise<DecompileResult> => {
+    if (!jarClasses) jarClasses = Object.keys(jars[jarName]);
+    if (!classData) classData = jars[jarName];
+
+    try {
+        _promiseCount++;
+        let result = await db.results.get([jarName, className, "java"]);
+        if (result) return result;
+
+        const options = await getOptions();
+        const promise = lastPromise
+            ? lastPromise.then(() => decompileClass0(jarName, jarClasses, className, classData, options))
+            : decompileClass0(jarName, jarClasses, className, classData, options);
+        lastPromise = promise;
+
+        result = await promise;
+        await db.results.put(result);
+        return result;
+    } finally {
+        _promiseCount--;
+    }
+}
+
+async function decompileClass0(jarName: string, jarClasses: string[], className: string, classData: DecompileData, options: Options): Promise<DecompileResult> {
     console.log(`Decompiling class: '${className}'`);
 
     if (!jarClasses.includes(className)) {
@@ -142,15 +163,20 @@ function generateImportTokens(source: string): Token[] {
 
 export const getClassBytecode = async (jarName: string, jarClasses: string[], className: string, classData: ArrayBufferLike[]): Promise<DecompileResult> => {
     try {
-        busy = true;
-        let result = await db.results.get([jarName, className, "bytecode"]);
+        _promiseCount++;
+        let result = await db.results.get([jarName, className, "java"]);
         if (result) return result;
 
-        result = await getClassBytecode0(jarName, jarClasses, className, classData);
+        const promise = lastPromise
+            ? lastPromise.then(() => getClassBytecode0(jarName, jarClasses, className, classData))
+            : getClassBytecode0(jarName, jarClasses, className, classData);
+        lastPromise = promise;
+
+        result = await promise;
         await db.results.put(result);
         return result;
     } finally {
-        busy = false;
+        _promiseCount--;
     }
 }
 

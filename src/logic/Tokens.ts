@@ -1,4 +1,4 @@
-import type { DecompileResult } from "../workers/Decompile";
+import type { DecompileResult } from "../workers/decompile";
 
 export type TokenType = 'class' | 'field' | 'method' | 'parameter' | 'local';
 

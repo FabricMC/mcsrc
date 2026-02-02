@@ -11,7 +11,7 @@ import { openTab } from '../logic/Tabs';
 import { minecraftJar, type MinecraftJar } from '../logic/MinecraftApi';
 import { DECOMPILER_OPTIONS } from '../logic/Decompiler';
 import { usageQuery } from '../logic/FindUsages';
-import { decompileClass } from '../workers/Decompile';
+import { decompileClass } from '../workers/decompile/client';
 
 // Sorts nodes with children first (directories before files), then alphabetically
 const sortTreeNodes = (nodes: TreeDataNode[] = []) => {

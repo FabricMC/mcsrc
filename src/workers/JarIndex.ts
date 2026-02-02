@@ -139,7 +139,7 @@ export class JarIndex {
             this.indexPromise = null;
             throw error;
         } finally {
-            await Promise.all(this.workers.map(worker => worker.setWorkerJar(null)));
+            await Promise.all(this.workers.map(worker => worker.setWorkerJar("", null)));
         }
     }
 

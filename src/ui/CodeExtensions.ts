@@ -1,10 +1,10 @@
 import type { CancellationToken, IDisposable, IPosition, IRange, languages } from "monaco-editor";
 import { editor, Range, Uri } from "monaco-editor";
-import type { DecompileResult } from '../logic/Decompiler';
 import { currentResult } from '../logic/Decompiler';
 import { activeTabKey, openTab } from '../logic/Tabs';
 import { getTokenLocation, type Token } from '../logic/Tokens';
 import { filter, take } from "rxjs";
+import type { DecompileResult } from "../workers/decompile";
 
 export function jumpToToken(
     result: DecompileResult,

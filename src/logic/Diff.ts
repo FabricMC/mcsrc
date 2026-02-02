@@ -1,6 +1,7 @@
 import { BehaviorSubject, combineLatest, from, map, Observable, switchMap } from "rxjs";
 import { minecraftJar, minecraftJarPipeline, selectedMinecraftVersion, type MinecraftJar } from "./MinecraftApi";
-import { currentResult, decompileResultPipeline, type DecompileResult } from "./Decompiler";
+import { currentResult, decompileResultPipeline } from "./Decompiler";
+import type { DecompileResult } from "../workers/decompile";
 
 export const diffView = new BehaviorSubject<boolean>(false);
 export const hideUnchangedSizes = new BehaviorSubject<boolean>(false);
