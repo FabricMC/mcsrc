@@ -1,14 +1,15 @@
-import { read, type Entry, type Reader, type Zip } from "@katana-project/zip";
+import { read, type Entry, type Reader, type Zip, readBlob } from "@katana-project/zip";
 
 export interface Jar {
     name: string;
     entries: { [key: string]: Entry; };
 }
 
-export async function openJar(name: string, blob: Blob): Promise<Jar> {
-    const reader = new BlobReader(blob);
-    const zip = await read(reader);
-    return new JarImpl(name, zip);
+export async function openJar(blob: Blob): Promise<Jar> {
+    const zip = await readBlob(blob, {
+        naive: true
+    });
+    return new JarImpl(zip);
 }
 
 export async function streamJar(name: string, url: string): Promise<Jar> {
@@ -30,28 +31,6 @@ class JarImpl implements Jar {
         zip.entries.forEach(entry => {
             this.entries[entry.name] = entry;
         });
-    }
-}
-
-class BlobReader implements Reader {
-    private blob: Blob;
-
-    constructor(blob: Blob) {
-        this.blob = blob;
-    }
-
-    async length(): Promise<number> {
-        return this.blob.size;
-    }
-
-    async read(offset: number, size: number): Promise<Uint8Array> {
-        const slice = this.blob.slice(offset, offset + size);
-        const arrayBuffer = await slice.arrayBuffer();
-        return new Uint8Array(arrayBuffer);
-    }
-
-    async slice(offset: number, size: number): Promise<Blob> {
-        return this.blob.slice(offset, offset + size);
     }
 }
 

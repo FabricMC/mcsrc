@@ -1,5 +1,6 @@
 import { load } from "../../java/build/generated/teavm/wasm-gc/java.wasm-runtime.js";
 import indexerWasm from '../../java/build/generated/teavm/wasm-gc/java.wasm?url';
+import { openJar, type Jar } from "../utils/Jar.js";
 import type { UsageKey, UsageString } from "./JarIndex.js";
 
 export type ClassDataString = `${string}|${string}|${number}|${string}`;
@@ -19,9 +20,34 @@ const getIndexer = async (): Promise<Indexer> => {
     return indexerFunc;
 };
 
-export const index = async (data: ArrayBufferLike): Promise<void> => {
+let jar: Jar | null = null;
+
+export const setWorkerJar = async (blob: Blob | null) => {
+    if (!blob) {
+        jar = null;
+        return;
+    }
+
+    jar = await openJar(blob);
+};
+
+export const indexBatch = async (classNames: string[]): Promise<void> => {
+    if (!jar) {
+        throw new Error("Jar not set in worker");
+    }
+
+    const currentJar = jar; // Capture for closure
+    const arrayBufferPromises = classNames.map(async className => {
+        const entry = currentJar.entries[className];
+        const data = await entry.blob();
+        return data.arrayBuffer();
+    });
+
     const indexer = await getIndexer();
-    indexer.index(data);
+
+    for (const arrayBuffer of arrayBufferPromises) {
+        indexer.index(await arrayBuffer);
+    }
 };
 
 export const getUsage = async (key: UsageKey): Promise<[UsageString]> => {

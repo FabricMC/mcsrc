@@ -8,6 +8,7 @@ import { selectedFile, setSelectedFile } from '../../logic/State';
 import { diffView } from "../../logic/Diff";
 import { isDecompiling } from "../../logic/Decompiler.ts";
 import { useEffect } from 'react';
+import { bytecode } from "../../logic/Settings.ts";
 
 const statusColors: Record<ChangeState, string> = {
     modified: 'gold',
@@ -114,18 +115,27 @@ const DiffFileList = () => {
                 >
                     <DiffVersionSelection />
                 </Flex>
-                <Button
-                    type="default"
-                    variant={"outlined"}
-                    onClick={handleExitDiff}
+                <div
                     style={{
                         position: 'absolute',
                         top: 12,
                         right: 0
                     }}
                 >
-                    Exit Diff
-                </Button>
+                    <Checkbox
+                        checked={useObservable(bytecode.observable)}
+                        onChange={e => bytecode.value = e.target.checked}
+                    >
+                        Show Bytecode
+                    </Checkbox>
+                    <Button
+                        type="default"
+                        variant={"outlined"}
+                        onClick={handleExitDiff}
+                    >
+                        Exit Diff
+                    </Button>
+                </div>
             </div>
             <div
                 style={{

@@ -16,7 +16,7 @@ export const isDecompiling = decompilerCounter.pipe(
     distinctUntilChanged()
 );
 
-const DECOMPILER_OPTIONS: Options = {};
+export const DECOMPILER_OPTIONS: Options = {};
 
 const decompilationCache = new Map<string, DecompileResult>();
 

@@ -76,3 +76,19 @@ html, body {margin: 0; height: 100%; overflow: hidden}
   background-color: rgba(255, 255, 100, 0.3) !important;
   width: 4px !important;
 }
+
+/* Stop icon & text in file tree from wrapping */
+.ant-tree-node-content-wrapper {
+    display: flex;
+    flex-wrap: nowrap;
+}
+
+/* Stop text in file tree from wrapping */
+.ant-tree-title {
+    white-space: nowrap;
+}
+
+/* Don't have text overflow in the structure dialog */
+.structure-tree {
+  overflow: auto;
+}
