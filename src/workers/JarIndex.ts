@@ -99,7 +99,7 @@ export class JarIndex {
                         await worker.index(data.buffer);
 
                         completed++;
-                        
+
                         // Only update progress every 1% or every 50 classes, whichever is smaller
                         const progressThreshold = Math.max(1, Math.floor(classNames.length / 100));
                         if (completed - lastProgressUpdate >= progressThreshold) {
@@ -151,7 +151,7 @@ export class JarIndex {
 
         const classDataStrings = await Promise.all(results).then(arrays => arrays.flat());
         this.classDataCache = classDataStrings.map(parseClassData);
-        
+
         return this.classDataCache;
     }
 }
@@ -168,7 +168,5 @@ export async function getBytecode(classData: ArrayBufferLike[]): Promise<string>
 function createWrorker() {
     return new ComlinkWorker<JarIndexWorker>(
         new URL("./JarIndexWorker", import.meta.url),
-        {
-        }
     );
 }

@@ -122,7 +122,7 @@ async function downloadMinecraftJar(version: VersionListEntry, progress: Behavio
 
     if (!response.body || total === 0) {
         const blob = await response.blob();
-        const jar = await openJar(blob);
+        const jar = await openJar(version.id, blob);
         progress.next(undefined);
         return { version: version.id, jar };
     }
@@ -143,7 +143,7 @@ async function downloadMinecraftJar(version: VersionListEntry, progress: Behavio
     }
 
     const blob = new Blob(chunks);
-    const jar = await openJar(blob);
+    const jar = await openJar(version.id, blob);
     progress.next(undefined);
     return { version: version.id, jar };
 }
@@ -151,7 +151,7 @@ async function downloadMinecraftJar(version: VersionListEntry, progress: Behavio
 // TODO add an option to stream the Minecraft jar, this may add additional latency but will remove the inital large download time
 async function streamMinecraftJar(version: VersionListEntry): Promise<MinecraftJar> {
     const versionManifest = await fetchVersionManifest(version);
-    const jar = await streamJar(versionManifest.downloads.client.url);
+    const jar = await streamJar(version.id, versionManifest.downloads.client.url);
     return { version: version.id, jar };
 }
 
