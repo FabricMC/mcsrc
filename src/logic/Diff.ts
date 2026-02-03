@@ -60,6 +60,8 @@ export interface ChangeInfo {
     deletions?: number;
 }
 
+const MAX_CALCULATED_LINE_CHANGES = 500;
+
 const calculatedLineChanges = new BehaviorSubject<Map<string, { additions: number, deletions: number; }>>(new Map());
 
 export function updateLineChanges(file: string, additions: number, deletions: number) {
@@ -68,6 +70,10 @@ export function updateLineChanges(file: string, additions: number, deletions: nu
     if (existing?.additions === additions && existing?.deletions === deletions) return;
 
     const next = new Map(current);
+    if (next.size >= MAX_CALCULATED_LINE_CHANGES) {
+        const firstKey = next.keys().next().value;
+        if (firstKey) next.delete(firstKey);
+    }
     next.set(file, { additions, deletions });
     calculatedLineChanges.next(next);
 }
