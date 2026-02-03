@@ -169,16 +169,16 @@ export function countLineDiff(oldText: string, newText: string): { additions: nu
 
     // Ignore error messages or "not found" messages from decompiler when counting
     if (oldText.startsWith('// Class not found') || oldText.startsWith('// Error during decompilation')) {
-        const newLines = newText.split(/\r?\n/).length;
+        const newLines = newText === "" ? 0 : newText.split(/\r?\n/).length;
         return { additions: newLines, deletions: 0 };
     }
     if (newText.startsWith('// Class not found') || newText.startsWith('// Error during decompilation')) {
-        const oldLines = oldText.split(/\r?\n/).length;
+        const oldLines = oldText === "" ? 0 : oldText.split(/\r?\n/).length;
         return { additions: 0, deletions: oldLines };
     }
 
-    const oldLines = oldText.split(/\r?\n/);
-    const newLines = newText.split(/\r?\n/);
+    const oldLines = oldText === "" ? [] : oldText.split(/\r?\n/);
+    const newLines = newText === "" ? [] : newText.split(/\r?\n/);
 
     let start = 0;
     while (start < oldLines.length && start < newLines.length && oldLines[start] === newLines[start]) {
