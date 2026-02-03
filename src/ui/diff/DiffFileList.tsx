@@ -23,33 +23,6 @@ const statusColors: Record<ChangeState, string> = {
     deleted: 'red',
 };
 
-const columns = [
-    {
-        title: 'File',
-        dataIndex: 'file',
-        key: 'file',
-        render: (file: string) => file.replace('.class', ''),
-    },
-    {
-        title: 'Status',
-        dataIndex: 'statusInfo',
-        key: 'status',
-        render: (info: ChangeInfo) => (
-            <Flex gap={4} align="center">
-                <Tag color={statusColors[info.state] || 'default'} style={{ marginRight: 0 }}>
-                    {info.state.toUpperCase()}
-                </Tag>
-                {info.deletions !== undefined && info.deletions > 0 && (
-                    <span style={{ color: '#ff4d4f', fontSize: '12px', fontWeight: 'bold' }}>-{info.deletions}</span>
-                )}
-                {info.additions !== undefined && info.additions > 0 && (
-                    <span style={{ color: '#52c41a', fontSize: '12px', fontWeight: 'bold' }}>+{info.additions}</span>
-                )}
-            </Flex>
-        ),
-    },
-];
-
 const searchQuery = new BehaviorSubject("");
 
 interface DiffEntry {
@@ -82,6 +55,36 @@ const DiffFileList = () => {
     const hideUnchanged = useObservable(hideUnchangedSizes) || false;
     const summary = useObservable<DiffSummary>(useMemo(() => getDiffSummary(), []));
     const { token } = theme.useToken();
+
+    const columns = useMemo(() => [
+        {
+            title: 'File',
+            dataIndex: 'file',
+            key: 'file',
+            render: (file: string) => <span style={{ color: token.colorText }}>{file.replace('.class', '')}</span>,
+        },
+        {
+            title: 'Status',
+            dataIndex: 'statusInfo',
+            key: 'status',
+            render: (info: ChangeInfo) => (
+                <Flex gap={6} align="center">
+                    <Tag color={statusColors[info.state] || 'default'} style={{ marginRight: 0 }}>
+                        {info.state.toUpperCase()}
+                    </Tag>
+                    {info.deletions !== undefined && info.deletions > 0 && (
+                        <span style={{ color: '#ff4d4f', fontSize: '12px', fontWeight: 'bold' }}>-{info.deletions}</span>
+                    )}
+                    {info.additions !== undefined && info.additions > 0 && (
+                        <span style={{ color: '#52c41a', fontSize: '12px', fontWeight: 'bold' }}>+{info.additions}</span>
+                    )}
+                    {info.state === 'modified' && info.additions === 0 && info.deletions === 0 && (
+                        <span style={{ color: token.colorTextDescription, fontSize: '12px', fontStyle: 'italic' }}>None</span>
+                    )}
+                </Flex>
+            ),
+        },
+    ], [token]);
 
     const onChange: SearchProps['onChange'] = (e) => {
         searchQuery.next(e.target.value);
@@ -130,9 +133,13 @@ const DiffFileList = () => {
                 </Tooltip>
                 {summary && (
                     <span style={{ marginLeft: 16, color: token.colorTextDescription }}>
-                        <span style={{ color: 'green' }}>+{summary.added} new files</span>
-                        <span style={{ marginLeft: 8, color: 'red' }}>-{summary.deleted} deleted</span>
-                        <span style={{ marginLeft: 8 }}>{summary.modified} modified</span>
+                        {summary.added === 0 && summary.deleted === 0 && summary.modified === 0 ? "None" : (
+                            <>
+                                <span style={{ color: 'green' }}>+{summary.added} new files</span>
+                                <span style={{ marginLeft: 8, color: 'red' }}>-{summary.deleted} deleted</span>
+                                <span style={{ marginLeft: 8 }}>{summary.modified} modified</span>
+                            </>
+                        )}
                     </span>
                 )}
                 <Flex
@@ -182,6 +189,7 @@ const DiffFileList = () => {
                     size="small"
                     bordered
                     showHeader={false}
+                    locale={{ emptyText: <span style={{ color: token.colorTextDescription }}>None</span> }}
                     rowClassName={(record) =>
                         currentFile === record.file ? 'ant-table-row-selected' : ''
                     }
