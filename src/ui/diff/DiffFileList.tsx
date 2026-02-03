@@ -1,13 +1,20 @@
 import { Table, Tag, Input, Button, Flex, theme, Checkbox, Tooltip } from 'antd';
 import DiffVersionSelection from './DiffVersionSelection';
-import { getDiffChanges, type ChangeState, hideUnchangedSizes } from '../../logic/Diff';
+import {
+    getDiffChanges,
+    type ChangeState,
+    type ChangeInfo,
+    hideUnchangedSizes,
+    getDiffSummary,
+    type DiffSummary,
+    diffView
+} from '../../logic/Diff';
 import { BehaviorSubject, map, combineLatest } from 'rxjs';
 import { useObservable } from '../../utils/UseObservable';
 import type { SearchProps } from 'antd/es/input';
 import { selectedFile, setSelectedFile } from '../../logic/State';
-import { diffView } from "../../logic/Diff";
 import { isDecompiling } from "../../logic/Decompiler.ts";
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { bytecode } from "../../logic/Settings.ts";
 
 const statusColors: Record<ChangeState, string> = {
@@ -21,29 +28,46 @@ const columns = [
         title: 'File',
         dataIndex: 'file',
         key: 'file',
+        render: (file: string) => file.replace('.class', ''),
     },
     {
         title: 'Status',
-        dataIndex: 'status',
+        dataIndex: 'statusInfo',
         key: 'status',
-        render: (status: ChangeState) => (
-            <Tag color={statusColors[status] || 'default'}>{status.toUpperCase()}</Tag>
+        render: (info: ChangeInfo) => (
+            <Flex gap={4} align="center">
+                <Tag color={statusColors[info.state] || 'default'} style={{ marginRight: 0 }}>
+                    {info.state.toUpperCase()}
+                </Tag>
+                {info.deletions !== undefined && info.deletions > 0 && (
+                    <span style={{ color: '#ff4d4f', fontSize: '12px', fontWeight: 'bold' }}>-{info.deletions}</span>
+                )}
+                {info.additions !== undefined && info.additions > 0 && (
+                    <span style={{ color: '#52c41a', fontSize: '12px', fontWeight: 'bold' }}>+{info.additions}</span>
+                )}
+            </Flex>
         ),
     },
 ];
 
 const searchQuery = new BehaviorSubject("");
 
+interface DiffEntry {
+    key: string;
+    file: string;
+    statusInfo: ChangeInfo;
+}
+
 const entries = combineLatest([getDiffChanges(), searchQuery]).pipe(
     map(([changesMap, query]) => {
-        const entriesArray: { key: string; file: string; status: string; }[] = [];
+        const entriesArray: DiffEntry[] = [];
         const lowerQuery = query.toLowerCase();
-        changesMap.forEach((status, file) => {
+        changesMap.forEach((info, file) => {
             if (!query || file.toLowerCase().includes(lowerQuery)) {
                 entriesArray.push({
                     key: file,
                     file,
-                    status,
+                    statusInfo: info,
                 });
             }
         });
@@ -56,6 +80,7 @@ const DiffFileList = () => {
     const currentFile = useObservable(selectedFile);
     const loading = useObservable(isDecompiling);
     const hideUnchanged = useObservable(hideUnchangedSizes) || false;
+    const summary = useObservable<DiffSummary>(useMemo(() => getDiffSummary(), []));
     const { token } = theme.useToken();
 
     const onChange: SearchProps['onChange'] = (e) => {
@@ -103,6 +128,13 @@ const DiffFileList = () => {
                         Hide same size
                     </Checkbox>
                 </Tooltip>
+                {summary && (
+                    <span style={{ marginLeft: 16, color: token.colorTextDescription }}>
+                        <span style={{ color: 'green' }}>+{summary.added} new files</span>
+                        <span style={{ marginLeft: 8, color: 'red' }}>-{summary.deleted} deleted</span>
+                        <span style={{ marginLeft: 8 }}>{summary.modified} modified</span>
+                    </span>
+                )}
                 <Flex
                     gap={8}
                     align="center"
@@ -151,14 +183,14 @@ const DiffFileList = () => {
                     bordered
                     showHeader={false}
                     rowClassName={(record) =>
-                        currentFile === record.file + ".class" ? 'ant-table-row-selected' : ''
+                        currentFile === record.file ? 'ant-table-row-selected' : ''
                     }
                     onRow={(record) => ({
                         onClick: () => {
                             if (loading) return;
-                            if (currentFile === record.file + ".class") return;
+                            if (currentFile === record.file) return;
 
-                            setSelectedFile(record.file + ".class");
+                            setSelectedFile(record.file);
                         }
                     })}
                     style={{

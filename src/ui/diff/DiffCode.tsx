@@ -1,11 +1,12 @@
 import { DiffEditor } from '@monaco-editor/react';
 import { useObservable } from '../../utils/UseObservable';
-import { getLeftDiff, getRightDiff } from '../../logic/Diff';
-import { useRef } from 'react';
+import { getLeftDiff, getRightDiff, countLineDiff, updateLineChanges } from '../../logic/Diff';
+import { useEffect, useRef } from 'react';
 import type { editor } from 'monaco-editor';
 import { Spin } from "antd";
 import { LoadingOutlined } from '@ant-design/icons';
 import { isDecompiling } from "../../logic/Decompiler.ts";
+import { selectedFile } from '../../logic/State';
 
 interface DiffCodeProps {
     height?: number | string;
@@ -16,6 +17,19 @@ const DiffCode = ({ height }: DiffCodeProps) => {
     const rightResult = useObservable(getRightDiff().result);
     const editorRef = useRef<editor.IStandaloneDiffEditor | null>(null);
     const loading = useObservable(isDecompiling);
+    const currentPath = useObservable(selectedFile);
+
+    useEffect(() => {
+        if (!loading && currentPath &&
+            leftResult?.source !== undefined &&
+            rightResult?.source !== undefined &&
+            leftResult.className === currentPath &&
+            rightResult.className === currentPath
+        ) {
+            const counts = countLineDiff(leftResult.source, rightResult.source);
+            updateLineChanges(currentPath, counts.additions, counts.deletions);
+        }
+    }, [leftResult, rightResult, loading, currentPath]);
 
     /* Disabled as it jumps to the line of the previous change when switching files
     useEffect(() => {
