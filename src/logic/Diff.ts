@@ -148,7 +148,7 @@ async function getEntriesWithCRC(jar: MinecraftJar): Promise<Map<string, EntryIn
 }
 /**
  * Simple line-based diff to count additions and deletions without external libraries.
- * Uses a basic Myers-ish approach or simplified LCS.
+ * Uses an efficient O(N+M) hash-based counting approach.
  */
 export function countLineDiff(oldText: string, newText: string): { additions: number, deletions: number; } {
     if (oldText === newText) return { additions: 0, deletions: 0 };
@@ -184,33 +184,34 @@ export function countLineDiff(oldText: string, newText: string): { additions: nu
     if (n <= 0) return { additions: Math.max(0, m), deletions: 0 };
     if (m <= 0) return { additions: 0, deletions: Math.max(0, n) };
 
-    // Standard LCS DP with memory optimization (only O(min(N,M)) space)
-    // We only need the length, not the full path.
-    const shorts = n < m ? n : m;
-    const longs = n < m ? m : n;
-    const shortRows = n < m ? oldLines.slice(start, oldEnd + 1) : newLines.slice(start, newEnd + 1);
-    const longRows = n < m ? newLines.slice(start, newEnd + 1) : oldLines.slice(start, oldEnd + 1);
+    // Efficient O(N+M) diff using hash-based line counting
+    const oldDiff = oldLines.slice(start, oldEnd + 1);
+    const newDiff = newLines.slice(start, newEnd + 1);
 
-    let prev = new Array(shorts + 1).fill(0);
-    let curr = new Array(shorts + 1).fill(0);
-
-    for (let i = 1; i <= longs; i++) {
-        for (let j = 1; j <= shorts; j++) {
-            if (longRows[i - 1] === shortRows[j - 1]) {
-                curr[j] = prev[j - 1] + 1;
-            } else {
-                curr[j] = Math.max(prev[j], curr[j - 1]);
-            }
-        }
-        [prev, curr] = [curr, prev];
+    const lineCounts = new Map<string, number>();
+    for (const line of oldDiff) {
+        lineCounts.set(line, (lineCounts.get(line) || 0) + 1);
     }
 
-    const commonInRange = prev[shorts];
-    const totalCommon = commonInRange + start + (oldLines.length - 1 - oldEnd);
+    let commonInDiff = 0;
+    for (const line of newDiff) {
+        const count = lineCounts.get(line);
+        if (count && count > 0) {
+            lineCounts.set(line, count - 1);
+            commonInDiff++;
+        }
+    }
+
+    let deletionsInDiff = 0;
+    for (const count of lineCounts.values()) {
+        deletionsInDiff += count;
+    }
+
+    const totalCommon = start + (oldLines.length - 1 - oldEnd) + commonInDiff;
 
     return {
-        deletions: oldLines.length - totalCommon,
-        additions: newLines.length - totalCommon
+        deletions: deletionsInDiff,
+        additions: newDiff.length - commonInDiff
     };
 }
 function getChangedEntries(
