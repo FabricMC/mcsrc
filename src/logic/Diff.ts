@@ -62,12 +62,14 @@ export interface ChangeInfo {
 }
 
 // Clear calculated line changes when diff versions change to prevent stale data
-combineLatest([
-    getLeftDiff().selectedVersion,
-    selectedMinecraftVersion
-]).subscribe(() => {
-    calculatedLineChanges.next(new Map());
-});
+setTimeout(() => {
+    combineLatest([
+        getLeftDiff().selectedVersion,
+        selectedMinecraftVersion
+    ]).subscribe(() => {
+        calculatedLineChanges.next(new Map());
+    });
+}, 0);
 
 let diffChanges: Observable<Map<string, ChangeInfo>> | null = null;
 export function getDiffChanges(): Observable<Map<string, ChangeInfo>> {
