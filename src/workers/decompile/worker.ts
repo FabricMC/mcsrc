@@ -122,8 +122,11 @@ async function decompileClass0(jarName: string, jarClasses: string[], classNames
     try {
         // decompilerCounter.next(decompilerCounter.value + 1);
 
-        const result = await vf.decompileMany(classNames, {
-            source: async (name) => classData[name] ?? null,
+        const result = await vf.decompile(classNames, {
+            source: async (name) => {
+                // console.log(name);
+                return await classData[name] ?? null;
+            },
             resources: jarClasses,
             options,
             // tokenCollector: tokenCollector(tokens)

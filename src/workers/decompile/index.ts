@@ -21,7 +21,7 @@ export class DecompileJar {
         this.jar = jar;
         this.proxy = new Proxy({}, {
             get(_, className: string) {
-                return jar.entries[className + ".class"].bytes()
+                return jar.entries[className + ".class"]?.bytes()
             }
         })
     }
