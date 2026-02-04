@@ -32,6 +32,7 @@ export class DecompileJar {
         this._classes = Object.keys(this.jar.entries)
             .filter(f => f.endsWith(".class"))
             .map(f => f.replace(".class", ""))
+            .sort();
         return this._classes;
     }
 }

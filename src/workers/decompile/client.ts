@@ -5,38 +5,47 @@ type DecompileWorker = typeof import("./worker");
 function createWrorker() {
     return new ComlinkWorker<DecompileWorker>(
         new URL("./worker", import.meta.url),
+        { name: "decompileWorker" }
     );
 }
 
-const threads = navigator.hardwareConcurrency - 1 || 4;
+const threads = (navigator.hardwareConcurrency / 2) || 1;
 const workers = Array.from({ length: threads }, () => createWrorker());
 
 export async function decompileClass(className: string, jar: Jar): Promise<DecompileResult> {
-    await decompileEntireJar(jar);
+    // await decompileEntireJar(jar);
+    await decompileEntireJar4(jar);
     return decompileClass0(className, jar);
 }
 
 export async function decompileEntireJar(jar: Jar) {
-    await Promise.all(workers.map(w => w.registerJar(jar.name, jar.blob)));
+    const classNames = new DecompileJar(jar).classes
+        .filter(n => !n.includes("$"))
+        .slice(0, 500);
 
-    const jarClasses = new DecompileJar(jar).classes
-    const entryLength = jarClasses.length;
-    jarClasses.reverse();
-    async function decompile(worker: ReturnType<typeof createWrorker>) {
-        if (jarClasses.length === 0) return;
-
-        const className = jarClasses.pop()!;
-        await worker
-            .decompileClassNoReturn(jar.name, null, className, null)
-            .then(async () => await decompile(worker));
-    }
+    const sab = new SharedArrayBuffer(Uint32Array.BYTES_PER_ELEMENT);
+    const view = new Uint32Array(sab);
+    view[0] = 0;
 
     const start = performance.now();
-    await Promise.all(workers.map(w => decompile(w)));
-    const elapsedMs = performance.now() - start;
-    console.log(`Decompiled ${entryLength} classes in ${elapsedMs.toFixed(3)} ms`);
+    await Promise.all(workers.map(w => w.decompileManyClasses(jar.name, jar.blob, classNames, sab)));
+    const elapsed = (performance.now() - start) / 1000;
+    console.log(`Decompiled ${classNames.length} classes in ${elapsed.toFixed(3)} s`);
+}
 
-    await Promise.all(workers.map(w => w.registerJar(jar.name, null)));
+export async function decompileEntireJar4(jar: Jar) {
+    const classNames = new DecompileJar(jar).classes
+        .filter(n => !n.includes("$"))
+        // .slice(0, 500);
+
+    const sab = new SharedArrayBuffer(Uint32Array.BYTES_PER_ELEMENT);
+    const view = new Uint32Array(sab);
+    view[0] = 0;
+
+    const start = performance.now();
+    await Promise.all(workers.map(w => w.decompileManyClasses4(jar.name, jar.blob, classNames, sab, 100)));
+    const elapsed = (performance.now() - start) / 1000;
+    console.log(`Decompiled ${classNames.length} classes in ${elapsed.toFixed(3)} s`);
 }
 
 export async function decompileClass0(className: string, jar: Jar): Promise<DecompileResult> {
@@ -62,7 +71,8 @@ export async function decompileClass0(className: string, jar: Jar): Promise<Deco
         classData[classFile] = data;
     }
 
-    return await worker.decompileClass(jar.name, jarClasses, className, classData);
+    const res = await worker.decompileClass(jar.name, jarClasses, [className], classData);
+    return res[0];
 }
 
 export async function getClassBytecode(className: string, jar: Jar): Promise<DecompileResult> {

@@ -14,6 +14,10 @@ export default defineConfig({
   },
   // For javadoc API during development
   server: {
+    headers: {
+      'Cross-Origin-Opener-Policy': 'same-origin',
+      'Cross-Origin-Embedder-Policy': 'require-corp',
+    },
     proxy: {
       '/v1': {
         target: 'http://localhost:8080',
