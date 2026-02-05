@@ -4,10 +4,8 @@ import { BehaviorSubject } from "rxjs";
 import { useObservable } from "../utils/UseObservable";
 import { NumberOption } from "./SettingsModal";
 import { NumberSetting } from "../logic/Settings";
-import { decompileEntireJar, type DecompileEntireJarTask } from "../workers/decompile/client";
+import { decompileEntireJar, deleteCache, type DecompileEntireJarTask } from "../workers/decompile/client";
 import { minecraftJar } from "../logic/MinecraftApi";
-import { useState } from "react";
-import { clearDb } from "../workers/decompile/worker";
 
 const modalOpen = new BehaviorSubject(false);
 
@@ -50,7 +48,7 @@ export const JarDecompilerModal = () => {
     const clearCache = (all: boolean) => {
         if (!jar) return;
 
-        clearDb(all ? null : jar.jar.name)
+        deleteCache(all ? null : jar.jar.name)
             .finally(() => messageApi.open({ type: "success", content: "Cache deleted" }));
     }
 
