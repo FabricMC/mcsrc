@@ -1,12 +1,13 @@
-import { BehaviorSubject, combineLatest, from, map, Observable, switchMap } from "rxjs";
+import { BehaviorSubject, combineLatest, from, map, Observable, switchMap, shareReplay } from "rxjs";
 import { minecraftJar, minecraftJarPipeline, selectedMinecraftVersion, type MinecraftJar } from "./MinecraftApi";
 import { currentResult, decompileResultPipeline, type DecompileResult } from "./Decompiler";
+import { calculatedLineChanges } from "./LineChanges";
 
 export const diffView = new BehaviorSubject<boolean>(false);
 export const hideUnchangedSizes = new BehaviorSubject<boolean>(false);
 
 export interface EntryInfo {
-    crcs: number[];
+    classCrcs: Map<string, number>;
     totalUncompressedSize: number;
 }
 
@@ -48,20 +49,69 @@ export function getRightDiff(): DiffSide {
     return rightDiff;
 }
 
-let diffChanges: Observable<Map<string, ChangeState>> | null = null;
-export function getDiffChanges(): Observable<Map<string, ChangeState>> {
+export interface DiffSummary {
+    added: number;
+    deleted: number;
+    modified: number;
+}
+
+export interface ChangeInfo {
+    state: ChangeState;
+    additions?: number;
+    deletions?: number;
+}
+
+// Clear calculated line changes when diff versions change to prevent stale data
+setTimeout(() => {
+    combineLatest([
+        getLeftDiff().selectedVersion,
+        selectedMinecraftVersion
+    ]).subscribe(() => {
+        calculatedLineChanges.next(new Map());
+    });
+}, 0);
+
+let diffChanges: Observable<Map<string, ChangeInfo>> | null = null;
+export function getDiffChanges(): Observable<Map<string, ChangeInfo>> {
     if (!diffChanges) {
         diffChanges = combineLatest([
             getLeftDiff().entries,
             getRightDiff().entries,
-            hideUnchangedSizes
+            hideUnchangedSizes,
+            calculatedLineChanges
         ]).pipe(
-            map(([leftEntries, rightEntries, skipUnchangedSize]) => {
-                return getChangedEntries(leftEntries, rightEntries, skipUnchangedSize);
-            })
+            map(([leftEntries, rightEntries, skipUnchangedSize, lineChanges]) => {
+                const changes = getChangedEntries(leftEntries, rightEntries, skipUnchangedSize);
+                lineChanges.forEach((counts, file) => {
+                    const info = changes.get(file);
+                    if (info) {
+                        info.additions = counts.additions;
+                        info.deletions = counts.deletions;
+                    }
+                });
+                return changes;
+            }),
+            shareReplay(1)
         );
     }
     return diffChanges;
+}
+
+let diffSummaryObs: Observable<DiffSummary> | null = null;
+export function getDiffSummary(): Observable<DiffSummary> {
+    if (!diffSummaryObs) {
+        diffSummaryObs = getDiffChanges().pipe(
+            map(changes => {
+                const summary: DiffSummary = { added: 0, deleted: 0, modified: 0 };
+                changes.forEach(info => {
+                    summary[info.state]++;
+                });
+                return summary;
+            }),
+            shareReplay(1)
+        );
+    }
+    return diffSummaryObs;
 }
 
 export type ChangeState = "added" | "deleted" | "modified";
@@ -74,18 +124,20 @@ async function getEntriesWithCRC(jar: MinecraftJar): Promise<Map<string, EntryIn
             continue;
         }
 
-        let className = path.substring(0, path.length - 6);
-        if (path.includes('$')) {
-            className = className.split('$')[0];
-        }
+        const className = path.substring(0, path.length - 6);
+        const lastSlash = path.lastIndexOf('/');
+        const folder = lastSlash !== -1 ? path.substring(0, lastSlash + 1) : '';
+        const fileName = path.substring(folder.length);
+        const baseFileName = fileName.includes('$') ? fileName.split('$')[0] : fileName.replace('.class', '');
+        const baseClassName = folder + baseFileName + '.class';
 
-        const existing = entries.get(className);
+        const existing = entries.get(baseClassName);
         if (existing) {
-            insertSorted(existing.crcs, file.crc32);
+            existing.classCrcs.set(className, file.crc32);
             existing.totalUncompressedSize += file.uncompressedSize;
         } else {
-            entries.set(className, {
-                crcs: [file.crc32],
+            entries.set(baseClassName, {
+                classCrcs: new Map([[className, file.crc32]]),
                 totalUncompressedSize: file.uncompressedSize
             });
         }
@@ -98,8 +150,8 @@ function getChangedEntries(
     leftEntries: Map<string, EntryInfo>,
     rightEntries: Map<string, EntryInfo>,
     skipUnchangedSize: boolean = false
-): Map<string, ChangeState> {
-    const changes = new Map<string, ChangeState>();
+): Map<string, ChangeInfo> {
+    const changes = new Map<string, ChangeInfo>();
 
     const allKeys = new Set<string>([
         ...leftEntries.keys(),
@@ -111,28 +163,29 @@ function getChangedEntries(
         const rightInfo = rightEntries.get(key);
 
         if (leftInfo === undefined) {
-            changes.set(key, "added");
+            changes.set(key, { state: "added" });
         } else if (rightInfo === undefined) {
-            changes.set(key, "deleted");
-        } else if (!arraysEqual(leftInfo.crcs, rightInfo.crcs)) {
+            changes.set(key, { state: "deleted" });
+        } else {
+            const leftClasses = leftInfo.classCrcs;
+            const rightClasses = rightInfo.classCrcs;
+
+            // Check if any of the classes (including inner classes) have changed by comparing their CRCs.
+            // A Map is used to track the CRC of each individual class file that belongs to this base class.
+            const hasChanges = leftClasses.size !== rightClasses.size ||
+                Array.from(leftClasses.entries()).some(([className, leftCrc]) => rightClasses.get(className) !== leftCrc);
+
+            if (!hasChanges) {
+                continue;
+            }
+
             if (skipUnchangedSize && leftInfo.totalUncompressedSize === rightInfo.totalUncompressedSize) {
                 continue;
             }
-            changes.set(key, "modified");
+
+            changes.set(key, { state: "modified" });
         }
     }
 
     return changes;
-}
-
-function insertSorted(arr: number[], num: number) {
-    const idx = arr.findIndex(x => x > num);
-    if (idx === -1) arr.push(num);
-    else arr.splice(idx, 0, num);
-    return arr;
-}
-
-
-function arraysEqual(a: number[], b: number[]) {
-    return a.length === b.length && a.every((val, i) => val === b[i]);
 }
