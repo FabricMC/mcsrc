@@ -6,6 +6,7 @@ import ProgressModal from "./ProgressModal";
 import AboutModal from "./AboutModal";
 import SettingsModal from "./SettingsModal";
 import StructureModal from "./StructureModal";
+import { JarDecompilerModal, JarDecompilerProgressModal } from "./JarDecompilerModal";
 
 const Modals = () => {
     return (
@@ -18,6 +19,8 @@ const Modals = () => {
             <AboutModal />
             <SettingsModal />
             <StructureModal />
+            <JarDecompilerModal />
+            <JarDecompilerProgressModal />
         </>
     );
 };

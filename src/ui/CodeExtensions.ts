@@ -4,7 +4,7 @@ import { currentResult } from '../logic/Decompiler';
 import { activeTabKey, openTab } from '../logic/Tabs';
 import { getTokenLocation, type Token } from '../logic/Tokens';
 import { filter, take } from "rxjs";
-import type { DecompileResult } from "../workers/decompile";
+import type { DecompileResult } from "../workers/decompile/types";
 
 export function jumpToToken(
     result: DecompileResult,

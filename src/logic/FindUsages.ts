@@ -2,7 +2,7 @@ import { BehaviorSubject, combineLatest, distinctUntilChanged, from, map, Observ
 import { jarIndex, type UsageKey, type UsageString } from "../workers/JarIndex";
 import { openTab } from "./Tabs";
 import type { Token } from "./Tokens";
-import type { DecompileResult } from "../workers/decompile";
+import type { DecompileResult } from "../workers/decompile/types";
 
 export const usageQuery = new BehaviorSubject("");
 

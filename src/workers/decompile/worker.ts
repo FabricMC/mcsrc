@@ -2,8 +2,8 @@ import * as vf from "../../logic/vf";
 import Dexie, { type EntityTable, type Table } from "dexie";
 import type { Token } from "../../logic/Tokens";
 import { getBytecode } from "../JarIndexWorker";
-import { type DecompileResult, type DecompileOption, type DecompileData, DecompileJar } from ".";
-import { openJar, type Jar } from "../../utils/Jar";
+import { type DecompileResult, type DecompileOption, type DecompileData, DecompileJar, type DecompileLogger } from "./types";
+import { openJar } from "../../utils/Jar";
 
 const db = new Dexie("decompiler") as Dexie & {
     options: EntityTable<DecompileOption, "key">,
@@ -55,23 +55,26 @@ let lastPromise: Promise<DecompileResult[]> | undefined = undefined
 let _promiseCount = 0;
 export const promiseCount = () => _promiseCount;
 
-export const decompileManyClasses = async (jarName: string, blob: Blob, classNames: string[], sab: SharedArrayBuffer) => {
-    await registerJar(jarName, blob);
-    const state = new Uint32Array(sab);
+export const clearDb = async (jarName: string | null): Promise<void> => {
+    try {
+        _promiseCount++;
+        if (lastPromise) await lastPromise;
 
-    while (true) {
-        const i = Atomics.add(state, 0, 1);
-        if (i >= classNames.length) break;
-
-        await decompileClass(jarName, null, [classNames[i]], null);
+        if (jarName) {
+            await db.results.where("owner").equals(jarName).delete();
+        } else {
+            await db.results.clear();
+        }
+    } finally {
+        _promiseCount--;
     }
-    await registerJar(jarName, null);
 }
 
-export const decompileManyClasses4 = async (jarName: string, blob: Blob, classNames: string[], sab: SharedArrayBuffer, splits: number) => {
+export const decompileManyClasses = async (jarName: string, blob: Blob, classNames: string[], sab: SharedArrayBuffer, splits: number, logger?: DecompileLogger): Promise<number> => {
     await registerJar(jarName, blob);
     const state = new Uint32Array(sab);
 
+    let count = 0;
     while (true) {
         const i = Atomics.add(state, 0, splits);
         if (i >= classNames.length) break;
@@ -82,16 +85,14 @@ export const decompileManyClasses4 = async (jarName: string, blob: Blob, classNa
             targetClassNames.push(classNames[i + j]);
         }
 
-        await decompileClass(jarName, null, targetClassNames, null);
+        const result = await decompileClass(jarName, null, targetClassNames, null, logger);
+        count += result.length;
     }
     await registerJar(jarName, null);
+    return count;
 }
 
-export const decompileClassNoReturn = async (jarName: string, jarClasses: string[] | null, className: string[], classData: DecompileData | null) => {
-    await decompileClass(jarName, jarClasses, className, classData);
-}
-
-export const decompileClass = async (jarName: string, jarClasses: string[] | null, classNames: string[], classData: DecompileData | null): Promise<DecompileResult[]> => {
+export const decompileClass = async (jarName: string, jarClasses: string[] | null, classNames: string[], classData: DecompileData | null, logger?: DecompileLogger): Promise<DecompileResult[]> => {
     if (!jarClasses) jarClasses = jars[jarName].classes;
     if (!classData) classData = jars[jarName].proxy;
 
@@ -103,7 +104,7 @@ export const decompileClass = async (jarName: string, jarClasses: string[] | nul
         if (dbResult.every(t => t)) return dbResult as DecompileResult[];
 
         const options = await getOptions();
-        lastPromise = decompileClass0(jarName, jarClasses, classNames, classData, options);
+        lastPromise = decompileClass0(jarName, jarClasses, classNames, classData, options, logger);
         const promiseResult = await lastPromise;
         await db.results.bulkPut(promiseResult);
         return promiseResult;
@@ -113,7 +114,7 @@ export const decompileClass = async (jarName: string, jarClasses: string[] | nul
     }
 }
 
-async function decompileClass0(jarName: string, jarClasses: string[], classNames: string[], classData: DecompileData, options: vf.Options): Promise<DecompileResult[]> {
+async function decompileClass0(jarName: string, jarClasses: string[], classNames: string[], classData: DecompileData, options: vf.Options, logger?: DecompileLogger): Promise<DecompileResult[]> {
     // if (!jarClasses.includes(className)) {
     //     console.error(`Class not found in Minecraft jar: ${className}`);
     //     return { owner: jarName, className, source: `// Class not found: ${className}`, tokens: [], language: "java" };
@@ -129,6 +130,19 @@ async function decompileClass0(jarName: string, jarClasses: string[], classNames
             },
             resources: jarClasses,
             options,
+            logger: {
+                writeMessage(level, message, error) {
+                    switch (level) {
+                        case "warn": console.warn(message); break;
+                        case "error": console.error(message, error); break;
+                        // default: console.log(message); break;
+                    }
+                },
+                startClass(className) {
+                    if (logger) logger(className);
+                    // console.log(`Decompiling ${className}`);
+                },
+            }
             // tokenCollector: tokenCollector(tokens)
         });
 
@@ -138,7 +152,6 @@ async function decompileClass0(jarName: string, jarClasses: string[], classNames
             // tokens.push(...generateImportTokens(source));
             // tokens.sort((a, b) => a.start - b.start);
 
-            console.log(`Decompiled class: '${className}'`);
             res.push({ owner: jarName, className, source, tokens, language: "java" });
         }
         return res;

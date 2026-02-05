@@ -11,6 +11,8 @@ export type DecompileResult = {
 
 export type DecompileOption = { key: string, value: string };
 
+export type DecompileLogger = (className: string) => void;
+
 export type DecompileData = Record<string, Uint8Array | Promise<Uint8Array>>;
 
 export class DecompileJar {

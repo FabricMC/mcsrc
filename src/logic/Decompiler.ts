@@ -7,7 +7,7 @@ import { minecraftJar, type MinecraftJar } from "./MinecraftApi";
 import { selectedFile } from "./State";
 import { bytecode, displayLambdas } from "./Settings";
 import type { Options } from "./vf";
-import type { DecompileResult } from "../workers/decompile";
+import type { DecompileResult } from "../workers/decompile/types";
 import { decompileClass, getClassBytecode } from "../workers/decompile/client";
 
 const decompilerCounter = new BehaviorSubject<number>(0);
