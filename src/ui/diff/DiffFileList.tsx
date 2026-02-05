@@ -1,4 +1,5 @@
 import { Table, Tag, Input, Button, Flex, theme, Checkbox, Tooltip } from 'antd';
+import { SplitCellsOutlined, AlignLeftOutlined } from '@ant-design/icons';
 import DiffVersionSelection from './DiffVersionSelection';
 import {
     getDiffChanges,
@@ -15,7 +16,7 @@ import type { SearchProps } from 'antd/es/input';
 import { selectedFile, setSelectedFile } from '../../logic/State';
 import { isDecompiling } from "../../logic/Decompiler.ts";
 import { useEffect, useMemo } from 'react';
-import { bytecode } from "../../logic/Settings.ts";
+import { bytecode, unifiedDiff } from "../../logic/Settings.ts";
 
 const statusColors: Record<ChangeState, string> = {
     modified: 'gold',
@@ -54,6 +55,8 @@ const DiffFileList = () => {
     const loading = useObservable(isDecompiling);
     const hideUnchanged = useObservable(hideUnchangedSizes) || false;
     const summary = useObservable<DiffSummary>(useMemo(() => getDiffSummary(), []));
+    const isUnifiedDiff = useObservable(unifiedDiff.observable);
+    const isBytecode = useObservable(bytecode.observable);
     const { token } = theme.useToken();
 
     const columns = useMemo(() => [
@@ -161,8 +164,16 @@ const DiffFileList = () => {
                         right: 0
                     }}
                 >
+                    <Tooltip title={isUnifiedDiff ? "Switch to side-by-side diff" : "Switch to unified diff"}>
+                        <Button
+                            type="text"
+                            icon={isUnifiedDiff ? <SplitCellsOutlined /> : <AlignLeftOutlined />}
+                            onClick={() => unifiedDiff.value = !unifiedDiff.value}
+                            style={{ marginRight: 8 }}
+                        />
+                    </Tooltip>
                     <Checkbox
-                        checked={useObservable(bytecode.observable)}
+                        checked={isBytecode}
                         onChange={e => bytecode.value = e.target.checked}
                     >
                         Show Bytecode

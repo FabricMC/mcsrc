@@ -8,6 +8,7 @@ import { Spin } from "antd";
 import { LoadingOutlined } from '@ant-design/icons';
 import { isDecompiling } from "../../logic/Decompiler.ts";
 import { selectedFile } from '../../logic/State';
+import { unifiedDiff } from '../../logic/Settings';
 
 interface DiffCodeProps {
     height?: number | string;
@@ -19,6 +20,7 @@ const DiffCode = ({ height }: DiffCodeProps) => {
     const editorRef = useRef<editor.IStandaloneDiffEditor | null>(null);
     const loading = useObservable(isDecompiling);
     const currentPath = useObservable(selectedFile);
+    const isUnified = useObservable(unifiedDiff.observable);
 
     useEffect(() => {
         if (!loading && currentPath &&
@@ -78,6 +80,7 @@ const DiffCode = ({ height }: DiffCodeProps) => {
                 options={{
                     readOnly: true,
                     domReadOnly: true,
+                    renderSideBySide: !isUnified,
                     //tabSize: 3,
                 }} />
         </Spin>
