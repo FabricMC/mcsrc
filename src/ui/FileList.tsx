@@ -1,16 +1,16 @@
 import { Tree, Dropdown, message } from 'antd';
 import type { TreeDataNode, TreeProps, MenuProps } from 'antd';
 import { CaretDownFilled } from '@ant-design/icons';
-import { firstValueFrom, map, shareReplay, type Observable } from 'rxjs';
+import { map, shareReplay, type Observable } from 'rxjs';
 import { classesList } from '../logic/JarFile';
 import { useObservable } from '../utils/UseObservable';
-import { selectedFile } from '../logic/State';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { Key } from 'antd/es/table/interface';
 import { openTab } from '../logic/Tabs';
 import { minecraftJar, type MinecraftJar } from '../logic/MinecraftApi';
 import { decompileClass, DECOMPILER_OPTIONS } from '../logic/Decompiler';
 import { usageQuery } from '../logic/FindUsages';
+import { selectedFile } from '../logic/State';
 
 // Sorts nodes with children first (directories before files), then alphabetically
 const sortTreeNodes = (nodes: TreeDataNode[] = []) => {

@@ -5,11 +5,11 @@ import {
 } from "rxjs";
 import { minecraftJar, type MinecraftJar } from "./MinecraftApi";
 import { decompile, type Options, type TokenCollector } from "./vf";
-import { selectedFile } from "./State";
 import type { Jar } from "../utils/Jar";
 import type { Token } from "./Tokens";
 import { bytecode, displayLambdas } from "./Settings";
 import { getBytecode } from "../workers/JarIndex";
+import { selectedFile } from "./State";
 
 export interface DecompileResult {
     className: string;

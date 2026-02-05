@@ -1,9 +1,9 @@
 import { BehaviorSubject, combineLatest, from, map, Observable, switchMap, shareReplay } from "rxjs";
-import { minecraftJar, minecraftJarPipeline, selectedMinecraftVersion, type MinecraftJar } from "./MinecraftApi";
+import { minecraftJar, minecraftJarPipeline, type MinecraftJar } from "./MinecraftApi";
 import { currentResult, decompileResultPipeline, type DecompileResult } from "./Decompiler";
 import { calculatedLineChanges } from "./LineChanges";
+import { selectedMinecraftVersion } from "./State";
 
-export const diffView = new BehaviorSubject<boolean>(false);
 export const hideUnchangedSizes = new BehaviorSubject<boolean>(false);
 
 export interface EntryInfo {

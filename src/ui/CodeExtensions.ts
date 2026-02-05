@@ -2,9 +2,10 @@ import type { CancellationToken, IDisposable, IPosition, IRange, languages } fro
 import { editor, Range, Uri } from "monaco-editor";
 import type { DecompileResult } from '../logic/Decompiler';
 import { currentResult } from '../logic/Decompiler';
-import { activeTabKey, openTab } from '../logic/Tabs';
+import { openTab } from '../logic/Tabs';
 import { getTokenLocation, type Token } from '../logic/Tokens';
 import { filter, take } from "rxjs";
+import { selectedFile } from "../logic/State";
 
 export function jumpToToken(
     result: DecompileResult,
@@ -118,7 +119,7 @@ export function createEditorOpener(
             console.log(className);
             console.log(baseClassName);
 
-            const jumpInSameFile = baseClassName === activeTabKey.value;
+            const jumpInSameFile = baseClassName === selectedFile.value;
             const fragment = resource.fragment.split(":") as ['method' | 'field', string];
             if (fragment.length === 2) {
                 const [targetType, target] = fragment;

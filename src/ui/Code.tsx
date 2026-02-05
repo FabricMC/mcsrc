@@ -1,14 +1,13 @@
 import Editor, { useMonaco } from '@monaco-editor/react';
 import { useObservable } from '../utils/UseObservable';
-import { currentResult, type DecompileResult, isDecompiling } from '../logic/Decompiler';
+import { currentResult, isDecompiling } from '../logic/Decompiler';
 import { useEffect, useRef, useState } from 'react';
 import { editor, Range } from "monaco-editor";
 import { isThin } from '../logic/Browser';
 import { classesList } from '../logic/JarFile';
-import { activeTabKey, getOpenTab, openTabs, tabHistory } from '../logic/Tabs';
+import { getOpenTab } from '../logic/Tabs';
 import { message, Spin } from 'antd';
 import { LoadingOutlined } from '@ant-design/icons';
-import { setSelectedFile, state } from '../logic/State';
 import { getTokenLocation } from '../logic/Tokens';
 import { pairwise, startWith } from "rxjs";
 import { getNextJumpToken, nextUsageNavigation, usageQuery } from '../logic/FindUsages';
@@ -30,8 +29,8 @@ import {
     createEditorOpener,
     createFoldingRangeProvider
 } from './CodeExtensions';
-import { diffView } from '../logic/Diff';
 import { bytecode } from '../logic/Settings';
+import { selectedFile, diffView, openTabs, selectedLines, tabHistory } from '../logic/State';
 
 const Code = () => {
     const monaco = useMonaco();
@@ -41,7 +40,7 @@ const Code = () => {
     const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
     const hideMinimap = useObservable(isThin);
     const decompiling = useObservable(isDecompiling);
-    const currentState = useObservable(state);
+    const selectedLine = useObservable(selectedLines);
     const nextUsage = useObservable(nextUsageNavigation);
 
     const decorationsCollectionRef = useRef<editor.IEditorDecorationsCollection | null>(null);
@@ -154,7 +153,7 @@ const Code = () => {
     useEffect(() => {
         if (editorRef.current && decompileResult) {
             const editor = editorRef.current;
-            const currentTab = openTabs.value.find(tab => tab.key === activeTabKey.value);
+            const currentTab = openTabs.value.find(tab => tab.key === selectedFile.value);
             const prevTab = openTabs.value.find(tab => tab.key === tabHistory.value.at(-2));
             if (prevTab) {
                 prevTab.scroll = editor.getScrollTop();
@@ -163,9 +162,9 @@ const Code = () => {
             lineHighlightRef.current?.clear();
 
             const executeScroll = () => {
-                const currentLine = state.value?.line;
+                const currentLine = selectedLine?.line;
                 if (currentLine) {
-                    const lineEnd = state.value?.lineEnd ?? currentLine;
+                    const lineEnd = selectedLine?.lineEnd ?? currentLine;
                     editor.setSelection(new Range(currentLine, 1, currentLine, 1));
                     editor.revealLinesInCenterIfOutsideViewport(currentLine, lineEnd);
 
@@ -190,7 +189,7 @@ const Code = () => {
                 executeScroll();
             });
         }
-    }, [decompileResult, currentState?.line, currentState?.lineEnd]);
+    }, [decompileResult, selectedLine]);
 
     // Scroll to a "Find usages" token
     useEffect(() => {
@@ -220,8 +219,8 @@ const Code = () => {
 
     // Subscribe to tab changes and store model & viewstate of previously opened tab
     useEffect(() => {
-        const sub = activeTabKey.pipe(
-            startWith(activeTabKey.value),
+        const sub = selectedFile.pipe(
+            startWith(selectedFile.value),
             pairwise()
         ).subscribe(([prev, curr]) => {
             if (prev === curr) return;
@@ -243,7 +242,7 @@ const Code = () => {
                 );
             } else {
                 if (!openTab) return;
-                setSelectedFile(openTab.key);
+                selectedFile.next(openTab.key);
 
                 // While this is not perfect, it works because leaving the diff view
                 // makes the view invisible and doesn't apply any of the custom "extensions",
@@ -287,7 +286,7 @@ const Code = () => {
         // Only restore view state if there's no line to jump to
         // Otherwise the line highlighting effect will handle scrolling
         if (editorRef.current) {
-            if (!state.value?.line) {
+            if (!selectedLine) {
                 tab.applyViewToEditor(editorRef.current);
             } else {
                 // Just set the model without restoring view state
@@ -297,7 +296,34 @@ const Code = () => {
             }
         }
         applyTokenDecorations(tab.model!);
-    }, [decompileResult, resetViewTrigger]);
+    }, [decompileResult, resetViewTrigger, selectedLine]);
+
+    // Handle gutter clicks for line linking
+    useEffect(() => {
+        if (!editorRef.current) return;
+        const codeEditor = editorRef.current;
+
+        const onMouseDown = codeEditor.onMouseDown((e) => {
+            if (e.target.type === editor.MouseTargetType.GUTTER_LINE_NUMBERS ||
+                e.target.type === editor.MouseTargetType.GUTTER_GLYPH_MARGIN) {
+                const lineNumber = e.target.position?.lineNumber;
+
+                if (lineNumber) {
+                    // Shift-click to select a range
+                    console.log(selectedLine);
+                    if (e.event.shiftKey && selectedLine) {
+                        selectedLines.next({ line: selectedLine.line, lineEnd: lineNumber });
+                    } else {
+                        selectedLines.next({ line: lineNumber });
+                    }
+                }
+            }
+        });
+
+        return () => {
+            onMouseDown.dispose();
+        };
+    }, [editorRef.current, selectedLine]);
 
     return (
         <Spin
@@ -335,24 +361,6 @@ const Code = () => {
                         const token = findTokenAtPosition(codeEditor, decompileResultRef.current, classListRef.current);
                         const validToken = token != null && (token.type == "class" || token.type == "method" || token.type == "field");
                         isDefinitionContextKey.set(validToken);
-                    });
-
-                    // Handle gutter clicks for line linking
-                    codeEditor.onMouseDown((e) => {
-                        if (e.target.type === editor.MouseTargetType.GUTTER_LINE_NUMBERS ||
-                            e.target.type === editor.MouseTargetType.GUTTER_GLYPH_MARGIN) {
-                            const lineNumber = e.target.position?.lineNumber;
-
-                            const currentState = state.value;
-                            if (lineNumber && currentState) {
-                                // Shift-click to select a range
-                                if (e.event.shiftKey && currentState.line) {
-                                    setSelectedFile(currentState.file, currentState.line, lineNumber);
-                                } else {
-                                    setSelectedFile(currentState.file, lineNumber);
-                                }
-                            }
-                        }
                     });
                 }} />
         </Spin>
