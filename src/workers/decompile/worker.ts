@@ -229,7 +229,7 @@ function generateImportTokens(source: string): Token[] {
 export async function getClassBytecode(jarName: string, jarClasses: string[], className: string, classData: ArrayBufferLike[]): Promise<DecompileResult> {
     try {
         _promiseCount++;
-        let result = await db.results.get([jarName, className, "java"]);
+        let result = await db.results.get([jarName, className, "bytecode"]);
         if (result) return result;
 
         const promise = lastPromise
