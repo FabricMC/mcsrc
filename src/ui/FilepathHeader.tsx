@@ -1,10 +1,20 @@
 import { theme } from "antd";
-import { selectedFile } from "../logic/State";
 import { useObservable } from "../utils/UseObservable";
+import { getDiffChanges } from "../logic/Diff";
+import { combineLatest, map } from "rxjs";
+import { selectedFile, diffView } from "../logic/State";
+
+const changeInfoObs = combineLatest([selectedFile, getDiffChanges(), diffView]).pipe(
+    map(([file, changes, isDiff]) => {
+        if (!isDiff || !file) return null;
+        return changes.get(file) || null;
+    })
+);
 
 export const FilepathHeader = () => {
     const { token } = theme.useToken();
     const info = useObservable(selectedFile);
+    const changeInfo = useObservable(changeInfoObs);
 
     return info && (
         <div style={{
@@ -30,6 +40,16 @@ export const FilepathHeader = () => {
                     </span>
                 ))}
             </div>
+            {changeInfo && (
+                <div style={{ display: "flex", gap: "4px", marginLeft: "8px" }}>
+                    {changeInfo.deletions !== undefined && changeInfo.deletions > 0 && (
+                        <span style={{ color: token.colorError, fontSize: '12px', fontWeight: 'bold' }}>-{changeInfo.deletions}</span>
+                    )}
+                    {changeInfo.additions !== undefined && changeInfo.additions > 0 && (
+                        <span style={{ color: token.colorSuccess, fontSize: '12px', fontWeight: 'bold' }}>+{changeInfo.additions}</span>
+                    )}
+                </div>
+            )}
         </div>
     );
 };

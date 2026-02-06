@@ -1,10 +1,9 @@
 import { BehaviorSubject, combineLatest, distinctUntilChanged, from, map, Observable, switchMap, throttleTime } from "rxjs";
 import { jarIndex, type UsageKey, type UsageString } from "../workers/JarIndex";
 import { openTab } from "./Tabs";
+import { usageQuery } from "./State";
 import type { Token } from "./Tokens";
 import type { DecompileResult } from "../workers/decompile/types";
-
-export const usageQuery = new BehaviorSubject("");
 
 export const useageResults = usageQuery
     .pipe(

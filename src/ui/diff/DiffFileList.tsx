@@ -1,14 +1,21 @@
 import { Table, Tag, Input, Button, Flex, theme, Checkbox, Tooltip } from 'antd';
+import { SplitCellsOutlined, AlignLeftOutlined } from '@ant-design/icons';
 import DiffVersionSelection from './DiffVersionSelection';
-import { getDiffChanges, type ChangeState, hideUnchangedSizes } from '../../logic/Diff';
+import {
+    getDiffChanges,
+    type ChangeState,
+    type ChangeInfo,
+    hideUnchangedSizes,
+    getDiffSummary,
+    type DiffSummary,
+} from '../../logic/Diff';
 import { BehaviorSubject, map, combineLatest } from 'rxjs';
 import { useObservable } from '../../utils/UseObservable';
 import type { SearchProps } from 'antd/es/input';
-import { selectedFile, setSelectedFile } from '../../logic/State';
-import { diffView } from "../../logic/Diff";
 import { isDecompiling } from "../../logic/Decompiler.ts";
-import { useEffect } from 'react';
-import { bytecode } from "../../logic/Settings.ts";
+import { useEffect, useMemo } from 'react';
+import { bytecode, unifiedDiff } from "../../logic/Settings.ts";
+import { selectedFile, diffView } from '../../logic/State.ts';
 
 const statusColors: Record<ChangeState, string> = {
     modified: 'gold',
@@ -16,34 +23,24 @@ const statusColors: Record<ChangeState, string> = {
     deleted: 'red',
 };
 
-const columns = [
-    {
-        title: 'File',
-        dataIndex: 'file',
-        key: 'file',
-    },
-    {
-        title: 'Status',
-        dataIndex: 'status',
-        key: 'status',
-        render: (status: ChangeState) => (
-            <Tag color={statusColors[status] || 'default'}>{status.toUpperCase()}</Tag>
-        ),
-    },
-];
-
 const searchQuery = new BehaviorSubject("");
+
+interface DiffEntry {
+    key: string;
+    file: string;
+    statusInfo: ChangeInfo;
+}
 
 const entries = combineLatest([getDiffChanges(), searchQuery]).pipe(
     map(([changesMap, query]) => {
-        const entriesArray: { key: string; file: string; status: string; }[] = [];
+        const entriesArray: DiffEntry[] = [];
         const lowerQuery = query.toLowerCase();
-        changesMap.forEach((status, file) => {
+        changesMap.forEach((info, file) => {
             if (!query || file.toLowerCase().includes(lowerQuery)) {
                 entriesArray.push({
                     key: file,
                     file,
-                    status,
+                    statusInfo: info,
                 });
             }
         });
@@ -56,7 +53,40 @@ const DiffFileList = () => {
     const currentFile = useObservable(selectedFile);
     const loading = useObservable(isDecompiling);
     const hideUnchanged = useObservable(hideUnchangedSizes) || false;
+    const summary = useObservable<DiffSummary>(useMemo(() => getDiffSummary(), []));
+    const isUnifiedDiff = useObservable(unifiedDiff.observable);
+    const isBytecode = useObservable(bytecode.observable);
     const { token } = theme.useToken();
+
+    const columns = useMemo(() => [
+        {
+            title: 'File',
+            dataIndex: 'file',
+            key: 'file',
+            render: (file: string) => <span style={{ color: token.colorText }}>{file.replace('.class', '')}</span>,
+        },
+        {
+            title: 'Status',
+            dataIndex: 'statusInfo',
+            key: 'status',
+            render: (info: ChangeInfo) => (
+                <Flex gap={6} align="center">
+                    <Tag color={statusColors[info.state] || 'default'} style={{ marginRight: 0 }}>
+                        {info.state.toUpperCase()}
+                    </Tag>
+                    {info.deletions !== undefined && info.deletions > 0 && (
+                        <span style={{ color: token.colorError, fontSize: '12px', fontWeight: 'bold' }}>-{info.deletions}</span>
+                    )}
+                    {info.additions !== undefined && info.additions > 0 && (
+                        <span style={{ color: token.colorSuccess, fontSize: '12px', fontWeight: 'bold' }}>+{info.additions}</span>
+                    )}
+                    {info.state === 'modified' && info.additions === 0 && info.deletions === 0 && (
+                        <span style={{ color: token.colorTextDescription, fontSize: '12px', fontStyle: 'italic' }}>None</span>
+                    )}
+                </Flex>
+            ),
+        },
+    ], [token]);
 
     const onChange: SearchProps['onChange'] = (e) => {
         searchQuery.next(e.target.value);
@@ -103,6 +133,17 @@ const DiffFileList = () => {
                         Hide same size
                     </Checkbox>
                 </Tooltip>
+                {summary && (
+                    <span style={{ marginLeft: 16, color: token.colorTextDescription }}>
+                        {summary.added === 0 && summary.deleted === 0 && summary.modified === 0 ? "None" : (
+                            <>
+                                <span style={{ color: token.colorSuccess }}>+{summary.added} new files</span>
+                                <span style={{ marginLeft: 8, color: token.colorError }}>-{summary.deleted} deleted</span>
+                                <span style={{ marginLeft: 8 }}>{summary.modified} modified</span>
+                            </>
+                        )}
+                    </span>
+                )}
                 <Flex
                     gap={8}
                     align="center"
@@ -122,8 +163,16 @@ const DiffFileList = () => {
                         right: 0
                     }}
                 >
+                    <Tooltip title={isUnifiedDiff ? "Switch to side-by-side diff" : "Switch to unified diff"}>
+                        <Button
+                            type="text"
+                            icon={isUnifiedDiff ? <SplitCellsOutlined /> : <AlignLeftOutlined />}
+                            onClick={() => unifiedDiff.value = !unifiedDiff.value}
+                            style={{ marginRight: 8 }}
+                        />
+                    </Tooltip>
                     <Checkbox
-                        checked={useObservable(bytecode.observable)}
+                        checked={isBytecode}
                         onChange={e => bytecode.value = e.target.checked}
                     >
                         Show Bytecode
@@ -150,15 +199,16 @@ const DiffFileList = () => {
                     size="small"
                     bordered
                     showHeader={false}
+                    locale={{ emptyText: <span style={{ color: token.colorTextDescription }}>None</span> }}
                     rowClassName={(record) =>
-                        currentFile === record.file + ".class" ? 'ant-table-row-selected' : ''
+                        currentFile === record.file ? 'ant-table-row-selected' : ''
                     }
                     onRow={(record) => ({
                         onClick: () => {
                             if (loading) return;
-                            if (currentFile === record.file + ".class") return;
+                            if (currentFile === record.file) return;
 
-                            setSelectedFile(record.file + ".class");
+                            selectedFile.next(record.file);
                         }
                     })}
                     style={{

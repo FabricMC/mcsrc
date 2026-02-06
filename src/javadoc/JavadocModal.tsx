@@ -6,7 +6,7 @@ import type { Token } from "../logic/Tokens";
 import JavadocMarkdownEditor from "./JavadocMarkdownEditor";
 import { useMemo, useState } from "react";
 import { javadocApi, type UpdateTarget } from "./api/JavadocApi";
-import { selectedMinecraftVersion } from "../logic/MinecraftApi";
+import { selectedMinecraftVersion } from "../logic/State";
 
 const ModalBody = ({ token, onValueChange }: { token: Token; onValueChange: (value: string | undefined) => void; }) => {
     const initialValue = useMemo(() => getJavadocForToken(token, javadocData.value) || "", [token]);

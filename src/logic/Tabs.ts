@@ -1,16 +1,15 @@
-import { BehaviorSubject } from "rxjs";
-import { setSelectedFile, state } from "./State";
 import { enableTabs } from "./Settings";
 import { editor } from "monaco-editor";
+import { selectedFile, openTabs, tabHistory } from "./State";
 
-class Tab {
+export class Tab {
     public key: string;
     public scroll: number = 0;
 
     public viewState: editor.ICodeEditorViewState | null = null;
     public model: editor.ITextModel | null = null;
 
-    constructor(key: string) {
+    public constructor(key: string) {
         this.key = key;
     }
 
@@ -52,22 +51,25 @@ class Tab {
     }
 }
 
-export const activeTabKey = new BehaviorSubject<string>(state.value.file);
-export const openTabs = new BehaviorSubject<Tab[]>([new Tab(state.value.file)]);
-export const tabHistory = new BehaviorSubject<string[]>([state.value.file]);
-
 export const getOpenTab = (): (Tab | null) => {
-    return openTabs.value.find(o => o.key === activeTabKey.value) || null;
+    return openTabs.value.find(o => o.key === selectedFile.value) || null;
 };
 
 export const openTab = (key: string) => {
     if (!enableTabs.value) {
-        setSelectedFile(key);
+        selectedFile.next(key);
+
+        const currentTab = openTabs.value[0];
+        if (currentTab && currentTab.key !== key) {
+            currentTab.invalidateCachedView();
+            openTabs.next([new Tab(key)]);
+        }
+
         return;
     }
 
     const tabs = [...openTabs.value];
-    const activeIndex = tabs.findIndex(tab => tab.key === activeTabKey.value);
+    const activeIndex = tabs.findIndex(tab => tab.key === selectedFile.value);
 
     // If class is not already open, open it
     if (!tabs.some(tab => tab.key === key)) {
@@ -77,9 +79,8 @@ export const openTab = (key: string) => {
     }
 
     // Switch to the newly opened tab, if not already open to the right class
-    if (activeTabKey.value !== key) {
-        activeTabKey.next(key);
-        setSelectedFile(key);
+    if (selectedFile.value !== key) {
+        selectedFile.next(key);
 
         if (tabHistory.value.length < 50) {
             // Limit history to 50
@@ -97,7 +98,7 @@ export const closeTab = (key: string) => {
     tabHistory.next(tabHistory.value.filter(v => v != key));
     const modifiedOpenTabs = openTabs.value.filter(v => v.key != key);
 
-    if (key === activeTabKey.value) {
+    if (key === selectedFile.value) {
         const history = [...tabHistory.value];
         let newKey = history.pop();
         tabHistory.next(history);
@@ -144,8 +145,7 @@ export const closeOtherTabs = (key: string) => {
     openTabs.next([tab]);
     tabHistory.next([key]);
 
-    if (activeTabKey.value !== key) {
-        activeTabKey.next(key);
-        setSelectedFile(key);
+    if (selectedFile.value !== key) {
+        selectedFile.next(key);
     }
 };

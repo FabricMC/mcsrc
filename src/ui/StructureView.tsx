@@ -5,9 +5,9 @@ import { useObservable } from "../utils/UseObservable";
 import { currentResult } from "../logic/Decompiler";
 import { parseDescriptor } from "./CodeHoverProvider";
 import { getTokenLocation, type MemberToken, type Token } from "../logic/Tokens";
-import { setSelectedFile } from "../logic/State";
+import { selectedLines } from "../logic/State";
 
-type StructureNode = TreeDataNode & { token?: Token };
+type StructureNode = TreeDataNode & { token?: Token; };
 
 const formatClassDisplayName = (className: string) => {
     const simpleName = className.split("/").pop();
@@ -92,7 +92,7 @@ const StructureView = ({ onNavigate }: StructureViewProps) => {
         if (!token) return;
 
         const location = getTokenLocation(decompileResult, token);
-        setSelectedFile(decompileResult.className, location.line);
+        selectedLines.next({ line: location.line });
         onNavigate?.();
     };
 

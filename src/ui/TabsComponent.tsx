@@ -1,11 +1,12 @@
 import { Tabs } from "antd";
 import { useObservable } from "../utils/UseObservable";
-import { activeTabKey, closeTab, openTab, openTabs, setTabPosition, closeOtherTabs } from "../logic/Tabs";
+import { closeTab, openTab, setTabPosition, closeOtherTabs } from "../logic/Tabs";
 import React, { useEffect, useRef, useState } from "react";
+import { selectedFile, openTabs } from "../logic/State";
 
 export const TabsComponent = () => {
     // variables - tabs
-    const activeKey = useObservable(activeTabKey);
+    const activeKey = useObservable(selectedFile);
     const tabs = useObservable(openTabs);
     const tabRefs = useRef<Record<string, HTMLDivElement | null>>({});
 

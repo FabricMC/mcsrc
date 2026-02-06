@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { useObservable } from '../utils/UseObservable.ts';
 import { isThin } from '../logic/Browser.ts';
 import { HeaderBody } from './Header.tsx';
-import { diffView } from '../logic/Diff.ts';
+import { diffView } from '../logic/State';
 import DiffView from './diff/DiffView.tsx';
 import { FilepathHeader } from './FilepathHeader.tsx';
 import { enableTabs } from '../logic/Settings.ts';
