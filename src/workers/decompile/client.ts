@@ -1,5 +1,5 @@
 import * as Comlink from "comlink";
-import { DecompileJar, type DecompileResult } from "./types";
+import { DecompileJar, type DecompileData, type DecompileResult } from "./types";
 import type { Jar } from "../../utils/Jar";
 
 type DecompileWorker = typeof import("./worker");
@@ -13,6 +13,11 @@ function createWrorker() {
 const threads = navigator.hardwareConcurrency || 4;
 const workers = Array.from({ length: threads }, () => createWrorker());
 
+export async function deleteCache(jarName: string | null) {
+    const worker = workers.reduce((a, b) => a.promiseCount() < b.promiseCount() ? a : b);
+    await worker.clear(jarName);
+}
+
 export type DecompileEntireJarOptions = {
     threads?: number,
     splits?: number,
@@ -20,14 +25,9 @@ export type DecompileEntireJarOptions = {
 };
 
 export type DecompileEntireJarTask = {
-    start: () => Promise<void>,
+    start: () => Promise<number>,
     stop: () => void;
 };
-
-export async function deleteCache(jarName: string | null) {
-    const worker = workers.reduce((a, b) => a.promiseCount() < b.promiseCount() ? a : b);
-    await worker.clearDb(jarName);
-}
 
 export function decompileEntireJar(jar: Jar, options?: DecompileEntireJarOptions): DecompileEntireJarTask {
     const sab = new SharedArrayBuffer(Uint32Array.BYTES_PER_ELEMENT);
@@ -36,23 +36,18 @@ export function decompileEntireJar(jar: Jar, options?: DecompileEntireJarOptions
 
     const optThreads = Math.min(options?.threads ?? threads, threads);
     const optSplits = options?.splits ?? 100;
-    const optLogger = options?.logger ? Comlink.proxy(options.logger) : undefined;
+    const optLogger = options?.logger ? Comlink.proxy(options.logger) : null;
 
     const classNames = new DecompileJar(jar).classes
         .filter(n => !n.includes("$"));
 
     return {
         async start() {
-            console.log("optThreads " + optThreads);
-            console.log("optSplits " + optSplits);
-
-            const start = performance.now();
             const result = await Promise.all(workers
                 .slice(0, optThreads)
-                .map(w => w.decompileManyClasses(jar.name, jar.blob, classNames, sab, optSplits, optLogger)));
+                .map(w => w.decompileMany(jar.name, jar.blob, classNames, sab, optSplits, optLogger)));
             const total = result.reduce((acc, n) => acc + n, 0);
-            const elapsed = (performance.now() - start) / 1000;
-            console.log(`Decompiled ${total} classes in ${elapsed.toFixed(3)} s`);
+            return total;
         },
         stop() {
             Atomics.store(state, 0, classNames.length);
@@ -61,54 +56,59 @@ export function decompileEntireJar(jar: Jar, options?: DecompileEntireJarOptions
 }
 
 export async function decompileClass(className: string, jar: Jar): Promise<DecompileResult> {
-    const worker = workers.reduce((a, b) => a.promiseCount() < b.promiseCount() ? a : b);
     className = className.replace(".class", "");
 
-    const jarClasses = Object
-        .keys(jar.entries)
-        .filter(f => f.endsWith(".class"))
-        .map(f => f.replace(".class", ""))
-        .sort();
+    if (!jar.entries[`${className}.class`]) return {
+        owner: jar.name,
+        className,
+        source: `// Class not found: ${className}`,
+        tokens: [],
+        language: "java",
+    };
 
-    const classData: Record<string, Uint8Array> = {};
-    const data = await jar.entries[className + ".class"].bytes();
+    const jarClasses = new DecompileJar(jar).classes;
+    const classData: DecompileData = {};
+    const data = await jar.entries[`${className}.class`].bytes();
     classData[className] = data;
 
     for (const classFile of jarClasses) {
-        if (!classFile.startsWith(className + "$")) {
+        if (!classFile.startsWith(`${className}\$`)) {
             continue;
         }
 
-        const data = await jar.entries[classFile + ".class"].bytes();
+        const data = await jar.entries[`${classFile}.class`].bytes();
         classData[classFile] = data;
     }
 
-    const res = await worker.decompileClass(jar.name, jarClasses, [className], classData);
-    return res[0];
+    const worker = workers.reduce((a, b) => a.promiseCount() < b.promiseCount() ? a : b);
+    return await worker.decompile(jar.name, jarClasses, className, classData);
 }
 
 export async function getClassBytecode(className: string, jar: Jar): Promise<DecompileResult> {
-    const worker = workers.reduce((a, b) => a.promiseCount() < b.promiseCount() ? a : b);
     className = className.replace(".class", "");
 
-    const jarClasses = Object
-        .keys(jar.entries)
-        .filter(f => f.endsWith(".class"))
-        .map(f => f.replace(".class", ""))
-        .sort();
+    if (!jar.entries[`${className}.class`]) return {
+        owner: jar.name,
+        className,
+        source: `// Class not found: ${className}`,
+        tokens: [],
+        language: "bytecode",
+    };
 
+    const jarClasses = new DecompileJar(jar).classes;
     const classData: ArrayBufferLike[] = [];
-    const data = await jar.entries[className + ".class"].bytes();
+    const data = await jar.entries[`${className}.class`].bytes();
     classData.push(data.buffer);
 
     for (const classFile of jarClasses) {
-        if (!classFile.startsWith(className + "$")) {
+        if (!classFile.startsWith(`${className}\$`)) {
             continue;
         }
 
-        const data = await jar.entries[classFile + ".class"].bytes();
+        const data = await jar.entries[`${classFile}.class`].bytes();
         classData.push(data.buffer);
     }
 
+    const worker = workers.reduce((a, b) => a.promiseCount() < b.promiseCount() ? a : b);
     return await worker.getClassBytecode(jar.name, jarClasses, className, classData);
 }

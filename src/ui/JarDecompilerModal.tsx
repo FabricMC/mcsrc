@@ -23,7 +23,8 @@ export const JarDecompilerModal = () => {
     const jar = useObservable(minecraftJar);
     const isModalOpen = useObservable(modalOpen);
 
-    const [messageApi, contextHolder] = message.useMessage();
+    const [messageApi, messageCtx] = message.useMessage();
+    const [modalApi, modalCtx] = Modal.useModal();
 
     const onOk = () => {
         modalOpen.next(false);
@@ -37,8 +38,17 @@ export const JarDecompilerModal = () => {
             },
         });
 
+        const start = performance.now();
         taskSubject.next(task);
-        task.start().finally(() => {
+        task.start().then((total) => {
+            const elapsed = (performance.now() - start) / 1000;
+            modalApi.info({
+                content: `Decompiled ${total} new classes in ${elapsed.toFixed(3)} s.`,
+                closable: true,
+                keyboard: true,
+                maskClosable: true,
+            });
+        }).finally(() => {
             taskSubject.next(undefined);
             progressSubject.next(undefined);
         });
@@ -60,7 +70,8 @@ export const JarDecompilerModal = () => {
             onCancel={() => modalOpen.next(false)}
             onOk={onOk}
         >
-            {contextHolder}
+            {messageCtx}
+            {modalCtx}
             <Alert
                 type="warning"
                 message="Decompiling the entire JAR will use large amount of resources and may crash the browser."
