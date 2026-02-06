@@ -8,7 +8,8 @@ import { selectedFile } from "./State";
 import { bytecode, displayLambdas } from "./Settings";
 import type { Options } from "./vf";
 import type { DecompileResult } from "../workers/decompile/types";
-import { decompileClass, getClassBytecode } from "../workers/decompile/client";
+import * as worker from "../workers/decompile/client";
+import type { Jar } from "../utils/Jar";
 
 const decompilerCounter = new BehaviorSubject<number>(0);
 
@@ -18,8 +19,6 @@ export const isDecompiling = decompilerCounter.pipe(
 );
 
 export const DECOMPILER_OPTIONS: Options = {};
-
-const decompilationCache = new Map<string, DecompileResult>();
 
 export const currentResult = decompileResultPipeline(minecraftJar);
 export function decompileResultPipeline(jar: Observable<MinecraftJar>): Observable<DecompileResult> {
@@ -42,35 +41,32 @@ export function decompileResultPipeline(jar: Observable<MinecraftJar>): Observab
                 key += ":lambdas";
             }
 
-            const cached = decompilationCache.get(key);
-            if (cached) {
-                // Re-insert at end
-                decompilationCache.delete(key);
-                decompilationCache.set(key, cached);
-                return of(cached);
-            }
-
             let options = { ...DECOMPILER_OPTIONS };
 
             if (displayLambdas) {
                 options["mark-corresponding-synthetics"] = "1";
             }
 
-            return from(decompileClass(className, jar.jar)).pipe(
-                tap(result => {
-                    // Store DecompilationResult in in-memory cache
-                    if (decompilationCache.size >= 75) {
-                        const firstKey = decompilationCache.keys().next().value;
-                        if (firstKey) decompilationCache.delete(firstKey);
-                    }
-                    decompilationCache.set(key, result);
-                })
-            );
+            return from(decompileClass(className, jar.jar));
         }),
         shareReplay({ bufferSize: 1, refCount: false })
     );
 }
 
-export const currentSource = currentResult.pipe(
-    map(result => result.source)
-);
+export async function getClassBytecode(className: string, jar: Jar) {
+    try {
+        decompilerCounter.next(decompilerCounter.value + 1);
+        return await worker.getClassBytecode(className, jar);
+    } finally {
+        decompilerCounter.next(decompilerCounter.value - 1);
+    }
+}
+
+export async function decompileClass(className: string, jar: Jar) {
+    try {
+        decompilerCounter.next(decompilerCounter.value + 1);
+        return await worker.decompileClass(className, jar);
+    } finally {
+        decompilerCounter.next(decompilerCounter.value - 1);
+    }
+}

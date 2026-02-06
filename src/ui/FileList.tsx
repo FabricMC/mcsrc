@@ -8,8 +8,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { Key } from 'antd/es/table/interface';
 import { openTab } from '../logic/Tabs';
 import { minecraftJar, type MinecraftJar } from '../logic/MinecraftApi';
-import { DECOMPILER_OPTIONS } from '../logic/Decompiler';
-import { decompileClass } from '../workers/decompile/client';
+import { decompileClass, DECOMPILER_OPTIONS } from '../logic/Decompiler';
 import { selectedFile, usageQuery } from '../logic/State';
 
 // Sorts nodes with children first (directories before files), then alphabetically

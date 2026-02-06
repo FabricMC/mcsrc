@@ -142,8 +142,6 @@ async function _decompile1(
     logger: DecompileLogger | null,
 ): Promise<DecompileResult[]> {
     try {
-        // decompilerCounter.next(decompilerCounter.value + 1);
-
         const result = await vf.decompile(classNames, {
             source: async (name) => await classData[name] ?? null,
             resources: jarClasses,
@@ -176,9 +174,7 @@ async function _decompile1(
     //     // console.error(`Error during decompilation of class '${className}':`, e);
     //     // return { owner: jarName, className, source: `// Error during decompilation: ${(e as Error).message}`, tokens: [], language: "java" };
     // }
-    finally {
-        // decompilerCounter.next(decompilerCounter.value - 1);
-    }
+    finally {}
 }
 
 function tokenCollector(tokens: Token[]): vf.TokenCollector {
@@ -251,13 +247,10 @@ export async function getClassBytecode(jarName: string, jarClasses: string[], cl
 
 async function getClassBytecode0(jarName: string, jarClasses: string[], className: string, classData: ArrayBufferLike[]): Promise<DecompileResult[]> {
     try {
-        // decompilerCounter.next(decompilerCounter.value + 1);
         const bytecode = await getBytecode(classData);
         return [{ owner: jarName, className, source: bytecode, tokens: [], language: "bytecode" }];
     } catch (e) {
         console.error(`Error during bytecode retrieval of class '${className}':`, e);
         return [{ owner: jarName, className, source: `// Error during bytecode retrieval: ${(e as Error).message}`, tokens: [], language: "bytecode" }];
-    } finally {
-        // decompilerCounter.next(decompilerCounter.value - 1);
     }
 }
