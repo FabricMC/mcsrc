@@ -142,10 +142,13 @@ async function _decompile1(
     logger: DecompileLogger | null,
 ): Promise<DecompileResult[]> {
     try {
+        const allTokens: Record<string, Token[]> = {};
+        const res: DecompileResult[] = [];
         const result = await vf.decompile(classNames, {
             source: async (name) => await classData[name] ?? null,
             resources: jarClasses,
             options,
+            tokenCollector: tokenCollector(allTokens),
             logger: {
                 writeMessage(level, message, error) {
                     switch (level) {
@@ -155,17 +158,15 @@ async function _decompile1(
                 },
                 startClass(className) {
                     if (logger) logger(className);
-                    // console.log(`Decompiling ${className}`);
                 },
-            }
-            // tokenCollector: tokenCollector(tokens)
+            },
         });
 
-        const res: DecompileResult[] = [];
         for (const [className, source] of Object.entries(result)) {
-            const tokens: Token[] = [];
-            // tokens.push(...generateImportTokens(source));
-            // tokens.sort((a, b) => a.start - b.start);
+            console.log(allTokens);
+            const tokens = allTokens[source] ?? [];
+            tokens.push(...generateImportTokens(source));
+            tokens.sort((a, b) => a.start - b.start);
 
             res.push({ owner: jarName, className, source, tokens, language: "java" });
         }
@@ -174,29 +175,36 @@ async function _decompile1(
     //     // console.error(`Error during decompilation of class '${className}':`, e);
     //     // return { owner: jarName, className, source: `// Error during decompilation: ${(e as Error).message}`, tokens: [], language: "java" };
     // }
-    finally {}
+    finally { }
 }
 
-function tokenCollector(tokens: Token[]): vf.TokenCollector {
+function tokenCollector(tokens: Record<string, Token[]>): vf.TokenCollector {
+    let currentContent: string | undefined;
+    let current: Token[] | undefined;
     return {
-        start: function(content: string): void {
+        start(content) {
+            currentContent = content;
+            current = [];
         },
-        visitClass: function(start: number, length: number, declaration: boolean, name: string): void {
-            tokens.push({ type: "class", start, length, className: name, declaration });
+        visitClass(start, length, declaration, name) {
+            current!.push({ type: "class", start, length, className: name, declaration });
         },
-        visitField: function(start: number, length: number, declaration: boolean, className: string, name: string, descriptor: string): void {
-            tokens.push({ type: "field", start, length, className, declaration, name, descriptor });
+        visitField(start, length, declaration, className, name, descriptor) {
+            current!.push({ type: "field", start, length, className, declaration, name, descriptor });
         },
-        visitMethod: function(start: number, length: number, declaration: boolean, className: string, name: string, descriptor: string): void {
-            tokens.push({ type: "method", start, length, className, declaration, name, descriptor });
+        visitMethod(start, length, declaration, className, name, descriptor) {
+            current!.push({ type: "method", start, length, className, declaration, name, descriptor });
         },
-        visitParameter: function(start: number, length: number, declaration: boolean, className: string, methodName: string, methodDescriptor: string, index: number, name: string): void {
-            tokens.push({ type: "parameter", start, length, className, declaration });
+        visitParameter(start, length, declaration, className, _methodName, _methodDescriptor, _index, _name) {
+            current!.push({ type: "parameter", start, length, className, declaration });
         },
-        visitLocal: function(start: number, length: number, declaration: boolean, className: string, methodName: string, methodDescriptor: string, index: number, name: string): void {
-            tokens.push({ type: "local", start, length, className, declaration });
+        visitLocal(start, length, declaration, className, _methodName, _methodDescriptor, _index, _name) {
+            current!.push({ type: "local", start, length, className, declaration });
         },
-        end: function(): void {
+        end() {
+            tokens[currentContent!] = current!;
+            currentContent = undefined;
+            current = undefined;
         }
     };
 }
