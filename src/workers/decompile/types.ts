@@ -9,7 +9,7 @@ export type DecompileResult = {
     language: 'java' | 'bytecode';
 };
 
-export type DecompileOption = { key: string, value: string };
+export type DecompileOption = { key: string, value: string; };
 
 export type DecompileLogger = (className: string) => void;
 
@@ -23,9 +23,9 @@ export class DecompileJar {
         this.jar = jar;
         this.proxy = new Proxy({}, {
             get(_, className: string) {
-                return jar.entries[className + ".class"]?.bytes()
+                return jar.entries[className + ".class"]?.bytes();
             }
-        })
+        });
     }
 
     private _classes: string[] | null = null;

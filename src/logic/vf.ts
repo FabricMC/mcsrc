@@ -19,6 +19,6 @@ async function loadRuntime() {
 // Copied from ../node_modules/@run-slicer/vf/vf.js as I needed to get the correct import paths
 let decompileFunc: typeof vf.decompile | null = null;
 export const decompile: typeof vf.decompile = async (name, options) => {
-    if (!decompileFunc) decompileFunc = (await loadRuntime()).decompile
+    if (!decompileFunc) decompileFunc = (await loadRuntime()).decompile;
     return await decompileFunc(name, options);
 };

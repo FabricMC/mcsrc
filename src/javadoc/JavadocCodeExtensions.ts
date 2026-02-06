@@ -44,7 +44,7 @@ export function applyJavadocCodeExtensions(monaco: monaco, editor: editor.IStand
     });
 
     const codeLense = monaco.languages.registerCodeLensProvider("java", {
-        provideCodeLenses: function (model: editor.ITextModel, token: CancellationToken): languages.ProviderResult<languages.CodeLensList> {
+        provideCodeLenses: function(model: editor.ITextModel, token: CancellationToken): languages.ProviderResult<languages.CodeLensList> {
             const lenses: languages.CodeLens[] = [];
 
             for (const token of decompile.tokens) {
@@ -79,7 +79,7 @@ export function applyJavadocCodeExtensions(monaco: monaco, editor: editor.IStand
     const editJavadocCommand = monaco.editor.addEditorAction({
         id: EDIT_JAVADOC_COMMAND_ID,
         label: 'Edit Javadoc',
-        run: function (editor, ...args) {
+        run: function(editor, ...args) {
             const token: Token = args[0];
             activeJavadocToken.next(token);
         }

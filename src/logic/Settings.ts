@@ -49,7 +49,7 @@ export class NumberSetting extends Setting<number> {
         super(key, defaultValue, (s) => {
             const n = Number.parseInt(s);
             return Number.isNaN(n) ? defaultValue : n;
-        }, n => n.toString())
+        }, n => n.toString());
     }
 }
 

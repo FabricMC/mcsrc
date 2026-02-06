@@ -42,15 +42,15 @@ export const JarDecompilerModal = () => {
             taskSubject.next(undefined);
             progressSubject.next(undefined);
         });
-        progressSubject.next("Decompiling...")
-    }
+        progressSubject.next("Decompiling...");
+    };
 
     const clearCache = (all: boolean) => {
         if (!jar) return;
 
         deleteCache(all ? null : jar.jar.name)
             .finally(() => messageApi.open({ type: "success", content: "Cache deleted" }));
-    }
+    };
 
 
     return (
@@ -122,6 +122,6 @@ export const JarDecompilerProgressModal = () => {
             </div>
         </Modal>
     );
-}
+};
 
 const deleteModalOpen = new BehaviorSubject(false);

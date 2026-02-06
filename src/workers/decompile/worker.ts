@@ -21,7 +21,7 @@ export const getOptions = async (): Promise<vf.Options> => {
     const dbOptions = await db.options.toArray();
     _options = Object.fromEntries(dbOptions.map((it) => [it.key, it.value]));
     return _options;
-}
+};
 
 export const setOptions = async (options: vf.Options): Promise<void> => {
     const dbOptions = await db.options.toArray();
@@ -40,18 +40,18 @@ export const setOptions = async (options: vf.Options): Promise<void> => {
 
     await db.options.clear();
     await db.options.bulkAdd(Object.entries(options).map(([k, v]) => ({ key: k, value: v })));
-}
+};
 
-const jars: Record<string, DecompileJar> = {}
+const jars: Record<string, DecompileJar> = {};
 export const registerJar = async (jarName: string, blob: Blob | null) => {
     if (blob) {
-        jars[jarName] = new DecompileJar(await openJar(jarName, blob))
+        jars[jarName] = new DecompileJar(await openJar(jarName, blob));
     } else {
         delete jars[jarName];
     }
-}
+};
 
-let lastPromise: Promise<DecompileResult[]> | undefined = undefined
+let lastPromise: Promise<DecompileResult[]> | undefined = undefined;
 let _promiseCount = 0;
 export const promiseCount = () => _promiseCount;
 
@@ -68,7 +68,7 @@ export const clearDb = async (jarName: string | null): Promise<void> => {
     } finally {
         _promiseCount--;
     }
-}
+};
 
 export const decompileManyClasses = async (jarName: string, blob: Blob, classNames: string[], sab: SharedArrayBuffer, splits: number, logger?: DecompileLogger): Promise<number> => {
     await registerJar(jarName, blob);
@@ -90,7 +90,7 @@ export const decompileManyClasses = async (jarName: string, blob: Blob, classNam
     }
     await registerJar(jarName, null);
     return count;
-}
+};
 
 export const decompileClass = async (jarName: string, jarClasses: string[] | null, classNames: string[], classData: DecompileData | null, logger?: DecompileLogger): Promise<DecompileResult[]> => {
     if (!jarClasses) jarClasses = jars[jarName].classes;
@@ -112,7 +112,7 @@ export const decompileClass = async (jarName: string, jarClasses: string[] | nul
         _promiseCount--;
         lastPromise = undefined;
     }
-}
+};
 
 async function decompileClass0(jarName: string, jarClasses: string[], classNames: string[], classData: DecompileData, options: vf.Options, logger?: DecompileLogger): Promise<DecompileResult[]> {
     // if (!jarClasses.includes(className)) {
@@ -230,7 +230,7 @@ export const getClassBytecode = async (jarName: string, jarClasses: string[], cl
     } finally {
         _promiseCount--;
     }
-}
+};
 
 async function getClassBytecode0(jarName: string, jarClasses: string[], className: string, classData: ArrayBufferLike[]): Promise<DecompileResult[]> {
     if (!jarClasses.includes(className)) {

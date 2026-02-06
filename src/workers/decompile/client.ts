@@ -17,12 +17,12 @@ export type DecompileEntireJarOptions = {
     threads?: number,
     splits?: number,
     logger?: (className: string) => void,
-}
+};
 
 export type DecompileEntireJarTask = {
     start: () => Promise<void>,
     stop: () => void;
-}
+};
 
 export async function deleteCache(jarName: string | null) {
     const worker = workers.reduce((a, b) => a.promiseCount() < b.promiseCount() ? a : b);
@@ -39,7 +39,7 @@ export function decompileEntireJar(jar: Jar, options?: DecompileEntireJarOptions
     const optLogger = options?.logger ? Comlink.proxy(options.logger) : undefined;
 
     const classNames = new DecompileJar(jar).classes
-        .filter(n => !n.includes("$"))
+        .filter(n => !n.includes("$"));
 
     return {
         async start() {
@@ -57,7 +57,7 @@ export function decompileEntireJar(jar: Jar, options?: DecompileEntireJarOptions
         stop() {
             Atomics.store(state, 0, classNames.length);
         },
-    }
+    };
 }
 
 export async function decompileClass(className: string, jar: Jar): Promise<DecompileResult> {
@@ -70,7 +70,7 @@ export async function decompileClass(className: string, jar: Jar): Promise<Decom
         .map(f => f.replace(".class", ""))
         .sort();
 
-    const classData: Record<string, Uint8Array> = {}
+    const classData: Record<string, Uint8Array> = {};
     const data = await jar.entries[className + ".class"].bytes();
     classData[className] = data;
 
