@@ -3,14 +3,15 @@ import Header from "./Header";
 import FileList from "./FileList";
 import type { InputRef, SearchProps } from "antd/es/input";
 import { useObservable } from "../utils/UseObservable";
-import { isSearching, searchQuery } from "../logic/JarFile";
+import { isSearching } from "../logic/JarFile";
 import SearchResults from "./SearchResults";
 import UsageResults from "./UsageResults";
 import { isThin } from "../logic/Browser";
-import { formatUsageQuery, isViewingUsages, usageQuery } from "../logic/FindUsages";
+import { formatUsageQuery, isViewingUsages } from "../logic/FindUsages";
 import { ArrowLeftOutlined } from "@ant-design/icons";
 import { focusSearchEvent } from "../logic/Keybinds";
 import { useEffect, useRef } from "react";
+import { searchQuery, usageQuery } from "../logic/State";
 
 const { Search } = Input;
 

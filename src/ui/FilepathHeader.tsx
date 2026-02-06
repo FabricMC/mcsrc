@@ -1,8 +1,8 @@
 import { theme } from "antd";
-import { selectedFile } from "../logic/State";
 import { useObservable } from "../utils/UseObservable";
-import { getDiffChanges, diffView, type ChangeInfo } from "../logic/Diff";
+import { getDiffChanges } from "../logic/Diff";
 import { combineLatest, map } from "rxjs";
+import { selectedFile, diffView } from "../logic/State";
 
 const changeInfoObs = combineLatest([selectedFile, getDiffChanges(), diffView]).pipe(
     map(([file, changes, isDiff]) => {

@@ -1,8 +1,9 @@
 import { useObservable } from "../utils/UseObservable";
-import { formatUsage, goToUsage, usageQuery, useageResults } from "../logic/FindUsages";
+import { formatUsage, goToUsage, useageResults } from "../logic/FindUsages";
 import type { UsageString } from "../workers/JarIndex";
 import { map, Observable } from "rxjs";
 import { openTab } from "../logic/Tabs";
+import { usageQuery } from "../logic/State";
 
 function getUsageClass(usage: UsageString): string {
     if (usage.startsWith("m:") || usage.startsWith("f:")) {

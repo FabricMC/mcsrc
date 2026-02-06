@@ -7,8 +7,8 @@ import type { editor } from 'monaco-editor';
 import { Spin } from "antd";
 import { LoadingOutlined } from '@ant-design/icons';
 import { isDecompiling } from "../../logic/Decompiler.ts";
-import { selectedFile } from '../../logic/State';
 import { unifiedDiff } from '../../logic/Settings';
+import { selectedFile } from '../../logic/State.ts';
 
 interface DiffCodeProps {
     height?: number | string;

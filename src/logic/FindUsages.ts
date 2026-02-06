@@ -3,8 +3,7 @@ import { jarIndex, type UsageKey, type UsageString } from "../workers/JarIndex";
 import { openTab } from "./Tabs";
 import type { DecompileResult } from "./Decompiler";
 import type { Token } from "./Tokens";
-
-export const usageQuery = new BehaviorSubject("");
+import { usageQuery } from "./State";
 
 export const useageResults = usageQuery
     .pipe(

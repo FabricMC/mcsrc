@@ -1,7 +1,7 @@
 import { BehaviorSubject, combineLatest, distinctUntilChanged, filter, from, map, shareReplay, switchMap, tap, Observable } from "rxjs";
 import { agreedEula } from "./Settings";
-import { state, updateSelectedMinecraftVersion } from "./State";
-import { openJar, streamJar, type Jar } from "../utils/Jar";
+import { openJar, type Jar } from "../utils/Jar";
+import { selectedMinecraftVersion } from "./State";
 
 const CACHE_NAME = 'mcsrc-v1';
 const VERSIONS_URL = "https://piston-meta.mojang.com/mc/game/version_manifest_v2.json";
@@ -39,7 +39,6 @@ export const minecraftVersions = new BehaviorSubject<VersionListEntry[]>([]);
 export const minecraftVersionIds = minecraftVersions.pipe(
     map(versions => versions.map(v => v.id))
 );
-export const selectedMinecraftVersion = new BehaviorSubject<string | null>(null);
 
 export const downloadProgress = new BehaviorSubject<number | undefined>(undefined);
 
@@ -48,7 +47,6 @@ export function minecraftJarPipeline(source$: Observable<string | null>): Observ
     return source$.pipe(
         filter(id => id !== null),
         distinctUntilChanged(),
-        tap(version => updateSelectedMinecraftVersion()),
         map(version => getVersionEntryById(version!)!),
         tap((version) => console.log(`Opening Minecraft jar ${version.id}`)),
         switchMap(version => from(downloadMinecraftJar(version, downloadProgress))),
@@ -160,10 +158,10 @@ async function initialize(version: string | null = null) {
 let hasInitialized = false;
 
 // Automatically download the Minecraft jar only when the user has agreed to the EULA
-combineLatest([agreedEula.observable, state]).subscribe(([agreed, currentState]) => {
+combineLatest([agreedEula.observable, selectedMinecraftVersion]).subscribe(([agreed, mcVersion]) => {
     if (agreed && !hasInitialized) {
         hasInitialized = true;
-        initialize(currentState.minecraftVersion);
+        initialize(mcVersion);
     }
 });
 

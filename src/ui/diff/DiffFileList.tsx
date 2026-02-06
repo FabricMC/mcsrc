@@ -8,15 +8,14 @@ import {
     hideUnchangedSizes,
     getDiffSummary,
     type DiffSummary,
-    diffView
 } from '../../logic/Diff';
 import { BehaviorSubject, map, combineLatest } from 'rxjs';
 import { useObservable } from '../../utils/UseObservable';
 import type { SearchProps } from 'antd/es/input';
-import { selectedFile, setSelectedFile } from '../../logic/State';
 import { isDecompiling } from "../../logic/Decompiler.ts";
 import { useEffect, useMemo } from 'react';
 import { bytecode, unifiedDiff } from "../../logic/Settings.ts";
+import { selectedFile, diffView } from '../../logic/State.ts';
 
 const statusColors: Record<ChangeState, string> = {
     modified: 'gold',
@@ -209,7 +208,7 @@ const DiffFileList = () => {
                             if (loading) return;
                             if (currentFile === record.file) return;
 
-                            setSelectedFile(record.file);
+                            selectedFile.next(record.file);
                         }
                     })}
                     style={{
