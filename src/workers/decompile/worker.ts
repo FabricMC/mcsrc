@@ -163,7 +163,6 @@ async function _decompile1(
         });
 
         for (const [className, source] of Object.entries(result)) {
-            console.log(allTokens);
             const tokens = allTokens[source] ?? [];
             tokens.push(...generateImportTokens(source));
             tokens.sort((a, b) => a.start - b.start);
