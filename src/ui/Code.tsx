@@ -10,7 +10,7 @@ import { message, Spin } from 'antd';
 import { LoadingOutlined } from '@ant-design/icons';
 import { getTokenLocation } from '../logic/Tokens';
 import { pairwise, startWith } from "rxjs";
-import { getNextJumpToken, nextUsageNavigation, usageQuery } from '../logic/FindUsages';
+import { getNextJumpToken, nextUsageNavigation } from '../logic/FindUsages';
 import { setupJavaBytecodeLanguage } from '../utils/JavaBytecode';
 import { IS_JAVADOC_EDITOR } from '../site';
 import { applyJavadocCodeExtensions } from '../javadoc/JavadocCodeExtensions';
@@ -30,7 +30,7 @@ import {
     createFoldingRangeProvider
 } from './CodeExtensions';
 import { bytecode } from '../logic/Settings';
-import { selectedFile, diffView, openTabs, selectedLines, tabHistory } from '../logic/State';
+import { selectedFile, diffView, openTabs, selectedLines, tabHistory, usageQuery } from '../logic/State';
 
 const Code = () => {
     const monaco = useMonaco();

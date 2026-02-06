@@ -9,8 +9,7 @@ import type { Key } from 'antd/es/table/interface';
 import { openTab } from '../logic/Tabs';
 import { minecraftJar, type MinecraftJar } from '../logic/MinecraftApi';
 import { decompileClass, DECOMPILER_OPTIONS } from '../logic/Decompiler';
-import { usageQuery } from '../logic/FindUsages';
-import { selectedFile } from '../logic/State';
+import { selectedFile, usageQuery } from '../logic/State';
 
 // Sorts nodes with children first (directories before files), then alphabetically
 const sortTreeNodes = (nodes: TreeDataNode[] = []) => {

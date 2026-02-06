@@ -2,7 +2,7 @@ import { BehaviorSubject, combineLatest, from, map, Observable, switchMap, share
 import { minecraftJar, minecraftJarPipeline, type MinecraftJar } from "./MinecraftApi";
 import { currentResult, decompileResultPipeline, type DecompileResult } from "./Decompiler";
 import { calculatedLineChanges } from "./LineChanges";
-import { selectedMinecraftVersion } from "./State";
+import { diffLeftselectedMinecraftVersion, selectedMinecraftVersion } from "./State";
 
 export const hideUnchangedSizes = new BehaviorSubject<boolean>(false);
 
@@ -24,7 +24,7 @@ let leftDiff: DiffSide | null = null;
 export function getLeftDiff(): DiffSide {
     if (!leftDiff) {
         leftDiff = {} as DiffSide;
-        leftDiff.selectedVersion = new BehaviorSubject<string | null>(null);
+        leftDiff.selectedVersion = diffLeftselectedMinecraftVersion;
         leftDiff.jar = minecraftJarPipeline(leftDiff.selectedVersion);
         leftDiff.entries = leftDiff.jar.pipe(
             switchMap(jar => from(getEntriesWithCRC(jar)))
