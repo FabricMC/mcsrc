@@ -2,7 +2,7 @@ import { combineLatest } from "rxjs";
 import { resetPermalinkAffectingSettings, supportsPermalinking } from "./Settings";
 import { diffView, selectedFile, selectedLines, selectedMinecraftVersion } from "./State";
 
-interface State {
+export interface State {
     version: number; // Allows us to change the permalink structure in the future
     minecraftVersion: string;
     file: string;
@@ -19,16 +19,7 @@ const DEFAULT_STATE: State = {
     selectedLines: null
 };
 
-const getInitialState = (): State => {
-    // Try pathname first (new style), fall back to hash (old style for backwards compatibility)
-    const pathname = window.location.pathname;
-    const hash = window.location.hash;
-    
-    // Use pathname if it's not just "/" (new style), otherwise use hash (old style)
-    let path = pathname !== '/' && pathname !== '' 
-        ? pathname.slice(1) // Remove leading /
-        : (hash.startsWith('#/') ? hash.slice(2) : (hash.startsWith('#') ? hash.slice(1) : ''));
-
+export const parsePathToState = (path: string): State | null => {
     // Check for line number marker (e.g., #L123 or #L10-20)
     let lineNumber: number | null = null;
     let lineEnd: number | null = null;
@@ -44,10 +35,8 @@ const getInitialState = (): State => {
     const segments = path.split('/').filter(s => s.length > 0);
 
     if (segments.length < 3) {
-        return DEFAULT_STATE;
+        return null;
     }
-
-    resetPermalinkAffectingSettings();
 
     const version = parseInt(segments[0], 10);
     let minecraftVersion = decodeURIComponent(segments[1]);
@@ -64,6 +53,33 @@ const getInitialState = (): State => {
         file: filePath + (filePath.endsWith('.class') ? '' : '.class'),
         selectedLines: lineNumber ? { line: lineNumber, lineEnd: lineEnd || undefined } : null
     };
+};
+
+const getInitialState = (): State => {
+    const pathname = window.location.pathname;
+    const hash = window.location.hash;
+
+    const newStyle = pathname !== '/' && pathname !== '';
+
+    // Use pathname if it's not just "/" (new style), otherwise use hash (old style)
+    let path = newStyle
+        ? pathname.slice(1) // Remove leading /
+        : (hash.startsWith('#/') ? hash.slice(2) : (hash.startsWith('#') ? hash.slice(1) : ''));
+
+    // For new style (pathname-based), append hash if it contains line number
+    if (newStyle && hash.startsWith('#L')) {
+        path += hash;
+    }
+
+    const state = parsePathToState(path);
+
+    if (state === null) {
+        return DEFAULT_STATE;
+    }
+
+    resetPermalinkAffectingSettings();
+
+    return state;
 };
 
 export const initalState = getInitialState();
