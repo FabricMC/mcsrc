@@ -18,33 +18,35 @@ export const isDecompiling = decompilerCounter.pipe(
     distinctUntilChanged()
 );
 
-export const DECOMPILER_OPTIONS: Options = {};
+const decompilerOptions = combineLatest([
+    displayLambdas.observable
+]).pipe(
+    distinctUntilChanged(),
+    switchMap(([displayLambdas]) => {
+        const options: Options = {};
+
+        if (displayLambdas) {
+            options["mark-corresponding-synthetics"] = "1";
+        }
+
+        return of(options);
+    }),
+);
+decompilerOptions.subscribe(v => worker.setOptions(v));
 
 export const currentResult = decompileResultPipeline(minecraftJar);
 export function decompileResultPipeline(jar: Observable<MinecraftJar>): Observable<DecompileResult> {
     return combineLatest([
         selectedFile,
         jar,
-        displayLambdas.observable,
-        bytecode.observable
+        bytecode.observable,
+        decompilerOptions,
     ]).pipe(
         distinctUntilChanged(),
         throttleTime(250),
-        switchMap(([className, jar, displayLambdas, bytecode]) => {
+        switchMap(([className, jar, bytecode]) => {
             if (bytecode) {
                 return from(getClassBytecode(className, jar.jar));
-            }
-
-            let key = `${jar.version}:${className}`;
-
-            if (displayLambdas) {
-                key += ":lambdas";
-            }
-
-            let options = { ...DECOMPILER_OPTIONS };
-
-            if (displayLambdas) {
-                options["mark-corresponding-synthetics"] = "1";
             }
 
             return from(decompileClass(className, jar.jar));

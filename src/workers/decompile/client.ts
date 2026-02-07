@@ -1,4 +1,5 @@
 import * as Comlink from "comlink";
+import type * as vf from "../../logic/vf";
 import { DecompileJar, type DecompileData, type DecompileResult } from "./types";
 import type { Jar } from "../../utils/Jar";
 
@@ -12,6 +13,14 @@ function createWrorker() {
 
 const threads = navigator.hardwareConcurrency || 4;
 const workers = Array.from({ length: threads }, () => createWrorker());
+
+export async function setOptions(options: vf.Options) {
+    const sab = new SharedArrayBuffer(Uint32Array.BYTES_PER_ELEMENT);
+    const state = new Uint32Array(sab);
+    state[0] = 0;
+
+    await Promise.all(workers.map(w => w.setOptions(options, sab)));
+}
 
 export async function loadVFRuntime(preferWasm: boolean) {
     await Promise.all(workers.map(w => w.loadVFRuntime(preferWasm)));
