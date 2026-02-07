@@ -23,14 +23,16 @@ const DiffCode = ({ height }: DiffCodeProps) => {
     const isUnified = useObservable(unifiedDiff.observable);
 
     useEffect(() => {
-        if (!loading && currentPath &&
-            leftResult?.source !== undefined &&
-            rightResult?.source !== undefined &&
-            leftResult.className === currentPath &&
-            rightResult.className === currentPath
-        ) {
-            updateLineChanges(currentPath, leftResult.source, rightResult.source);
-        }
+        if (loading) return;
+        if (!currentPath) return;
+        if (!leftResult) return;
+        if (!rightResult) return;
+
+        const currentClass = currentPath.replace(".class", "");
+        if (leftResult.className !== currentClass) return;
+        if (rightResult.className !== currentClass) return;
+
+        updateLineChanges(currentPath, leftResult.source, rightResult.source);
     }, [leftResult, rightResult, loading, currentPath]);
 
     /* Disabled as it jumps to the line of the previous change when switching files
