@@ -13,6 +13,10 @@ function createWrorker() {
 const threads = navigator.hardwareConcurrency || 4;
 const workers = Array.from({ length: threads }, () => createWrorker());
 
+export async function loadVFRuntime(preferWasm: boolean) {
+    await Promise.all(workers.map(w => w.loadVFRuntime(preferWasm)));
+}
+
 export async function deleteCache(jarName: string | null) {
     const worker = workers.reduce((a, b) => a.promiseCount() < b.promiseCount() ? a : b);
     await worker.clear(jarName);
@@ -95,11 +99,11 @@ export async function getClassBytecode(className: string, jar: Jar): Promise<Dec
         language: "bytecode",
     };
 
-    const jarClasses = new DecompileJar(jar).classes;
     const classData: ArrayBufferLike[] = [];
     const data = await jar.entries[`${className}.class`].bytes();
     classData.push(data.buffer);
 
+    const jarClasses = new DecompileJar(jar).classes;
     for (const classFile of jarClasses) {
         if (!classFile.startsWith(`${className}\$`)) {
             continue;
@@ -110,5 +114,5 @@ export async function getClassBytecode(className: string, jar: Jar): Promise<Dec
     }
 
     const worker = workers.reduce((a, b) => a.promiseCount() < b.promiseCount() ? a : b);
-    return await worker.getClassBytecode(jar.name, jarClasses, className, classData);
+    return await worker.getClassBytecode(jar.name, className, classData);
 }

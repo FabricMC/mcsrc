@@ -42,32 +42,45 @@ export async function setOptions(options: vf.Options): Promise<void> {
     await db.options.bulkAdd(Object.entries(options).map(([k, v]) => ({ key: k, value: v })));
 }
 
-const jars: Record<string, DecompileJar> = {};
-export async function registerJar(jarName: string, blob: Blob | null) {
-    if (blob) {
-        jars[jarName] = new DecompileJar(await openJar(jarName, blob));
-    } else {
-        delete jars[jarName];
-    }
-}
-
-let lastPromise: Promise<DecompileResult[]> | undefined = undefined;
+let lastPromise: Promise<unknown> | undefined = undefined;
 let _promiseCount = 0;
 export const promiseCount = () => _promiseCount;
 
-export async function clear(jarName: string | null): Promise<void> {
+async function schedule<T>(fn: () => Promise<T>): Promise<T> {
     try {
         _promiseCount++;
         if (lastPromise) await lastPromise;
+        lastPromise = fn();
+        return await lastPromise as Promise<T>;
+    } finally {
+        _promiseCount--;
+        lastPromise = undefined;
+    }
+}
 
+const jars: Record<string, DecompileJar> = {};
+export async function registerJar(jarName: string, blob: Blob | null) {
+    await schedule(async () => {
+        if (blob) {
+            jars[jarName] = new DecompileJar(await openJar(jarName, blob));
+        } else {
+            delete jars[jarName];
+        }
+    });
+}
+
+export async function loadVFRuntime(preferWasm: boolean) {
+    await schedule(() => vf.loadRuntime(preferWasm));
+}
+
+export async function clear(jarName: string | null) {
+    await schedule(async () => {
         if (jarName) {
             await db.results.where("owner").equals(jarName).delete();
         } else {
             await db.results.clear();
         }
-    } finally {
-        _promiseCount--;
-    }
+    });
 }
 
 export async function decompileMany(
@@ -82,26 +95,31 @@ export async function decompileMany(
     const state = new Uint32Array(sab);
 
     let count = 0;
-    while (true) {
-        const i = Atomics.add(state, 0, splits);
-        if (i >= classNames.length) break;
+    await schedule(async () => {
+        while (true) {
+            const i = Atomics.add(state, 0, splits);
+            if (i >= classNames.length) break;
 
-        const targetClassNames: string[] = [];
-        for (let j = 0; j < splits; j++) {
-            if ((i + j) >= classNames.length) break;
-            targetClassNames.push(classNames[i + j]);
+            const targetClassNames: string[] = [];
+            for (let j = 0; j < splits; j++) {
+                if ((i + j) >= classNames.length) break;
+                targetClassNames.push(classNames[i + j]);
+            }
+
+            const result = await _decompile(jarName, null, targetClassNames, null, logger, true);
+            count += result.length;
         }
+    });
 
-        const result = await _decompile(jarName, null, targetClassNames, null, logger, true);
-        count += result.length;
-    }
     await registerJar(jarName, null);
     return count;
 }
 
 export async function decompile(jarName: string, jarClasses: string[], className: string, classData: DecompileData): Promise<DecompileResult> {
-    const result = await _decompile(jarName, jarClasses, [className], classData, null, false);
-    return result[0];
+    return await schedule(async () => {
+        const result = await _decompile(jarName, jarClasses, [className], classData, null, false);
+        return result[0];
+    });
 }
 
 async function _decompile(
@@ -115,22 +133,13 @@ async function _decompile(
     if (!jarClasses) jarClasses = jars[jarName].classes;
     if (!classData) classData = jars[jarName].proxy;
 
-    try {
-        _promiseCount++;
-        if (lastPromise) await lastPromise;
+    const dbResult = await db.results.bulkGet(classNames.map(n => [jarName, n, "java"] as [string, string, string]));
+    if (dbResult.every(t => t)) return skipDb ? [] : dbResult as DecompileResult[];
 
-        const dbResult = await db.results.bulkGet(classNames.map(n => [jarName, n, "java"] as [string, string, string]));
-        if (dbResult.every(t => t)) return skipDb ? [] : dbResult as DecompileResult[];
-
-        const options = await getOptions();
-        lastPromise = _decompile1(jarName, jarClasses, classNames, classData, options, logger);
-        const promiseResult = await lastPromise;
-        await db.results.bulkPut(promiseResult);
-        return promiseResult;
-    } finally {
-        _promiseCount--;
-        lastPromise = undefined;
-    }
+    const options = await getOptions();
+    const result = await _decompile1(jarName, jarClasses, classNames, classData, options, logger);
+    await db.results.bulkPut(result);
+    return result;
 }
 
 async function _decompile1(
@@ -233,31 +242,23 @@ function generateImportTokens(source: string): Token[] {
     return importTokens;
 }
 
-export async function getClassBytecode(jarName: string, jarClasses: string[], className: string, classData: ArrayBufferLike[]): Promise<DecompileResult> {
-    try {
-        _promiseCount++;
+export async function getClassBytecode(jarName: string, className: string, classData: ArrayBufferLike[]): Promise<DecompileResult> {
+    return schedule(async () => {
         let result = await db.results.get([jarName, className, "bytecode"]);
         if (result) return result;
 
-        const promise = lastPromise
-            ? lastPromise.then(() => getClassBytecode0(jarName, jarClasses, className, classData))
-            : getClassBytecode0(jarName, jarClasses, className, classData);
-        lastPromise = promise;
-
-        result = (await promise)[0];
-        await db.results.put(result);
+        result = await getClassBytecode0(jarName, className, classData);
+        db.results.put(result);
         return result;
-    } finally {
-        _promiseCount--;
-    }
+    })
 }
 
-async function getClassBytecode0(jarName: string, jarClasses: string[], className: string, classData: ArrayBufferLike[]): Promise<DecompileResult[]> {
+async function getClassBytecode0(jarName: string, className: string, classData: ArrayBufferLike[]): Promise<DecompileResult> {
     try {
         const bytecode = await getBytecode(classData);
-        return [{ owner: jarName, className, source: bytecode, tokens: [], language: "bytecode" }];
+        return { owner: jarName, className, source: bytecode, tokens: [], language: "bytecode" };
     } catch (e) {
         console.error(`Error during bytecode retrieval of class '${className}':`, e);
-        return [{ owner: jarName, className, source: `// Error during bytecode retrieval: ${(e as Error).message}`, tokens: [], language: "bytecode" }];
+        return { owner: jarName, className, source: `// Error during bytecode retrieval: ${(e as Error).message}`, tokens: [], language: "bytecode" };
     }
 }

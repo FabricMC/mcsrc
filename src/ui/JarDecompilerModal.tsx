@@ -2,8 +2,8 @@ import { Alert, Button, Form, message, Modal, Popconfirm, Space, type ModalProps
 import { JavaOutlined } from '@ant-design/icons';
 import { BehaviorSubject } from "rxjs";
 import { useObservable } from "../utils/UseObservable";
-import { NumberOption } from "./SettingsModal";
-import { NumberSetting } from "../logic/Settings";
+import { BooleanOption, NumberOption } from "./SettingsModal";
+import { NumberSetting, preferWasmDecompiler } from "../logic/Settings";
 import { decompileEntireJar, deleteCache, type DecompileEntireJarTask } from "../workers/decompile/client";
 import { minecraftJar } from "../logic/MinecraftApi";
 
@@ -78,7 +78,8 @@ export const JarDecompilerModal = () => {
                 description="If the browser crashed, simply reopen the page and you can continue decompiling the rest of the classes by opening this menu again."
             />
             <br />
-            <Form layout="horizontal" labelCol={{ span: 8 }} wrapperCol={{ span: 8 }}>
+            <Form layout="horizontal" labelCol={{ span: 9 }} wrapperCol={{ span: 8 }}>
+                <BooleanOption setting={preferWasmDecompiler} title="Prefer WASM Decompiler" tooltip="WASM deompiler might be faster than JavaScript." />
                 <NumberOption setting={threadsSetting} title="Worker Threads" min={1} max={maxThread} />
                 <NumberOption setting={splitsSetting} title="Worker Splits" min={1} />
                 <Form.Item label="Cache">

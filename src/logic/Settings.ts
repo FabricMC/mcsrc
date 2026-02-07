@@ -1,4 +1,6 @@
-import { BehaviorSubject, combineLatest, map, Observable, switchMap } from "rxjs";
+import { BehaviorSubject, combineLatest, distinctUntilChanged, map, Observable, switchMap } from "rxjs";
+import { loadVFRuntime } from "../workers/decompile/client";
+
 
 export type ModifierKey = 'Ctrl' | 'Alt' | 'Shift';
 export type Key = string;
@@ -114,6 +116,11 @@ export const bytecode = new BooleanSetting('bytecode', false);
 export const unifiedDiff = new BooleanSetting('unified_diff', false);
 export const focusSearch = new KeybindSetting('focus_search', 'Ctrl+ ');
 export const showStructure = new KeybindSetting('show_structure', 'Ctrl+F12');
+
+export const preferWasmDecompiler = new BooleanSetting('prefer_wasm_decompiler', true);
+preferWasmDecompiler.observable
+    .pipe(distinctUntilChanged())
+    .subscribe((v) => loadVFRuntime(v));
 
 export const supportsPermalinking = combineLatest([displayLambdas.observable, bytecode.observable]).pipe(
     map(([lambdaDisplay, bytecode]) => {

@@ -2,7 +2,7 @@ import { Button, Modal, type CheckboxProps, Form, Tooltip, InputNumber, type Inp
 import { SettingOutlined } from '@ant-design/icons';
 import { Checkbox } from 'antd';
 import { useObservable } from "../utils/UseObservable";
-import { BooleanSetting, enableTabs, displayLambdas, focusSearch, KeybindSetting, type KeybindValue, bytecode, showStructure, NumberSetting } from "../logic/Settings";
+import { BooleanSetting, enableTabs, displayLambdas, focusSearch, KeybindSetting, type KeybindValue, bytecode, showStructure, NumberSetting, preferWasmDecompiler } from "../logic/Settings";
 import { capturingKeybind, rawKeydownEvent } from "../logic/Keybinds";
 import { BehaviorSubject } from "rxjs";
 import type React from "react";
@@ -29,10 +29,11 @@ const SettingsModal = () => {
             onCancel={() => settingsModalOpen.next(false)}
             footer={null}
         >
-            <Form layout="horizontal" labelCol={{ span: 8 }} wrapperCol={{ span: 16 }}>
+            <Form layout="horizontal" labelCol={{ span: 9 }} wrapperCol={{ span: 16 }}>
                 <BooleanOption setting={enableTabs} title={"Enable Tabs"} />
                 <BooleanOption setting={displayLambdas} title={"Lambda Names"} tooltip="Display lambda names as inline comments. Does not support permalinking." disabled={bytecodeValue} />
                 <BooleanOption setting={bytecode} title={"Show Bytecode"} tooltip="Show bytecode instructions alongside decompiled source. Does not support permalinking." disabled={displayLambdasValue} />
+                <BooleanOption setting={preferWasmDecompiler} title={"Prefer WASM Decompiler"} tooltip="WASM deompiler might be faster than JavaScript."/>
                 <KeybindOption setting={focusSearch} title={"Focus Search"} captureId="focus_search" />
                 <KeybindOption setting={showStructure} title={"Show Structure"} captureId="show_structure" />
             </Form>
@@ -40,14 +41,14 @@ const SettingsModal = () => {
     );
 };
 
-interface BooleanOptionProps {
+export interface BooleanOptionProps {
     setting: BooleanSetting;
     title: string;
     tooltip?: string;
     disabled?: boolean;
 }
 
-const BooleanOption: React.FC<BooleanOptionProps> = ({ setting, title, tooltip, disabled }) => {
+export const BooleanOption: React.FC<BooleanOptionProps> = ({ setting, title, tooltip, disabled }) => {
     const value = useObservable(setting.observable);
     const onChange: CheckboxProps['onChange'] = (e) => {
         setting.value = e.target.checked;
