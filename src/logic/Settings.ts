@@ -122,6 +122,10 @@ preferWasmDecompiler.observable
     .pipe(distinctUntilChanged())
     .subscribe((v) => loadVFRuntime(v));
 
+export const MAX_THREADS = navigator.hardwareConcurrency || 4;
+export const decompilerThreads = new NumberSetting("decompiler_threads", Math.max(MAX_THREADS / 2, 1));
+export const decompilerSplits = new NumberSetting("decompiler_splits", 100);
+
 export const supportsPermalinking = combineLatest([displayLambdas.observable, bytecode.observable]).pipe(
     map(([lambdaDisplay, bytecode]) => {
         if (lambdaDisplay || bytecode) {

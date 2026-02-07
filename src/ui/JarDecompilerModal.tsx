@@ -1,9 +1,9 @@
-import { Alert, Button, Form, message, Modal, Popconfirm, Space, type ModalProps } from "antd";
+import { Alert, Button, Form, message, Modal, Popconfirm, Space } from "antd";
 import { JavaOutlined } from '@ant-design/icons';
 import { BehaviorSubject } from "rxjs";
 import { useObservable } from "../utils/UseObservable";
 import { BooleanOption, NumberOption } from "./SettingsModal";
-import { NumberSetting, preferWasmDecompiler } from "../logic/Settings";
+import { decompilerSplits, decompilerThreads, MAX_THREADS, preferWasmDecompiler } from "../logic/Settings";
 import { decompileEntireJar, deleteCache, type DecompileEntireJarTask } from "../workers/decompile/client";
 import { minecraftJar } from "../logic/MinecraftApi";
 
@@ -14,10 +14,6 @@ export const JarDecompilerModalButton = () => (
         <JavaOutlined />
     </Button>
 );
-
-const maxThread = navigator.hardwareConcurrency || 4;
-const threadsSetting = new NumberSetting("jarDecompilerThreads", Math.max(maxThread / 2, 1));
-const splitsSetting = new NumberSetting("jarDecompilerSplits", 100);
 
 export const JarDecompilerModal = () => {
     const jar = useObservable(minecraftJar);
@@ -31,8 +27,8 @@ export const JarDecompilerModal = () => {
         if (!jar) return;
 
         const task = decompileEntireJar(jar.jar, {
-            threads: threadsSetting.value,
-            splits: splitsSetting.value,
+            threads: decompilerThreads.value,
+            splits: decompilerSplits.value,
             logger(className) {
                 progressSubject.next(className);
             },
@@ -80,8 +76,8 @@ export const JarDecompilerModal = () => {
             <br />
             <Form layout="horizontal" labelCol={{ span: 9 }} wrapperCol={{ span: 8 }}>
                 <BooleanOption setting={preferWasmDecompiler} title="Prefer WASM Decompiler" tooltip="WASM deompiler might be faster than JavaScript." />
-                <NumberOption setting={threadsSetting} title="Worker Threads" min={1} max={maxThread} />
-                <NumberOption setting={splitsSetting} title="Worker Splits" min={1} />
+                <NumberOption setting={decompilerThreads} title="Worker Threads" min={1} max={MAX_THREADS} />
+                <NumberOption setting={decompilerSplits} title="Worker Splits" min={1} />
                 <Form.Item label="Cache">
                     <Space>
                         <Popconfirm title="Are you sure?" onConfirm={() => clearCache(false)}>
