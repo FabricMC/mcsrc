@@ -38,6 +38,7 @@
     "typescript": "~5.9.3",
     "vite": "^7.1.7",
     "vite-plugin-comlink": "^5.3.0",
-    "vitest": "^4.0.15"
+    "vitest": "^4.0.15",
+    "wrangler": "^4.63.0"
   }
 }
