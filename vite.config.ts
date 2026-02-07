@@ -11,7 +11,6 @@ export default defineConfig({
   },
   test: {
     exclude: ['**/node_modules/**', '**/dist/**', 'tests/**'],
-    environment: 'happy-dom',
   },
   // For javadoc API during development
   server: {

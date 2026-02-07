@@ -55,7 +55,7 @@ export const parsePathToState = (path: string): State | null => {
     };
 };
 
-const getInitialState = (): State => {
+export const getInitialState = (): State => {
     const pathname = window.location.pathname;
     const hash = window.location.hash;
 
@@ -71,52 +71,56 @@ const getInitialState = (): State => {
         path += hash;
     }
 
-    const state = parsePathToState(path);
+    try {
+        const state = parsePathToState(path);
+        if (state === null) {
+            return DEFAULT_STATE;
+        }
 
-    if (state === null) {
+        resetPermalinkAffectingSettings();
+        return state;
+    } catch (e) {
+        console.error("Error parsing permalink:", e);
         return DEFAULT_STATE;
     }
-
-    resetPermalinkAffectingSettings();
-
-    return state;
 };
 
-export const initalState = getInitialState();
+if (typeof window !== "undefined") {
+    window.addEventListener('load', () => {
+        combineLatest([
+            selectedMinecraftVersion,
+            selectedFile,
+            selectedLines,
+            supportsPermalinking,
+            diffView
+        ]).subscribe(([
+            minecraftVersion,
+            file,
+            selectedLines,
+            supported,
+            diffView
+        ]) => {
+            const className = file.split('/').pop()?.replace('.class', '') || file;
+            document.title = className;
+            window.location.hash = '';
 
-window.addEventListener('load', () => {
-    combineLatest([
-        selectedMinecraftVersion,
-        selectedFile,
-        selectedLines,
-        supportsPermalinking,
-        diffView
-    ]).subscribe(([
-        minecraftVersion,
-        file,
-        selectedLines,
-        supported,
-        diffView
-    ]) => {
-        const className = file.split('/').pop()?.replace('.class', '') || file;
-        document.title = className;
-
-        if (!supported || diffView) {
-            window.history.replaceState({}, '', '/');
-            return;
-        }
-
-        let url = `/1/${minecraftVersion}/${file.replace(".class", "")}`;
-
-        if (selectedLines) {
-            const { line, lineEnd } = selectedLines;
-            if (lineEnd && lineEnd !== line) {
-                url += `#L${Math.min(line, lineEnd)}-${Math.max(line, lineEnd)}`;
-            } else {
-                url += `#L${line}`;
+            if (!supported || diffView) {
+                window.history.replaceState({}, '', '/');
+                return;
             }
-        }
 
-        window.history.replaceState({}, '', url);
+            let url = `/1/${minecraftVersion}/${file.replace(".class", "")}`;
+
+            if (selectedLines) {
+                const { line, lineEnd } = selectedLines;
+                if (lineEnd && lineEnd !== line) {
+                    url += `#L${Math.min(line, lineEnd)}-${Math.max(line, lineEnd)}`;
+                } else {
+                    url += `#L${line}`;
+                }
+            }
+
+            window.history.replaceState({}, '', url);
+        });
     });
-});
+}

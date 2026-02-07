@@ -1,6 +1,8 @@
 import { BehaviorSubject } from "rxjs";
 import { Tab } from "./Tabs";
-import { initalState } from "./Permalink";
+import { getInitialState } from "./Permalink";
+
+export const initalState = getInitialState();
 
 /// All of the user controled global state should be defined here:
 
@@ -20,3 +22,10 @@ export const selectedLines = new BehaviorSubject<SelectedLines | null>(initalSta
 
 export const diffView = new BehaviorSubject<boolean>(false);
 export const diffLeftselectedMinecraftVersion = new BehaviorSubject<string | null>(null);
+
+// Reset selected lines when file changes away from initial file
+selectedFile.subscribe((file) => {
+  if (file !== initalState.file) {
+    selectedLines.next(null);
+  }
+});
