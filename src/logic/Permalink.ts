@@ -20,8 +20,14 @@ const DEFAULT_STATE: State = {
 };
 
 const getInitialState = (): State => {
+    // Try pathname first (new style), fall back to hash (old style for backwards compatibility)
+    const pathname = window.location.pathname;
     const hash = window.location.hash;
-    let path = hash.startsWith('#/') ? hash.slice(2) : (hash.startsWith('#') ? hash.slice(1) : '');
+    
+    // Use pathname if it's not just "/" (new style), otherwise use hash (old style)
+    let path = pathname !== '/' && pathname !== '' 
+        ? pathname.slice(1) // Remove leading /
+        : (hash.startsWith('#/') ? hash.slice(2) : (hash.startsWith('#') ? hash.slice(1) : ''));
 
     // Check for line number marker (e.g., #L123 or #L10-20)
     let lineNumber: number | null = null;
@@ -80,11 +86,11 @@ window.addEventListener('load', () => {
         document.title = className;
 
         if (!supported || diffView) {
-            window.location.hash = '';
+            window.history.replaceState({}, '', '/');
             return;
         }
 
-        let url = `#1/${minecraftVersion}/${file.replace(".class", "")}`;
+        let url = `/1/${minecraftVersion}/${file.replace(".class", "")}`;
 
         if (selectedLines) {
             const { line, lineEnd } = selectedLines;
