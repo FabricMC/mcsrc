@@ -92,28 +92,31 @@ export async function decompileMany(
     splits: number,
     logger: DecompileLogger | null
 ): Promise<number> {
-    await registerJar(jarName, blob);
-    const state = new Uint32Array(sab);
+    try {
+        await registerJar(jarName, blob);
+        const state = new Uint32Array(sab);
 
-    let count = 0;
-    await schedule(async () => {
-        while (true) {
-            const i = Atomics.add(state, 0, splits);
-            if (i >= classNames.length) break;
+        let count = 0;
+        await schedule(async () => {
+            while (true) {
+                const i = Atomics.add(state, 0, splits);
+                if (i >= classNames.length) break;
 
-            const targetClassNames: string[] = [];
-            for (let j = 0; j < splits; j++) {
-                if ((i + j) >= classNames.length) break;
-                targetClassNames.push(classNames[i + j]);
+                const targetClassNames: string[] = [];
+                for (let j = 0; j < splits; j++) {
+                    if ((i + j) >= classNames.length) break;
+                    targetClassNames.push(classNames[i + j]);
+                }
+
+                const result = await _decompile(jarName, null, targetClassNames, null, logger, true);
+                count += result.length;
             }
+        });
 
-            const result = await _decompile(jarName, null, targetClassNames, null, logger, true);
-            count += result.length;
-        }
-    });
-
-    await registerJar(jarName, null);
-    return count;
+        return count;
+    } finally {
+        await registerJar(jarName, null);
+    }
 }
 
 export const decompile = (jarName: string, jarClasses: string[], className: string, classData: DecompileData) => schedule(async () => {
