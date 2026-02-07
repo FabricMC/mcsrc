@@ -26,10 +26,10 @@ test.describe('Diff View', () => {
 
         const leftVersionSelect = page.locator('.ant-select').nth(0);
         await leftVersionSelect.click();
-        
+
         await expect(page.locator('.ant-select-dropdown:visible')).toBeVisible({ timeout: 5000 });
         await page.waitForTimeout(500);
-        
+
         const leftOption = page.locator('.ant-select-dropdown:visible .ant-select-item-option').filter({ hasText: '26.1-snapshot-1' }).first();
         await leftOption.click();
         await page.waitForTimeout(5000);
@@ -37,15 +37,15 @@ test.describe('Diff View', () => {
         const rightVersionSelect = page.locator('.ant-select').nth(1);
         await expect(rightVersionSelect).toBeVisible({ timeout: 10000 });
         await rightVersionSelect.click();
-        
+
         await expect(page.locator('.ant-select-dropdown:visible')).toBeVisible({ timeout: 5000 });
         await page.waitForTimeout(500);
-        
+
         const rightOption = page.locator('.ant-select-dropdown:visible .ant-select-item-option').filter({ hasText: '26.1-snapshot-2' }).first();
         await rightOption.click();
         await page.waitForTimeout(5000);
 
-        const searchInput = page.locator('input[placeholder="Search classes"]');
+        const searchInput = page.locator('input[placeholder="Search"]');
         await searchInput.fill('LevelRenderer');
         await page.waitForTimeout(1000);
 
