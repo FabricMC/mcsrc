@@ -10,9 +10,45 @@ function createWrorker() {
         { name: "decompileWorker" }
     );
 }
+type WorkerInstance = ReturnType<typeof createWrorker>;
 
-const threads = navigator.hardwareConcurrency || 4;
-const workers = Array.from({ length: threads }, () => createWrorker());
+const MAX_THREADS = navigator.hardwareConcurrency || 4;
+let workers: WorkerInstance[] = [];
+let preferWasmRuntime = true;
+
+async function ensureWorkers(count: number) {
+    count = Math.min(count, MAX_THREADS);
+    if (workers.length >= count) return;
+
+    let newWorkers = Array.from(
+        { length: count - workers.length },
+        () => createWrorker());
+
+    await Promise.all(newWorkers.map(w => w.loadVFRuntime(preferWasmRuntime)));
+    workers.push(...newWorkers);
+}
+
+async function findWorker(): Promise<WorkerInstance> {
+    let i = 0;
+    if (workers.length > 0) {
+        const count = await Promise.all(workers.map(w => w.promiseCount()));
+        i = workers.reduce((a, _, b) => count[a] < count[b] ? a : b, 0);
+        if (count[i] === 0) return workers[i];
+    }
+
+    if (workers.length < (MAX_THREADS - 1)) {
+        i = workers.length;
+        await ensureWorkers(workers.length + 1);
+    }
+
+    return workers[i];
+}
+
+export async function setRuntime(preferWasm: boolean) {
+    preferWasmRuntime = preferWasm;
+    await Promise.all(workers.map(w => w.scheduleClose()));
+    workers = [];
+}
 
 export async function setOptions(options: vf.Options) {
     const sab = new SharedArrayBuffer(Uint32Array.BYTES_PER_ELEMENT);
@@ -22,12 +58,8 @@ export async function setOptions(options: vf.Options) {
     await Promise.all(workers.map(w => w.setOptions(options, sab)));
 }
 
-export async function loadVFRuntime(preferWasm: boolean) {
-    await Promise.all(workers.map(w => w.loadVFRuntime(preferWasm)));
-}
-
 export async function deleteCache(jarName: string | null) {
-    const worker = workers.reduce((a, b) => a.promiseCount() < b.promiseCount() ? a : b);
+    const worker = await findWorker();
     await worker.clear(jarName);
 }
 
@@ -47,7 +79,7 @@ export function decompileEntireJar(jar: Jar, options?: DecompileEntireJarOptions
     const state = new Uint32Array(sab);
     state[0] = 0;
 
-    const optThreads = Math.min(options?.threads ?? threads, threads);
+    const optThreads = Math.min(options?.threads ?? MAX_THREADS, MAX_THREADS);
     const optSplits = options?.splits ?? 100;
     const optLogger = options?.logger ? Comlink.proxy(options.logger) : null;
 
@@ -56,11 +88,16 @@ export function decompileEntireJar(jar: Jar, options?: DecompileEntireJarOptions
 
     return {
         async start() {
-            const result = await Promise.all(workers
-                .slice(0, optThreads)
-                .map(w => w.decompileMany(jar.name, jar.blob, classNames, sab, optSplits, optLogger)));
-            const total = result.reduce((acc, n) => acc + n, 0);
-            return total;
+            try {
+                await ensureWorkers(optThreads);
+                const result = await Promise.all(workers
+                    .slice(0, optThreads)
+                    .map(w => w.decompileMany(jar.name, jar.blob, classNames, sab, optSplits, optLogger)));
+                const total = result.reduce((acc, n) => acc + n, 0);
+                return total;
+            } finally {
+                setRuntime(preferWasmRuntime);
+            }
         },
         stop() {
             Atomics.store(state, 0, classNames.length);
@@ -93,7 +130,7 @@ export async function decompileClass(className: string, jar: Jar): Promise<Decom
         classData[classFile] = data;
     }
 
-    const worker = workers.reduce((a, b) => a.promiseCount() < b.promiseCount() ? a : b);
+    const worker = await findWorker();
     return await worker.decompile(jar.name, jarClasses, className, classData);
 }
 
@@ -122,6 +159,6 @@ export async function getClassBytecode(className: string, jar: Jar): Promise<Dec
         classData.push(data.buffer);
     }
 
-    const worker = workers.reduce((a, b) => a.promiseCount() < b.promiseCount() ? a : b);
+    const worker = await findWorker();
     return await worker.getClassBytecode(jar.name, className, classData);
 }

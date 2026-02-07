@@ -1,5 +1,5 @@
 import { BehaviorSubject, combineLatest, distinctUntilChanged, map, Observable, switchMap } from "rxjs";
-import { loadVFRuntime } from "../workers/decompile/client";
+import * as decompiler from "../workers/decompile/client";
 
 
 export type ModifierKey = 'Ctrl' | 'Alt' | 'Shift';
@@ -120,7 +120,7 @@ export const showStructure = new KeybindSetting('show_structure', 'Ctrl+F12');
 export const preferWasmDecompiler = new BooleanSetting('prefer_wasm_decompiler', true);
 preferWasmDecompiler.observable
     .pipe(distinctUntilChanged())
-    .subscribe((v) => loadVFRuntime(v));
+    .subscribe((v) => decompiler.setRuntime(v));
 
 export const MAX_THREADS = navigator.hardwareConcurrency || 4;
 export const decompilerThreads = new NumberSetting("decompiler_threads", Math.max(MAX_THREADS / 2, 1));

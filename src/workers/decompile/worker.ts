@@ -21,6 +21,8 @@ async function schedule<T>(fn: () => Promise<T>): Promise<T> {
     }
 }
 
+export const scheduleClose = () => schedule(async () => close());
+
 const db = new Dexie("decompiler") as Dexie & {
     options: EntityTable<DecompileOption, "key">,
     results: Table<DecompileResult, [string, string, string]>,
