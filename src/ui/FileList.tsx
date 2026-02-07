@@ -105,7 +105,7 @@ const getMenuItems = (
     const packagePath = path.replace(/\//g, '.').replace('.class', '');
     const filename = path.split('/').pop() || '';
     const linkPath = path.replace('.class', '');
-    const link = jar ? `https://mcsrc.dev/#1/${jar.version}/${linkPath}` : '';
+    const link = jar ? `https://mcsrc.dev/1/${jar.version}/${linkPath}` : '';
 
     const renderLabel = (title: string, value: string) => (
         <div style={{ display: 'flex', gap: '24px', justifyContent: 'space-between', alignItems: 'center', minWidth: '300px' }}>
