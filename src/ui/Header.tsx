@@ -16,7 +16,7 @@ const Header = () => {
     );
 };
 
-export const HeaderBody = () => {
+const HeaderBody = () => {
     const versions = useObservable(minecraftVersionIds);
     const currentVersion = useObservable(selectedMinecraftVersion);
     return (
