@@ -102,9 +102,9 @@ if (typeof window !== "undefined") {
         ]) => {
             const className = file.split('/').pop()?.replace('.class', '') || file;
             document.title = className;
-            window.location.hash = '';
 
             if (!supported || diffView) {
+                window.location.hash = '';
                 window.history.replaceState({}, '', '/');
                 return;
             }
