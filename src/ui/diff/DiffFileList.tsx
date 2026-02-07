@@ -1,5 +1,5 @@
-import { Table, Tag, Input, Button, Flex, theme, Checkbox, Tooltip } from 'antd';
-import { SplitCellsOutlined, AlignLeftOutlined } from '@ant-design/icons';
+import { Table, Tag, Input, Button, Flex, theme, Checkbox, Tooltip, Layout, Space } from 'antd';
+import { SplitCellsOutlined, AlignLeftOutlined, EyeOutlined, EyeInvisibleOutlined, CodeOutlined, FileTextOutlined } from '@ant-design/icons';
 import DiffVersionSelection from './DiffVersionSelection';
 import {
     getDiffChanges,
@@ -96,10 +96,6 @@ const DiffFileList = () => {
         diffView.next(false);
     };
 
-    const handleHideUnchangedToggle = (checked: boolean) => {
-        hideUnchangedSizes.next(checked);
-    };
-
     useEffect(() => {
         if (dataSource.length > 500 && !hideUnchanged) {
             hideUnchangedSizes.next(true);
@@ -107,89 +103,89 @@ const DiffFileList = () => {
     }, [dataSource.length, hideUnchanged]);
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', marginLeft: 8, marginRight: 8, overflow: 'hidden' }}>
-            <div
+        <Layout style={{ height: '100%', backgroundColor: token.colorBgContainer }}>
+            <Layout.Header
                 style={{
                     position: 'sticky',
                     top: 0,
                     zIndex: 10,
-                    paddingBottom: 12,
-                    paddingTop: 12,
-                    backgroundColor: token.colorBgContainer
+                    backgroundColor: token.colorBgContainer,
+                    padding: '12px 8px',
+                    height: 'auto',
+                    lineHeight: 'normal',
                 }}
             >
-                <Input.Search
-                    placeholder="Search classes"
-                    allowClear
-                    onChange={onChange}
-                    style={{ width: 220 }}
-                />
-                <Tooltip title="Hide modified classes that have the same uncompressed size. This is useful for versions where the compiler version has changed but the code hasn't.">
-                    <Checkbox
-                        checked={hideUnchanged}
-                        onChange={(e) => handleHideUnchangedToggle(e.target.checked)}
-                        style={{ marginLeft: 8 }}
-                    >
-                        Hide same size
-                    </Checkbox>
-                </Tooltip>
-                {summary && (
-                    <span style={{ marginLeft: 16, color: token.colorTextDescription }}>
-                        {summary.added === 0 && summary.deleted === 0 && summary.modified === 0 ? "None" : (
-                            <>
-                                <span style={{ color: token.colorSuccess }}>+{summary.added} new files</span>
-                                <span style={{ marginLeft: 8, color: token.colorError }}>-{summary.deleted} deleted</span>
-                                <span style={{ marginLeft: 8 }}>{summary.modified} modified</span>
-                            </>
-                        )}
-                    </span>
-                )}
-                <Flex
-                    gap={8}
-                    align="center"
-                    style={{
-                        position: 'absolute',
-                        left: '50%',
-                        top: 12,
-                        transform: 'translateX(-50%)',
-                    }}
-                >
-                    <DiffVersionSelection />
-                </Flex>
-                <div
-                    style={{
-                        position: 'absolute',
-                        top: 12,
-                        right: 0
-                    }}
-                >
-                    <Tooltip title={isUnifiedDiff ? "Switch to side-by-side diff" : "Switch to unified diff"}>
-                        <Button
-                            type="text"
-                            icon={isUnifiedDiff ? <SplitCellsOutlined /> : <AlignLeftOutlined />}
-                            onClick={() => unifiedDiff.value = !unifiedDiff.value}
-                            style={{ marginRight: 8 }}
+                <Flex wrap="wrap" gap={12} justify="center" align="center" style={{ width: '100%' }}>
+                    <Flex align="center" gap={8} wrap="wrap" style={{ flex: '1 1 0', minWidth: 'max-content', justifyContent: 'flex-start' }}>
+                        <Input.Search
+                            placeholder="Search"
+                            allowClear
+                            onChange={onChange}
+                            style={{ width: 160 }}
                         />
-                    </Tooltip>
-                    <Checkbox
-                        checked={isBytecode}
-                        onChange={e => bytecode.value = e.target.checked}
-                    >
-                        Show Bytecode
-                    </Checkbox>
-                    <Button
-                        type="default"
-                        variant={"outlined"}
-                        onClick={handleExitDiff}
-                    >
-                        Exit Diff
-                    </Button>
-                </div>
-            </div>
-            <div
+                        {summary && (
+                            <Flex vertical gap={0} style={{ color: token.colorTextDescription, fontSize: '10px', lineHeight: '1.2' }}>
+                                {summary.added === 0 && summary.deleted === 0 && summary.modified === 0 ? (
+                                    <span>None</span>
+                                ) : (
+                                    <>
+                                        <span style={{ color: token.colorSuccess }}>
+                                            +{summary.added} new files
+                                        </span>
+                                        <span style={{ color: token.colorError }}>
+                                            -{summary.deleted} deleted
+                                        </span>
+                                        <span>
+                                            {summary.modified} modified
+                                        </span>
+                                    </>
+                                )}
+                            </Flex>
+                        )}
+                    </Flex>
+
+                    <Flex style={{ flex: '0 1 auto', minWidth: 'max-content' }}>
+                        <DiffVersionSelection />
+                    </Flex>
+
+                    <Flex gap={0} wrap="wrap" justify="flex-end" style={{ flex: '1 1 0', minWidth: 'max-content' }}>
+                        <Tooltip title={isUnifiedDiff ? "Switch to side-by-side diff" : "Switch to unified diff"}>
+                            <Button
+                                type="text"
+                                icon={isUnifiedDiff ? <SplitCellsOutlined /> : <AlignLeftOutlined />}
+                                onClick={() => unifiedDiff.value = !unifiedDiff.value}
+                            />
+                        </Tooltip>
+                        <Tooltip title={isBytecode ? "Show decompiled code" : "Show bytecode"}>
+                            <Button
+                                type="text"
+                                icon={isBytecode ? <FileTextOutlined /> : <CodeOutlined />}
+                                onClick={() => bytecode.value = !bytecode.value}
+                            />
+                        </Tooltip>
+                        <Tooltip title={hideUnchanged ? "Show all modified classes" : "Hide modified classes that have the same uncompressed size"}>
+                            <Button
+                                type="text"
+                                icon={hideUnchanged ? <EyeOutlined /> : <EyeInvisibleOutlined />}
+                                onClick={() => hideUnchangedSizes.next(!hideUnchanged)}
+                            />
+                        </Tooltip>
+                        <Button
+                            type="default"
+                            variant={"outlined"}
+                            onClick={handleExitDiff}
+                            style={{ marginLeft: 8 }}
+                        >
+                            Exit
+                        </Button>
+                    </Flex>
+                </Flex>
+            </Layout.Header>
+
+            <Layout.Content
                 style={{
-                    flex: 1,
-                    overflowY: 'auto'
+                    padding: '0 8px',
+                    overflowY: 'auto',
                 }}
             >
                 <Table
@@ -215,8 +211,8 @@ const DiffFileList = () => {
                         cursor: loading ? 'not-allowed' : 'pointer'
                     }}
                 />
-            </div>
-        </div>
+            </Layout.Content>
+        </Layout>
     );
 };
 

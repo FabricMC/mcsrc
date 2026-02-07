@@ -1,4 +1,4 @@
-import { Select } from "antd";
+import { Select, Flex } from "antd";
 import { useObservable } from "../../utils/UseObservable";
 import { minecraftVersionIds } from "../../logic/MinecraftApi";
 import { getLeftDiff, getRightDiff } from "../../logic/Diff";
@@ -14,7 +14,7 @@ const DiffVersionSelection = () => {
     }
 
     return (
-        <>
+        <Flex align="center" gap={8}>
             <Select
                 value={leftVersion || versions?.[1]} // Select second version as default for left side
                 onChange={(v) => {
@@ -36,7 +36,7 @@ const DiffVersionSelection = () => {
                     <Select.Option key={v} value={v}>{v}</Select.Option>
                 ))}
             </Select>
-        </>
+        </Flex>
     );
 };
 
