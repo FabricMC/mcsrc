@@ -4,7 +4,6 @@ import SideBar from './SideBar.tsx';
 import { useState } from 'react';
 import { useObservable } from '../utils/UseObservable.ts';
 import { isThin } from '../logic/Browser.ts';
-import { HeaderBody } from './Header.tsx';
 import { diffView } from '../logic/State';
 import DiffView from './diff/DiffView.tsx';
 import { FilepathHeader } from './FilepathHeader.tsx';
@@ -75,7 +74,7 @@ const MobileApp = () => {
                 open={open}
                 placement='left'
                 styles={{ body: { padding: 0 } }}
-                extra={<HeaderBody />}
+                closeIcon={false}
             >
                 <SideBar />
             </Drawer>
