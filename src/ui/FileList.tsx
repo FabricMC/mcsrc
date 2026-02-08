@@ -1,7 +1,7 @@
 import { Tree, Dropdown, message } from 'antd';
 import type { TreeDataNode, TreeProps, MenuProps } from 'antd';
 import { CaretDownFilled } from '@ant-design/icons';
-import { map, shareReplay, type Observable } from 'rxjs';
+import { combineLatest, map, shareReplay, type Observable } from 'rxjs';
 import { classesList } from '../logic/JarFile';
 import { useObservable } from '../utils/UseObservable';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -10,52 +10,74 @@ import { openTab } from '../logic/Tabs';
 import { minecraftJar, type MinecraftJar } from '../logic/MinecraftApi';
 import { decompileClass, DECOMPILER_OPTIONS } from '../logic/Decompiler';
 import { selectedFile, usageQuery } from '../logic/State';
+import { compactPackages } from '../logic/Settings';
 
-// Sorts nodes with children first (directories before files), then alphabetically
-const sortTreeNodes = (nodes: TreeDataNode[] = []) => {
-    nodes.sort((a, b) => {
-        const aHas = !!(a.children && a.children.length);
-        const bHas = !!(b.children && b.children.length);
-        if (aHas !== bHas) return aHas ? -1 : 1;
-        const aTitle = String(a.title).toLowerCase();
-        const bTitle = String(b.title).toLowerCase();
-        return aTitle.localeCompare(bTitle);
-    });
-    nodes.forEach(n => {
-        if (n.children && n.children.length) sortTreeNodes(n.children);
-    });
-};
+const fileTree: Observable<TreeDataNode[]> = combineLatest([
+    classesList,
+    compactPackages.observable]
+).pipe(
+    map(([classFiles, compact]) => {
+        const dirs = new Map<string, TreeDataNode[]>();
+        dirs.set('', []);
 
-// Given a list of class files, create a tree structure
-const fileTree: Observable<TreeDataNode[]> = classesList.pipe(
-    map(classFiles => {
-        const root: TreeDataNode[] = [];
+        for (const filePath of classFiles) {
+            const i = filePath.lastIndexOf('/');
+            const dirPath = filePath.slice(0, i);
 
-        classFiles.forEach(filePath => {
-            const parts = filePath.split('/');
-            let currentLevel = root;
+            if (!dirs.has(dirPath)) {
+                const parts = dirPath.split('/');
+                parts.forEach((p, i) => {
+                    const parent = parts.slice(0, i).join('/');
+                    const current = parent === '' ? p : `${parent}/${p}`;
 
-            parts.forEach((part, index) => {
-                let existingNode = currentLevel.find(node => node.title === part);
-                if (!existingNode) {
-                    const isLeaf = index === parts.length - 1;
-                    existingNode = {
-                        title: part.replace('.class', ''),
-                        key: parts.slice(0, index + 1).join('/'),
-                        children: isLeaf ? undefined : [],
-                        isLeaf: isLeaf
+                    if (!dirs.has(current)) {
+                        dirs.set(current, []);
+                        dirs.get(parent)!.push({
+                            title: p,
+                            key: current,
+                            children: [],
+                            isLeaf: false,
+                        });
                     };
-                    currentLevel.push(existingNode);
-                }
-                if (index < parts.length - 1) {
-                    if (!existingNode.children) {
-                        existingNode.children = [];
-                    }
-                    currentLevel = existingNode.children;
-                }
+                });
+            };
+
+            const dir = dirs.get(dirPath)!;
+
+            dir.push({
+                title: filePath.slice(i + 1).replace('.class', ''),
+                key: filePath,
+                isLeaf: true,
             });
-        });
-        sortTreeNodes(root);
+        }
+
+        function traverse(dir: string, prefix: string, parent: TreeDataNode) {
+            const nodes = dirs.get(dir)!;
+
+            if (compact && nodes.length === 1 && !nodes[0].isLeaf) {
+                const node = nodes[0];
+                parent.title = `${parent.title}/${node.title}`;
+                traverse(node.key as string, prefix, parent);
+            } else {
+                for (const node of nodes) {
+                    parent.children!.push(node);
+
+                    if (!node.isLeaf) {
+                        traverse(node.key as string, prefix, node);
+                    };
+                }
+            }
+
+            parent.children!.sort((a, b) => {
+                if (a.isLeaf && !b.isLeaf) return +1;
+                if (!a.isLeaf && b.isLeaf) return -1;
+                return a.title! < b.title! ? -1 : +1;
+            });
+        }
+
+        const root: TreeDataNode[] = [];
+        traverse('', '', { title: '', key: '', children: root });
+
         return root;
     }),
     shareReplay(1)
