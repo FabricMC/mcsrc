@@ -69,10 +69,10 @@ export interface NumberOptionProps {
     title: string;
     min?: number;
     max?: number;
-    e2e?: string;
+    testid?: string;
 }
 
-export const NumberOption: React.FC<NumberOptionProps> = ({ setting, title, min, max, e2e}) => {
+export const NumberOption: React.FC<NumberOptionProps> = ({ setting, title, min, max, testid}) => {
     const value = useObservable(setting.observable);
     const onChange: InputNumberProps<number>["onChange"] = (e) => {
         setting.value = e ?? setting.defaultValue;
@@ -80,7 +80,7 @@ export const NumberOption: React.FC<NumberOptionProps> = ({ setting, title, min,
 
     return (
         <Form.Item label={title}>
-            <InputNumber data-e2e={e2e} min={min} max={max} value={value} onChange={onChange}/>
+            <InputNumber data-testid={testid} min={min} max={max} value={value} onChange={onChange}/>
         </Form.Item>
     );
 }
