@@ -1,4 +1,4 @@
-import { Button, Card, Divider, Input } from "antd";
+import { Button, Card, Divider, Flex, Input } from "antd";
 import Header from "./Header";
 import FileList from "./FileList";
 import type { InputRef, SearchProps } from "antd/es/input";
@@ -6,7 +6,6 @@ import { useObservable } from "../utils/UseObservable";
 import { isSearching } from "../logic/JarFile";
 import SearchResults from "./SearchResults";
 import UsageResults from "./UsageResults";
-import { isThin } from "../logic/Browser";
 import { formatUsageQuery, isViewingUsages } from "../logic/FindUsages";
 import { ArrowLeftOutlined } from "@ant-design/icons";
 import { focusSearchEvent } from "../logic/Keybinds";
@@ -16,7 +15,6 @@ import { searchQuery, usageQuery } from "../logic/State";
 const { Search } = Input;
 
 const SideBar = () => {
-    const isSmall = useObservable(isThin);
     const showUsage = useObservable(isViewingUsages);
     const currentUsageQuery = useObservable(usageQuery);
     const focusSearch = useObservable(focusSearchEvent);
@@ -45,7 +43,8 @@ const SideBar = () => {
     };
 
     return (
-        <Card cover={isSmall ? undefined : <Header />} variant="borderless">
+        <Flex vertical style={{ height: "100%", padding: "0 4px" }}>
+            <Header />
             {showUsage ? (
                 <>
                     <Button onClick={onBackClick} icon={<ArrowLeftOutlined />} block>
@@ -59,8 +58,10 @@ const SideBar = () => {
                 <Search ref={searchRef} placeholder="Search classes" allowClear onChange={onChange}></Search>
             )}
             <Divider size="small" />
-            <FileListOrSearchResults />
-        </Card>
+            <div style={{ flexGrow: 1, overflowY: "auto" }}>
+                <FileListOrSearchResults />
+            </div>
+        </Flex>
     );
 };
 
