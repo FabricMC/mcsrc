@@ -110,8 +110,12 @@ export async function decompileMany(
                     targetClassNames.push(classNames[i + j]);
                 }
 
-                const result = await _decompile(jarName, null, targetClassNames, null, logger, true);
-                count += result.length;
+                try {
+                    const result = await _decompile(jarName, null, targetClassNames, null, logger, true);
+                    count += result.length;
+                } catch (e) {
+                    console.error("Error during decompilation:", e);
+                }
             }
         });
 
@@ -121,9 +125,19 @@ export async function decompileMany(
     }
 }
 
-export const decompile = (jarName: string, jarClasses: string[], className: string, classData: DecompileData) => schedule(async () => {
-    const result = await _decompile(jarName, jarClasses, [className], classData, null, false);
-    return result[0];
+export const decompile = (
+    jarName: string,
+    jarClasses: string[],
+    className: string,
+    classData: DecompileData
+): Promise<DecompileResult> => schedule(async () => {
+    try {
+        const result = await _decompile(jarName, jarClasses, [className], classData, null, false);
+        return result[0];
+    } catch (e) {
+        console.error(`Error during decompilation of class '${className}':`, e);
+        return { owner: jarName, className, source: `// Error during decompilation: ${(e as Error).message}`, tokens: [], language: "java" };
+    }
 });
 
 async function _decompile(
@@ -141,99 +155,83 @@ async function _decompile(
     if (dbResult.every(t => t)) return skipDb ? [] : dbResult as DecompileResult[];
 
     const options = await getOptions();
-    const result = await _decompile1(jarName, jarClasses, classNames, classData, options, logger);
-    await db.results.bulkPut(result);
-    return result;
-}
 
-async function _decompile1(
-    jarName: string,
-    jarClasses: string[],
-    classNames: string[],
-    classData: DecompileData,
-    options: vf.Options,
-    logger: DecompileLogger | null,
-): Promise<DecompileResult[]> {
-    try {
-        const allTokens: Record<string, Token[]> = {};
-        let currentContent: string | undefined;
-        let currentTokens: Token[] | undefined;
+    const allTokens: Record<string, Token[]> = {};
+    let currentContent: string | undefined;
+    let currentTokens: Token[] | undefined;
 
-        const result = await vf.decompile(classNames, {
-            source: async (name) => await classData[name] ?? null,
-            resources: jarClasses,
-            options,
-            logger: {
-                writeMessage(level, message, error) {
-                    switch (level) {
-                        case "warn": console.warn(message); break;
-                        case "error": console.error(message, error); break;
-                    }
-                },
-                startClass(className) {
-                    if (logger) logger(className);
-                },
-            },
-            tokenCollector: {
-                start(content) {
-                    currentContent = content;
-                    currentTokens = [];
-                },
-                visitClass(start, length, declaration, name) {
-                    currentTokens!.push({ type: "class", start, length, className: name, declaration });
-                },
-                visitField(start, length, declaration, className, name, descriptor) {
-                    currentTokens!.push({ type: "field", start, length, className, declaration, name, descriptor });
-                },
-                visitMethod(start, length, declaration, className, name, descriptor) {
-                    currentTokens!.push({ type: "method", start, length, className, declaration, name, descriptor });
-                },
-                visitParameter(start, length, declaration, className, _methodName, _methodDescriptor, _index, _name) {
-                    currentTokens!.push({ type: "parameter", start, length, className, declaration });
-                },
-                visitLocal(start, length, declaration, className, _methodName, _methodDescriptor, _index, _name) {
-                    currentTokens!.push({ type: "local", start, length, className, declaration });
-                },
-                end() {
-                    allTokens[currentContent!] = currentTokens!;
-                    currentContent = undefined;
-                    currentTokens = undefined;
+    const sources = await vf.decompile(classNames, {
+        source: async (name) => await classData[name] ?? null,
+        resources: jarClasses,
+        options,
+        logger: {
+            writeMessage(level, message, error) {
+                switch (level) {
+                    case "warn": console.warn(message); break;
+                    case "error": console.error(message, error); break;
                 }
             },
-        });
+            startClass(className) {
+                if (logger) logger(className);
+            },
+        },
+        tokenCollector: {
+            start(content) {
+                currentContent = content;
+                currentTokens = [];
+            },
+            visitClass(start, length, declaration, name) {
+                currentTokens!.push({ type: "class", start, length, className: name, declaration });
+            },
+            visitField(start, length, declaration, className, name, descriptor) {
+                currentTokens!.push({ type: "field", start, length, className, declaration, name, descriptor });
+            },
+            visitMethod(start, length, declaration, className, name, descriptor) {
+                currentTokens!.push({ type: "method", start, length, className, declaration, name, descriptor });
+            },
+            visitParameter(start, length, declaration, className, _methodName, _methodDescriptor, _index, _name) {
+                currentTokens!.push({ type: "parameter", start, length, className, declaration });
+            },
+            visitLocal(start, length, declaration, className, _methodName, _methodDescriptor, _index, _name) {
+                currentTokens!.push({ type: "local", start, length, className, declaration });
+            },
+            end() {
+                allTokens[currentContent!] = currentTokens!;
+                currentContent = undefined;
+                currentTokens = undefined;
+            }
+        },
+    });
 
-        const res: DecompileResult[] = [];
-        for (const [className, source] of Object.entries(result)) {
-            const tokens = allTokens[source] ?? [];
+    const res: DecompileResult[] = [];
+    for (const [className, source] of Object.entries(sources)) {
+        const tokens = allTokens[source] ?? [];
 
-            const importRegex = /^\s*import\s+(?!static\b)([^\s;]+)\s*;/gm;
-            let match = null;
-            while ((match = importRegex.exec(source)) !== null) {
-                const importPath = match[1].replaceAll('.', '/');
-                if (importPath.endsWith('*')) {
-                    continue;
-                }
-
-                const className = importPath.substring(importPath.lastIndexOf('/') + 1);
-
-                tokens.push({
-                    type: "class",
-                    start: match.index + match[0].lastIndexOf(className),
-                    length: importPath.length - importPath.lastIndexOf(className),
-                    className: importPath,
-                    declaration: false
-                });
+        const importRegex = /^\s*import\s+(?!static\b)([^\s;]+)\s*;/gm;
+        let match = null;
+        while ((match = importRegex.exec(source)) !== null) {
+            const importPath = match[1].replaceAll('.', '/');
+            if (importPath.endsWith('*')) {
+                continue;
             }
 
-            tokens.sort((a, b) => a.start - b.start);
-            res.push({ owner: jarName, className, source, tokens, language: "java" });
+            const className = importPath.substring(importPath.lastIndexOf('/') + 1);
+
+            tokens.push({
+                type: "class",
+                start: match.index + match[0].lastIndexOf(className),
+                length: importPath.length - importPath.lastIndexOf(className),
+                className: importPath,
+                declaration: false
+            });
         }
-        return res;
-    } // catch (e) {
-    //     // console.error(`Error during decompilation of class '${className}':`, e);
-    //     // return { owner: jarName, className, source: `// Error during decompilation: ${(e as Error).message}`, tokens: [], language: "java" };
-    // }
-    finally { }
+
+        tokens.sort((a, b) => a.start - b.start);
+        res.push({ owner: jarName, className, source, tokens, language: "java" });
+    }
+
+    await db.results.bulkPut(res);
+    return res;
 }
 
 export const getClassBytecode = (jarName: string, className: string, classData: ArrayBufferLike[]): Promise<DecompileResult> => schedule(async () => {
@@ -248,6 +246,6 @@ export const getClassBytecode = (jarName: string, className: string, classData: 
         result = { owner: jarName, className, source: `// Error during bytecode retrieval: ${(e as Error).message}`, tokens: [], language: "bytecode" };
     }
 
-    db.results.put(result);
+    await db.results.put(result);
     return result;
 });

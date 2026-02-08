@@ -131,5 +131,3 @@ export const JarDecompilerProgressModal = () => {
         </Modal>
     );
 };
-
-const deleteModalOpen = new BehaviorSubject(false);
