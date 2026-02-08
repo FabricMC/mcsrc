@@ -2,7 +2,7 @@ import { Button, Modal, type CheckboxProps, Form, Tooltip, InputNumber, type Inp
 import { SettingOutlined } from '@ant-design/icons';
 import { Checkbox } from 'antd';
 import { useObservable } from "../utils/UseObservable";
-import { BooleanSetting, enableTabs, displayLambdas, focusSearch, KeybindSetting, type KeybindValue, bytecode, showStructure, NumberSetting, preferWasmDecompiler } from "../logic/Settings";
+import { BooleanSetting, enableTabs, displayLambdas, focusSearch, KeybindSetting, type KeybindValue, bytecode, showStructure, NumberSetting, preferWasmDecompiler, compactPackages } from "../logic/Settings";
 import { capturingKeybind, rawKeydownEvent } from "../logic/Keybinds";
 import { BehaviorSubject } from "rxjs";
 import type React from "react";
@@ -31,6 +31,7 @@ const SettingsModal = () => {
         >
             <Form layout="horizontal" labelCol={{ span: 9 }} wrapperCol={{ span: 16 }}>
                 <BooleanOption setting={enableTabs} title={"Enable Tabs"} />
+                <BooleanOption setting={compactPackages} title={"Compact Packages"} tooltip="Collapse packages with one child into one." />
                 <BooleanOption setting={displayLambdas} title={"Lambda Names"} tooltip="Display lambda names as inline comments. Does not support permalinking." disabled={bytecodeValue} />
                 <BooleanOption setting={bytecode} title={"Show Bytecode"} tooltip="Show bytecode instructions alongside decompiled source. Does not support permalinking." disabled={displayLambdasValue} />
                 <BooleanOption setting={preferWasmDecompiler} title={"Prefer WASM Decompiler"} tooltip="WASM deompiler might be faster than JavaScript."/>
