@@ -10,7 +10,7 @@ import { minecraftJar } from "../logic/MinecraftApi";
 const modalOpen = new BehaviorSubject(false);
 
 export const JarDecompilerModalButton = () => (
-    <Button color="danger" variant="outlined" onClick={() => modalOpen.next(true)}>
+    <Button data-e2e="jar-decompiler" color="danger" variant="outlined" onClick={() => modalOpen.next(true)}>
         <JavaOutlined />
     </Button>
 );
@@ -39,6 +39,7 @@ export const JarDecompilerModal = () => {
         task.start().then((total) => {
             const elapsed = (performance.now() - start) / 1000;
             modalApi.info({
+                bodyProps: { "data-e2e": "jar-decompiler-result" },
                 content: `Decompiled ${total} new classes in ${elapsed.toFixed(3)} s.`,
                 closable: true,
                 keyboard: true,
@@ -65,6 +66,7 @@ export const JarDecompilerModal = () => {
             open={isModalOpen}
             onCancel={() => modalOpen.next(false)}
             onOk={onOk}
+            okButtonProps={{ "data-e2e": "jar-decompiler-ok" }}
         >
             {messageCtx}
             {modalCtx}
@@ -77,7 +79,7 @@ export const JarDecompilerModal = () => {
             <Form layout="horizontal" labelCol={{ span: 9 }} wrapperCol={{ span: 8 }}>
                 <BooleanOption setting={preferWasmDecompiler} title="Prefer WASM Decompiler" tooltip="WASM deompiler might be faster than JavaScript." />
                 <NumberOption setting={decompilerThreads} title="Worker Threads" min={1} max={MAX_THREADS} />
-                <NumberOption setting={decompilerSplits} title="Worker Splits" min={1} />
+                <NumberOption e2e="jar-decompiler-splits" setting={decompilerSplits} title="Worker Splits" min={1} />
                 <Form.Item label="Cache">
                     <Space>
                         <Popconfirm title="Are you sure?" onConfirm={() => clearCache(false)}>
@@ -108,6 +110,7 @@ export const JarDecompilerProgressModal = () => {
             closable={false}
             keyboard={false}
             maskClosable={false}
+            okButtonProps={{ "data-e2e": "jar-decompiler-stop" }}
             onOk={() => {
                 if (task) task.stop();
                 taskSubject.next(undefined);
@@ -117,7 +120,7 @@ export const JarDecompilerProgressModal = () => {
                 <OkBtn />
             )}
         >
-            <div style={{
+            <div data-e2e="jar-decompiler-progress" style={{
                 fontFamily: "monospace",
                 padding: "10px 0",
                 overflow: "hidden",
