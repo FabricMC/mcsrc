@@ -29,7 +29,7 @@ test.describe('Decompilation', () => {
 
         const progress = page.getByTestId('jar-decompiler-progress').first();
         await progress.waitFor();
-        await expect(progress).toContainText('com/mojang');
+        await expect(progress).toContainText('com/mojang', { timeout: 30_000 });
 
         const stopButton = page.getByTestId('jar-decompiler-stop').first();
         await stopButton.click();

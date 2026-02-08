@@ -15,6 +15,7 @@ export default defineConfig({
   // For javadoc API during development
   server: {
     headers: {
+      'Cache-Control': 'no-store',
       'Cross-Origin-Opener-Policy': 'same-origin',
       'Cross-Origin-Embedder-Policy': 'require-corp',
     },
