@@ -1,4 +1,4 @@
-import { BehaviorSubject, combineLatest, distinctUntilChanged, filter, from, map, shareReplay, switchMap, tap, Observable } from "rxjs";
+import { BehaviorSubject, combineLatest, distinctUntilChanged, filter, from, map, shareReplay, switchMap, tap, Observable, withLatestFrom } from "rxjs";
 import { agreedEula } from "./Settings";
 import { openJar, type Jar } from "../utils/Jar";
 import { selectedMinecraftVersion } from "./State";
@@ -44,10 +44,15 @@ export const downloadProgress = new BehaviorSubject<number | undefined>(undefine
 
 export const minecraftJar = minecraftJarPipeline(selectedMinecraftVersion);
 export function minecraftJarPipeline(source$: Observable<string | null>): Observable<MinecraftJar> {
-    return source$.pipe(
-        filter(id => id !== null),
-        distinctUntilChanged(),
-        map(version => getVersionEntryById(version!)!),
+    return combineLatest([
+        source$.pipe(
+            filter(id => id !== null),
+            distinctUntilChanged()
+        ),
+        minecraftVersions
+    ]).pipe(
+        map(([version, versions]) => getVersionEntryById(versions, version!)),
+        filter((version) => version !== undefined),
         tap((version) => console.log(`Opening Minecraft jar ${version.id}`)),
         switchMap(version => from(downloadMinecraftJar(version, downloadProgress))),
         shareReplay({ bufferSize: 1, refCount: false })
@@ -85,8 +90,7 @@ async function fetchVersionManifest(version: VersionListEntry): Promise<VersionM
     return getJson<VersionManifest>(version.url);
 }
 
-function getVersionEntryById(id: string): VersionListEntry | undefined {
-    const versions = minecraftVersions.value;
+function getVersionEntryById(versions: VersionListEntry[], id: string): VersionListEntry | undefined {
     return versions.find(v => v.id === id);
 }
 

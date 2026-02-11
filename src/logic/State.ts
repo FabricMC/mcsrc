@@ -7,7 +7,7 @@ const initialState = getInitialState();
 
 /// All of the user controled global state should be defined here:
 
-export const selectedMinecraftVersion = new BehaviorSubject<string | null>(null);
+export const selectedMinecraftVersion = new BehaviorSubject<string | null>(initialState.minecraftVersion);
 
 export const selectedFile = new BehaviorSubject<string>(initialState.file);
 export const openTabs = new BehaviorSubject<Tab[]>([new Tab(initialState.file)]);
