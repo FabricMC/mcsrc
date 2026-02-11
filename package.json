@@ -17,7 +17,7 @@
   "dependencies": {
     "@katana-project/zip": "^0.7.1",
     "@monaco-editor/react": "^4.7.0",
-    "@run-slicer/vf": "git+https://github.com/deirn/vineflower.js.git#7a257563c0352acf232313612146eae82b5919bf",
+    "@run-slicer/vf": "^0.5.0-1.11.2",
     "@types/dagre": "^0.7.53",
     "@xyflow/react": "^12.10.0",
     "antd": "^5.28.0",
