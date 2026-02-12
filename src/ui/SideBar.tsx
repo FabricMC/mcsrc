@@ -1,4 +1,4 @@
-import { Button, Card, Divider, Flex, Input } from "antd";
+import { Button, Divider, Flex, Input } from "antd";
 import Header from "./Header";
 import FileList from "./FileList";
 import type { InputRef, SearchProps } from "antd/es/input";
@@ -11,6 +11,7 @@ import { ArrowLeftOutlined } from "@ant-design/icons";
 import { focusSearchEvent } from "../logic/Keybinds";
 import { useEffect, useRef } from "react";
 import { searchQuery, usageQuery } from "../logic/State";
+import IndexProgress from "./IndexProgress";
 
 const { Search } = Input;
 
@@ -34,7 +35,6 @@ const SideBar = () => {
     }, [focusSearch, showUsage]);
 
     const onChange: SearchProps['onChange'] = (e) => {
-
         searchQuery.next(e.target.value);
     };
 
@@ -69,13 +69,16 @@ const FileListOrSearchResults = () => {
     const showSearchResults = useObservable(isSearching);
     const showUsage = useObservable(isViewingUsages);
 
+    let children;
     if (showUsage) {
-        return <UsageResults />;
+        children = <UsageResults />;
     } else if (showSearchResults) {
-        return <SearchResults />;
+        children = <SearchResults />;
     } else {
-        return <FileList />;
+        children = <FileList />;
     }
+
+    return <IndexProgress children={children} />;
 };
 
 export default SideBar;

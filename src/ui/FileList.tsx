@@ -1,4 +1,4 @@
-import { Tree, Dropdown, message, ConfigProvider } from 'antd';
+import { Tree, Dropdown, message } from 'antd';
 import type { TreeDataNode, TreeProps, MenuProps } from 'antd';
 import { CaretDownFilled } from '@ant-design/icons';
 import { combineLatest, from, map, shareReplay, switchMap, type Observable } from 'rxjs';
@@ -9,7 +9,7 @@ import type { Key } from 'antd/es/table/interface';
 import { openTab } from '../logic/Tabs';
 import { minecraftJar, type MinecraftJar } from '../logic/MinecraftApi';
 import { decompileClass } from '../logic/Decompiler';
-import { selectedFile, usageQuery } from '../logic/State';
+import { mobileDrawerOpen, selectedFile, usageQuery } from '../logic/State';
 import { compactPackages } from '../logic/Settings';
 import { jarIndex } from '../workers/JarIndex';
 import { ClassDataIcon, PackageIcon } from './intellij-icons';

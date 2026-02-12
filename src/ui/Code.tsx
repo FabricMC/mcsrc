@@ -30,7 +30,7 @@ import {
     createFoldingRangeProvider
 } from './CodeExtensions';
 import { bytecode } from '../logic/Settings';
-import { selectedFile, diffView, openTabs, selectedLines, tabHistory, usageQuery } from '../logic/State';
+import { selectedFile, diffView, openTabs, selectedLines, tabHistory, usageQuery, mobileDrawerOpen } from '../logic/State';
 
 const Code = () => {
     const monaco = useMonaco();
@@ -114,7 +114,10 @@ const Code = () => {
         );
 
         const viewUsages = monaco.editor.addEditorAction(
-            createFindUsagesAction(decompileResultRef, classListRef, messageApi, (value) => usageQuery.next(value))
+            createFindUsagesAction(decompileResultRef, classListRef, messageApi, (value) => {
+                mobileDrawerOpen.next(true);
+                usageQuery.next(value);
+            })
         );
 
         const viewInheritance = monaco.editor.addEditorAction(

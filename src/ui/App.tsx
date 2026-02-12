@@ -4,13 +4,14 @@ import SideBar from './SideBar.tsx';
 import { useState } from 'react';
 import { useObservable } from '../utils/UseObservable.ts';
 import { isThin } from '../logic/Browser.ts';
-import { diffView } from '../logic/State';
+import { diffView, mobileDrawerOpen } from '../logic/State';
 import DiffView from './diff/DiffView.tsx';
 import { FilepathHeader } from './FilepathHeader.tsx';
 import { enableTabs } from '../logic/Settings.ts';
 import { MenuFoldOutlined } from '@ant-design/icons';
 import { TabsComponent } from './TabsComponent.tsx';
 import Modals from './Modals.tsx';
+import { BehaviorSubject } from 'rxjs';
 
 const App = () => {
     const isSmall = useObservable(isThin);
@@ -54,17 +55,16 @@ const LargeApp = () => {
     );
 };
 
-
 const MobileApp = () => {
-    const [open, setOpen] = useState(false);
+    const open = useObservable(mobileDrawerOpen);
     const tabsEnabled = useObservable(enableTabs.observable);
 
     const showDrawer = () => {
-        setOpen(true);
+        mobileDrawerOpen.next(true);
     };
 
     const onClose = () => {
-        setOpen(false);
+        mobileDrawerOpen.next(false);
     };
 
     return (
