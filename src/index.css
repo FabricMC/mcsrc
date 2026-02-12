@@ -81,6 +81,12 @@ html, body {margin: 0; height: 100%; overflow: hidden}
 .ant-tree-node-content-wrapper {
     display: flex;
     flex-wrap: nowrap;
+    padding-inline: 0 !important;
+}
+
+/* Remove extraneous gap in file tree component */
+.ant-tree-switcher {
+    margin-inline-end: 0 !important;
 }
 
 /* Stop text in file tree from wrapping */

@@ -1,9 +1,10 @@
 import { test, expect } from '@playwright/test';
-import { waitForDecompiledContent, setupTest } from './test-utils';
+import { waitForDecompiledContent, setupTest, waitForIndexing } from './test-utils';
 
 test.describe('Find Usages', () => {
     test.beforeEach(async ({ page }) => {
         await setupTest(page);
+        await waitForIndexing(page);
     });
 
     test('Triggers find usages action', async ({ page }) => {

@@ -1,10 +1,11 @@
 import { defineConfig } from 'vitest/config';
 import { comlink } from "vite-plugin-comlink";
 import react from '@vitejs/plugin-react';
+import svgr from 'vite-plugin-svgr';
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [comlink(), react()],
+  plugins: [comlink(), react(), svgr()],
   worker: {
     plugins: () => [comlink()],
     format: 'es',

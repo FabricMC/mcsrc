@@ -1,7 +1,7 @@
-import { Tree, Dropdown, message } from 'antd';
+import { Tree, Dropdown, message, ConfigProvider } from 'antd';
 import type { TreeDataNode, TreeProps, MenuProps } from 'antd';
 import { CaretDownFilled } from '@ant-design/icons';
-import { combineLatest, map, shareReplay, type Observable } from 'rxjs';
+import { combineLatest, from, map, shareReplay, switchMap, type Observable } from 'rxjs';
 import { classesList } from '../logic/JarFile';
 import { useObservable } from '../utils/UseObservable';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -11,18 +11,24 @@ import { minecraftJar, type MinecraftJar } from '../logic/MinecraftApi';
 import { decompileClass } from '../logic/Decompiler';
 import { selectedFile, usageQuery } from '../logic/State';
 import { compactPackages } from '../logic/Settings';
+import { jarIndex } from '../workers/JarIndex';
+import { ClassDataIcon, PackageIcon } from './intellij-icons';
 
+const classes = jarIndex.pipe(switchMap(j => from(j.getClassData())));
 const fileTree: Observable<TreeDataNode[]> = combineLatest([
-    classesList,
-    compactPackages.observable]
-).pipe(
-    map(([classFiles, compact]) => {
+    classes,
+    compactPackages.observable
+]).pipe(
+    map(([classes, compact]) => {
         const dirs = new Map<string, TreeDataNode[]>();
         dirs.set('', []);
 
-        for (const filePath of classFiles) {
-            const i = filePath.lastIndexOf('/');
-            const dirPath = filePath.slice(0, i);
+        for (const classData of classes) {
+            const { className } = classData;
+            if (className.includes('$')) continue;
+
+            const i = className.lastIndexOf('/');
+            const dirPath = className.slice(0, i);
 
             if (!dirs.has(dirPath)) {
                 const parts = dirPath.split('/');
@@ -35,6 +41,7 @@ const fileTree: Observable<TreeDataNode[]> = combineLatest([
                         dirs.get(parent)!.push({
                             title: p,
                             key: current,
+                            icon: <PackageIcon style={{ fontSize: '16px' }} />,
                             children: [],
                             isLeaf: false,
                         });
@@ -42,11 +49,10 @@ const fileTree: Observable<TreeDataNode[]> = combineLatest([
                 });
             };
 
-            const dir = dirs.get(dirPath)!;
-
-            dir.push({
-                title: filePath.slice(i + 1).replace('.class', ''),
-                key: filePath,
+            dirs.get(dirPath)!.push({
+                title: className.slice(i + 1),
+                key: `${className}.class`,
+                icon: <ClassDataIcon data={classData} style={{ fontSize: '16px' }} />,
                 isLeaf: true,
             });
         }

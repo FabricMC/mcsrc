@@ -21,3 +21,5 @@ Libraries and tools used:
 
 - Decompiler: [Vineflower](https://github.com/Vineflower/vineflower)
 - Wasm compilation of Vineflower: [@run-slicer/vf](https://www.npmjs.com/package/@run-slicer/vf)
+
+`./src/ui/intellij-icons/` includes icons from [IntelliJ Platform](https://intellij-icons.jetbrains.design), Licensed Apache 2.0.

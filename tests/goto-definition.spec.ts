@@ -1,9 +1,10 @@
 import { test } from '@playwright/test';
-import { waitForDecompiledContent, setupTest } from './test-utils';
+import { waitForDecompiledContent, setupTest, waitForIndexing } from './test-utils';
 
 test.describe('Go to Definition', () => {
     test.beforeEach(async ({ page }) => {
         await setupTest(page);
+        await waitForIndexing(page);
     });
 
     test('Ctrl+click on fromEnum navigates to StringRepresentable', async ({ page }) => {
