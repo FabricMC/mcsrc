@@ -55,7 +55,7 @@ const DiffCode = ({ height }: DiffCodeProps) => {
             indicator={<LoadingOutlined spin />}
             size={"large"}
             spinning={!!loading}
-            tip="Decompiling..."
+            description="Decompiling..."
             style={{
                 height: '100%',
                 color: 'white'

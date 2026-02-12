@@ -43,7 +43,7 @@ export const JarDecompilerModal = () => {
                 content: `Decompiled ${total} new classes in ${elapsed.toFixed(3)} s.`,
                 closable: true,
                 keyboard: true,
-                maskClosable: true,
+                mask: { closable: true },
             });
         }).finally(() => {
             taskSubject.next(undefined);
@@ -109,7 +109,7 @@ export const JarDecompilerProgressModal = () => {
             open={progress ? true : false}
             closable={false}
             keyboard={false}
-            maskClosable={false}
+            mask={{ closable: false }}
             okButtonProps={{ "data-testid": "jar-decompiler-stop" }}
             onOk={() => {
                 if (task) task.stop();
