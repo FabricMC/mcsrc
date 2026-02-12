@@ -330,7 +330,7 @@ const Code = () => {
             indicator={<LoadingOutlined spin />}
             size={"large"}
             spinning={!!decompiling}
-            tip="Decompiling..."
+            description="Decompiling..."
             style={{
                 height: '100%',
                 color: 'white'

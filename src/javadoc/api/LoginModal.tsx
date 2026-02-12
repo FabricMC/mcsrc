@@ -34,7 +34,7 @@ const LoginModal = () => {
             open={needsToLogin && accepted}
             footer={null}
             closable={false}
-            maskClosable={false}
+            mask={{ closable: false }}
         >
             <p style={{ marginBottom: 24 }}>
                 Please log in to access the Javadoc editor.
