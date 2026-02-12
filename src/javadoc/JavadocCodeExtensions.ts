@@ -80,7 +80,7 @@ export function applyJavadocCodeExtensions(monaco: monaco, editor: editor.IStand
         id: EDIT_JAVADOC_COMMAND_ID,
         label: 'Edit Javadoc',
         run: function(editor, ...args) {
-            const token: Token = args[0];
+            const token = args[0] as Token;
             activeJavadocToken.next(token);
         }
     });
