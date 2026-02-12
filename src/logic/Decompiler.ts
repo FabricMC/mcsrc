@@ -4,19 +4,12 @@ import {
     combineLatest, distinctUntilChanged, from, map, Observable, of, shareReplay, switchMap, tap, throttleTime
 } from "rxjs";
 import { minecraftJar, type MinecraftJar } from "./MinecraftApi";
-import { decompile, type Options, type TokenCollector } from "./vf";
-import type { Jar } from "../utils/Jar";
-import type { Token } from "./Tokens";
-import { bytecode, displayLambdas } from "./Settings";
-import { getBytecode } from "../workers/JarIndex";
 import { selectedFile } from "./State";
-
-export interface DecompileResult {
-    className: string;
-    source: string;
-    tokens: Token[];
-    language: 'java' | 'bytecode';
-}
+import { bytecode, displayLambdas } from "./Settings";
+import type { Options } from "./vf";
+import type { DecompileResult } from "../workers/decompile/types";
+import * as worker from "../workers/decompile/client";
+import type { Jar } from "../utils/Jar";
 
 const decompilerCounter = new BehaviorSubject<number>(0);
 
@@ -25,185 +18,56 @@ export const isDecompiling = decompilerCounter.pipe(
     distinctUntilChanged()
 );
 
-export const DECOMPILER_OPTIONS: Options = {};
+const decompilerOptions = combineLatest([
+    displayLambdas.observable
+]).pipe(
+    distinctUntilChanged(),
+    switchMap(([displayLambdas]) => {
+        const options: Options = {};
 
-const decompilationCache = new Map<string, DecompileResult>();
+        if (displayLambdas) {
+            options["mark-corresponding-synthetics"] = "1";
+        }
+
+        return of(options);
+    }),
+);
+decompilerOptions.subscribe(v => worker.setOptions(v));
 
 export const currentResult = decompileResultPipeline(minecraftJar);
 export function decompileResultPipeline(jar: Observable<MinecraftJar>): Observable<DecompileResult> {
     return combineLatest([
         selectedFile,
         jar,
-        displayLambdas.observable,
-        bytecode.observable
+        bytecode.observable,
+        decompilerOptions,
     ]).pipe(
         distinctUntilChanged(),
         throttleTime(250),
-        switchMap(([className, jar, displayLambdas, bytecode]) => {
+        switchMap(([className, jar, bytecode]) => {
             if (bytecode) {
                 return from(getClassBytecode(className, jar.jar));
             }
 
-            let key = `${jar.version}:${className}`;
-
-            if (displayLambdas) {
-                key += ":lambdas";
-            }
-
-            const cached = decompilationCache.get(key);
-            if (cached) {
-                // Re-insert at end
-                decompilationCache.delete(key);
-                decompilationCache.set(key, cached);
-                return of(cached);
-            }
-
-            let options = { ...DECOMPILER_OPTIONS };
-
-            if (displayLambdas) {
-                options["mark-corresponding-synthetics"] = "1";
-            }
-
-            return from(decompileClass(className, jar.jar, options)).pipe(
-                tap(result => {
-                    // Store DecompilationResult in in-memory cache
-                    if (decompilationCache.size >= 75) {
-                        const firstKey = decompilationCache.keys().next().value;
-                        if (firstKey) decompilationCache.delete(firstKey);
-                    }
-                    decompilationCache.set(key, result);
-                })
-            );
+            return from(decompileClass(className, jar.jar));
         }),
         shareReplay({ bufferSize: 1, refCount: false })
     );
 }
 
-export const currentSource = currentResult.pipe(
-    map(result => result.source)
-);
-
-export async function decompileClass(className: string, jar: Jar, options: Options): Promise<DecompileResult> {
-    console.log(`Decompiling class: '${className}'`);
-
-    const files = Object.keys(jar.entries);
-
-    if (!files.includes(className)) {
-        console.error(`Class not found in Minecraft jar: ${className}`);
-        return { className, source: `// Class not found: ${className}`, tokens: [], language: "java" };
-    }
-
+export async function getClassBytecode(className: string, jar: Jar) {
     try {
         decompilerCounter.next(decompilerCounter.value + 1);
-
-        const tokens: Token[] = [];
-        const source = await decompile(className.replace(".class", ""), {
-            source: async (name: string) => {
-                const file = jar.entries[name + ".class"];
-                if (file) {
-                    const arrayBuffer = await file.bytes();
-                    return new Uint8Array(arrayBuffer);
-                }
-
-                console.error(`File not found in Minecraft jar: ${name}`);
-                return null;
-            },
-            resources: files.filter(f => f.endsWith('.class')).map(f => f.replace(".class", "")),
-            options,
-            tokenCollector: tokenCollector(tokens)
-        });
-
-        tokens.push(...generateImportTokens(source));
-        tokens.sort((a, b) => a.start - b.start);
-
-        return { className, source, tokens, language: "java" };
-    } catch (e) {
-        console.error(`Error during decompilation of class '${className}':`, e);
-        return { className, source: `// Error during decompilation: ${(e as Error).message}`, tokens: [], language: "java" };
+        return await worker.getClassBytecode(className, jar);
     } finally {
         decompilerCounter.next(decompilerCounter.value - 1);
     }
 }
 
-function tokenCollector(tokens: Token[]): TokenCollector {
-    return {
-        start: function (content: string): void {
-        },
-        visitClass: function (start: number, length: number, declaration: boolean, name: string): void {
-            tokens.push({ type: "class", start, length, className: name, declaration });
-        },
-        visitField: function (start: number, length: number, declaration: boolean, className: string, name: string, descriptor: string): void {
-            tokens.push({ type: "field", start, length, className, declaration, name, descriptor });
-        },
-        visitMethod: function (start: number, length: number, declaration: boolean, className: string, name: string, descriptor: string): void {
-            tokens.push({ type: "method", start, length, className, declaration, name, descriptor });
-        },
-        visitParameter: function (start: number, length: number, declaration: boolean, className: string, methodName: string, methodDescriptor: string, index: number, name: string): void {
-            tokens.push({ type: "parameter", start, length, className, declaration });
-        },
-        visitLocal: function (start: number, length: number, declaration: boolean, className: string, methodName: string, methodDescriptor: string, index: number, name: string): void {
-            tokens.push({ type: "local", start, length, className, declaration });
-        },
-        end: function (): void {
-        }
-    };
-}
-
-function generateImportTokens(source: string): Token[] {
-    const importTokens: Token[] = [];
-
-    const importRegex = /^\s*import\s+(?!static\b)([^\s;]+)\s*;/gm;
-
-    let match = null;
-    while ((match = importRegex.exec(source)) !== null) {
-        const importPath = match[1].replaceAll('.', '/');
-        if (importPath.endsWith('*')) {
-            continue;
-        }
-
-        const className = importPath.substring(importPath.lastIndexOf('/') + 1);
-
-        importTokens.push({
-            type: "class",
-            start: match.index + match[0].lastIndexOf(className),
-            length: importPath.length - importPath.lastIndexOf(className),
-            className: importPath,
-            declaration: false
-        });
-    }
-    return importTokens;
-}
-
-async function getClassBytecode(className: string, jar: Jar): Promise<DecompileResult> {
-    var classData = [];
-    const allClasses = Object.keys(jar.entries).filter(f => f.endsWith('.class')).sort();
-    const baseClassName = className.replace(".class", "");
-
-    if (!allClasses.includes(className)) {
-        console.error(`Class not found in Minecraft jar: ${className}`);
-        return { className, source: `// Class not found: ${className}`, tokens: [], language: "bytecode" };
-    }
-
+export async function decompileClass(className: string, jar: Jar) {
     try {
         decompilerCounter.next(decompilerCounter.value + 1);
-
-        const data = await jar.entries[className].bytes();
-        classData.push(data.buffer);
-
-        for (const classFile of allClasses) {
-            if (!classFile.startsWith(baseClassName + "$")) {
-                continue;
-            }
-
-            const data = await jar.entries[classFile].bytes();
-            classData.push(data.buffer);
-        }
-
-        const bytecode = await getBytecode(classData);
-        return { className, source: bytecode, tokens: [], language: "bytecode" };
-    } catch (e) {
-        console.error(`Error during bytecode retrieval of class '${className}':`, e);
-        return { className, source: `// Error during bytecode retrieval: ${(e as Error).message}`, tokens: [], language: "bytecode" };
+        return await worker.decompileClass(className, jar);
     } finally {
         decompilerCounter.next(decompilerCounter.value - 1);
     }

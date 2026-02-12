@@ -1,4 +1,4 @@
-import type { DecompileResult } from "./Decompiler";
+import type { DecompileResult } from "../workers/decompile/types.ts";
 
 export type TokenType = 'class' | 'field' | 'method' | 'parameter' | 'local';
 

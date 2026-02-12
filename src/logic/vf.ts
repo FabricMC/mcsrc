@@ -1,39 +1,36 @@
 import wasmPath from "@run-slicer/vf/vf.wasm?url";
 import { load } from "@run-slicer/vf/vf.wasm-runtime.js";
+import type * as vf from "@run-slicer/vf";
 
-export type Options = Record<string, string>;
+export type * from "@run-slicer/vf";
 
-export interface TokenCollector {
-    start: (content: string) => void;
-    visitClass: (start: number, length: number, declaration: boolean, name: string) => void;
-    visitField: (start: number, length: number, declaration: boolean, className: string, name: string, descriptor: string) => void;
-    visitMethod: (start: number, length: number, declaration: boolean, className: string, name: string, descriptor: string) => void;
-    visitParameter: (start: number, length: number, declaration: boolean, className: string, methodName: string, methodDescriptor: string, index: number, name: string) => void;
-    visitLocal: (start: number, length: number, declaration: boolean, className: string, methodName: string, methodDescriptor: string, index: number, name: string) => void;
-    end: () => void;
-}
+let runtime: typeof vf | null = null;
+let runtimePreferWasm = true;
 
-export interface Config {
-    source?: (name: string) => Promise<Uint8Array | null>;
-    resources?: string[];
-    options?: Options;
-    tokenCollector?: TokenCollector;
-}
+export async function loadRuntime(preferWasm: boolean) {
+    if (!runtime || runtimePreferWasm !== preferWasm) {
+        runtimePreferWasm = preferWasm;
+        console.log(`Loading VineFlower ${preferWasm ? "WASM" : "JavaScript"} runtime`);
 
+        let loadJs = !preferWasm;
+        if (preferWasm) {
+            try {
+                const { exports } = await load(wasmPath, { noAutoImports: true });
+                runtime = exports;
+                loadJs = false;
+            } catch (e) {
+                console.warn("Failed to load WASM module (non-compliant browser?), falling back to JS implementation", e);
+                loadJs = true;
+            }
+        }
 
-// Copied from ../node_modules/@run-slicer/vf/vf.js as I needed to get the correct import paths
-let decompileFunc: ((name: string, options: Config) => Promise<string>) | null = null;
-export const decompile = async (name: string, options: Config) => {
-    if (!decompileFunc) {
-        try {
-            const { exports } = await load(wasmPath, { noAutoImports: true });
-            decompileFunc = exports.decompile;
-        } catch (e) {
-            console.warn("Failed to load WASM module (non-compliant browser?), falling back to JS implementation", e);
-            const { decompile: decompileJS } = await import("@run-slicer/vf/vf.runtime.js");
-            decompileFunc = decompileJS;
+        if (loadJs) {
+            runtime = await import("@run-slicer/vf/vf.runtime.js");
         }
     }
+}
 
-    return decompileFunc!(name, options);
+export const decompile: typeof vf.decompile = async (name, options) => {
+    if (!runtime) throw "No runtime loaded";
+    return await runtime.decompile(name, options);
 };

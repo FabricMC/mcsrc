@@ -125,7 +125,7 @@ async function downloadMinecraftJar(version: VersionListEntry, progress: Behavio
 
     if (!response.body || total === 0) {
         const blob = await response.blob();
-        const jar = await openJar(blob);
+        const jar = await openJar(version.id, blob);
         progress.next(undefined);
         return { version: version.id, jar, blob };
     }
@@ -146,7 +146,7 @@ async function downloadMinecraftJar(version: VersionListEntry, progress: Behavio
     }
 
     const blob = new Blob(chunks);
-    const jar = await openJar(blob);
+    const jar = await openJar(version.id, blob);
     progress.next(undefined);
     return { version: version.id, jar, blob };
 }

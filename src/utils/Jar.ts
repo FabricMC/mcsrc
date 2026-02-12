@@ -1,29 +1,36 @@
 import { read, type Entry, type Reader, type Zip, readBlob } from "@katana-project/zip";
 
 export interface Jar {
+    name: string;
+    blob: Blob;
     entries: { [key: string]: Entry; };
 }
 
-export async function openJar(blob: Blob): Promise<Jar> {
+export async function openJar(name: string, blob: Blob): Promise<Jar> {
     const zip = await readBlob(blob, {
         naive: true
     });
-    return new JarImpl(zip);
+    return new JarImpl(name, blob, zip);
 }
 
-export async function streamJar(url: string): Promise<Jar> {
-    const reader = new HttpStreamReader(url);
-    const zip = await read(reader, {
-        naive: true
-    });
-    return new JarImpl(zip);
-}
+// TODO: fix
+// export async function streamJar(name: string, url: string): Promise<Jar> {
+//     const reader = new HttpStreamReader(url);
+//     const zip = await read(reader, {
+//         naive: true
+//     });
+//     return new JarImpl(name, zip);
+// }
 
 class JarImpl implements Jar {
     private zip: Zip;
+    public name: string;
+    public blob: Blob;
     public entries: { [key: string]: Entry; } = {};
 
-    constructor(zip: Zip) {
+    constructor(name: string, blob: Blob, zip: Zip) {
+        this.name = name;
+        this.blob = blob;
         this.zip = zip;
         zip.entries.forEach(entry => {
             this.entries[entry.name] = entry;

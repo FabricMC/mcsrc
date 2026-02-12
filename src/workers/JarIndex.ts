@@ -95,7 +95,7 @@ export class JarIndex {
             console.log(`Indexing minecraft jar using ${this.workers.length} workers`);
 
             // Initialize all workers in parallel
-            await Promise.all(this.workers.map(worker => worker.setWorkerJar(this.minecraftJar.blob)));
+            await Promise.all(this.workers.map(worker => worker.setWorkerJar(this.minecraftJar.version, this.minecraftJar.blob)));
 
             const jar = this.minecraftJar.jar;
             const classNames = Object.keys(jar.entries)
@@ -139,7 +139,7 @@ export class JarIndex {
             this.indexPromise = null;
             throw error;
         } finally {
-            await Promise.all(this.workers.map(worker => worker.setWorkerJar(null)));
+            await Promise.all(this.workers.map(worker => worker.setWorkerJar("", null)));
         }
     }
 
@@ -187,7 +187,5 @@ export async function getBytecode(classData: ArrayBufferLike[]): Promise<string>
 function createWrorker() {
     return new ComlinkWorker<JarIndexWorker>(
         new URL("./JarIndexWorker", import.meta.url),
-        {
-        }
     );
 }

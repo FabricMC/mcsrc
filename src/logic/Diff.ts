@@ -1,8 +1,9 @@
 import { BehaviorSubject, combineLatest, from, map, Observable, switchMap, shareReplay } from "rxjs";
 import { minecraftJar, minecraftJarPipeline, type MinecraftJar } from "./MinecraftApi";
-import { currentResult, decompileResultPipeline, type DecompileResult } from "./Decompiler";
+import { currentResult, decompileResultPipeline } from "./Decompiler";
 import { calculatedLineChanges } from "./LineChanges";
 import { diffLeftselectedMinecraftVersion, selectedMinecraftVersion } from "./State";
+import type { DecompileResult } from "../workers/decompile/types";
 
 export const hideUnchangedSizes = new BehaviorSubject<boolean>(false);
 

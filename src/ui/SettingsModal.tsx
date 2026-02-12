@@ -1,10 +1,11 @@
-import { Button, Modal, type CheckboxProps, Form, Tooltip } from "antd";
+import { Button, Modal, type CheckboxProps, Form, Tooltip, InputNumber, type InputNumberProps } from "antd";
 import { SettingOutlined } from '@ant-design/icons';
 import { Checkbox } from 'antd';
 import { useObservable } from "../utils/UseObservable";
-import { BooleanSetting, enableTabs, displayLambdas, focusSearch, KeybindSetting, type KeybindValue, bytecode, showStructure, compactPackages } from "../logic/Settings";
+import { BooleanSetting, enableTabs, displayLambdas, focusSearch, KeybindSetting, type KeybindValue, bytecode, showStructure, NumberSetting, preferWasmDecompiler, compactPackages } from "../logic/Settings";
 import { capturingKeybind, rawKeydownEvent } from "../logic/Keybinds";
 import { BehaviorSubject } from "rxjs";
+import type React from "react";
 
 export const settingsModalOpen = new BehaviorSubject<boolean>(false);
 
@@ -28,26 +29,27 @@ const SettingsModal = () => {
             onCancel={() => settingsModalOpen.next(false)}
             footer={null}
         >
-            <Form layout="horizontal" labelCol={{ span: 8 }} wrapperCol={{ span: 16 }}>
-                <BooleanToggle setting={enableTabs} title={"Enable Tabs"} />
-                <BooleanToggle setting={compactPackages} title={"Compact Packages"} tooltip="Collapse packages with one child into one." />
-                <BooleanToggle setting={displayLambdas} title={"Lambda Names"} tooltip="Display lambda names as inline comments. Does not support permalinking." disabled={bytecodeValue} />
-                <BooleanToggle setting={bytecode} title={"Show Bytecode"} tooltip="Show bytecode instructions alongside decompiled source. Does not support permalinking." disabled={displayLambdasValue} />
-                <KeybindControl setting={focusSearch} title={"Focus Search"} captureId="focus_search" />
-                <KeybindControl setting={showStructure} title={"Show Structure"} captureId="show_structure" />
+            <Form layout="horizontal" labelCol={{ span: 9 }} wrapperCol={{ span: 16 }}>
+                <BooleanOption setting={enableTabs} title={"Enable Tabs"} />
+                <BooleanOption setting={compactPackages} title={"Compact Packages"} tooltip="Collapse packages with one child into one." />
+                <BooleanOption setting={displayLambdas} title={"Lambda Names"} tooltip="Display lambda names as inline comments. Does not support permalinking." disabled={bytecodeValue} />
+                <BooleanOption setting={bytecode} title={"Show Bytecode"} tooltip="Show bytecode instructions alongside decompiled source. Does not support permalinking." disabled={displayLambdasValue} />
+                <BooleanOption setting={preferWasmDecompiler} title={"Prefer WASM Decompiler"} tooltip="WASM deompiler might be faster than JavaScript."/>
+                <KeybindOption setting={focusSearch} title={"Focus Search"} captureId="focus_search" />
+                <KeybindOption setting={showStructure} title={"Show Structure"} captureId="show_structure" />
             </Form>
         </Modal>
     );
 };
 
-interface BooleanToggleProps {
+export interface BooleanOptionProps {
     setting: BooleanSetting;
     title: string;
     tooltip?: string;
     disabled?: boolean;
 }
 
-const BooleanToggle: React.FC<BooleanToggleProps> = ({ setting, title, tooltip, disabled }) => {
+export const BooleanOption: React.FC<BooleanOptionProps> = ({ setting, title, tooltip, disabled }) => {
     const value = useObservable(setting.observable);
     const onChange: CheckboxProps['onChange'] = (e) => {
         setting.value = e.target.checked;
@@ -62,13 +64,34 @@ const BooleanToggle: React.FC<BooleanToggleProps> = ({ setting, title, tooltip, 
     );
 };
 
-interface KeybindProps {
+export interface NumberOptionProps {
+    setting: NumberSetting;
+    title: string;
+    min?: number;
+    max?: number;
+    testid?: string;
+}
+
+export const NumberOption: React.FC<NumberOptionProps> = ({ setting, title, min, max, testid}) => {
+    const value = useObservable(setting.observable);
+    const onChange: InputNumberProps<number>["onChange"] = (e) => {
+        setting.value = e ?? setting.defaultValue;
+    }
+
+    return (
+        <Form.Item label={title}>
+            <InputNumber data-testid={testid} min={min} max={max} value={value} onChange={onChange}/>
+        </Form.Item>
+    );
+}
+
+interface KeybindOptionProps {
     setting: KeybindSetting;
     title: string;
     captureId: string;
 }
 
-const KeybindControl: React.FC<KeybindProps> = ({ setting, title, captureId }) => {
+const KeybindOption: React.FC<KeybindOptionProps> = ({ setting, title, captureId }) => {
     const value = useObservable(setting.observable);
     const capturing = useObservable(capturingKeybind);
     const isCapturing = capturing === captureId;

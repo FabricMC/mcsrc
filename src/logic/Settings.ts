@@ -1,4 +1,6 @@
-import { BehaviorSubject, combineLatest, map, Observable, switchMap } from "rxjs";
+import { BehaviorSubject, combineLatest, distinctUntilChanged, map, Observable, switchMap } from "rxjs";
+import * as decompiler from "../workers/decompile/client";
+
 
 export type ModifierKey = 'Ctrl' | 'Alt' | 'Shift';
 export type Key = string;
@@ -8,57 +10,54 @@ export type KeybindValue =
     | `${ModifierKey}+${ModifierKey}+${Key}`
     | `${ModifierKey}+${ModifierKey}+${ModifierKey}+${Key}`;
 
-export class BooleanSetting {
-    private key: string;
-    private subject: BehaviorSubject<boolean>;
+abstract class Setting<T> {
+    protected key: string;
+    protected subject: BehaviorSubject<T>;
+    readonly defaultValue: T;
+    private toString: (t: T) => string;
 
-    constructor(key: string, defaultValue: boolean) {
+    constructor(key: string, defaultValue: T, fromString: (s: string) => T, toString: (t: T) => string) {
         const stored = localStorage.getItem(`setting_${key}`);
-        const initialValue = stored !== null ? stored === 'true' : defaultValue;
+        const initialValue = stored ? fromString(stored) : defaultValue;
 
         this.key = key;
-        this.subject = new BehaviorSubject<boolean>(initialValue);
+        this.subject = new BehaviorSubject(initialValue);
+        this.defaultValue = defaultValue;
+        this.toString = toString;
     }
 
-    get observable(): Observable<boolean> {
+    get observable(): Observable<T> {
         return this.subject;
     }
 
-    get value(): boolean {
+    get value(): T {
         return this.subject.value;
     }
 
-    set value(newValue: boolean) {
+    set value(newValue: T) {
         this.subject.next(newValue);
-        localStorage.setItem(`setting_${this.key}`, newValue.toString());
+        localStorage.setItem(`setting_${this.key}`, this.toString(newValue));
     }
 }
 
-export class KeybindSetting {
-    private key: string;
-    private subject: BehaviorSubject<KeybindValue>;
-    private defaultValue: KeybindValue;
+export class BooleanSetting extends Setting<boolean> {
+    constructor(key: string, defaultValue: boolean) {
+        super(key, defaultValue, s => s === "true", b => b ? "true" : "false");
+    }
+}
 
+export class NumberSetting extends Setting<number> {
+    constructor(key: string, defaultValue: number) {
+        super(key, defaultValue, (s) => {
+            const n = Number.parseInt(s);
+            return Number.isNaN(n) ? defaultValue : n;
+        }, n => n.toString());
+    }
+}
+
+export class KeybindSetting extends Setting<KeybindValue> {
     constructor(key: string, defaultValue: KeybindValue) {
-        const stored = localStorage.getItem(`setting_${key}`);
-        const initialValue = stored !== null ? stored : defaultValue;
-
-        this.key = key;
-        this.defaultValue = defaultValue;
-        this.subject = new BehaviorSubject<KeybindValue>(initialValue);
-    }
-
-    get observable(): Observable<KeybindValue> {
-        return this.subject;
-    }
-
-    get value(): KeybindValue {
-        return this.subject.value;
-    }
-
-    set value(newValue: KeybindValue) {
-        this.subject.next(newValue);
-        localStorage.setItem(`setting_${this.key}`, newValue);
+        super(key, defaultValue, s => s, v => v);
     }
 
     reset(): void {
@@ -118,6 +117,15 @@ export const bytecode = new BooleanSetting('bytecode', false);
 export const unifiedDiff = new BooleanSetting('unified_diff', false);
 export const focusSearch = new KeybindSetting('focus_search', 'Ctrl+ ');
 export const showStructure = new KeybindSetting('show_structure', 'Ctrl+F12');
+
+export const preferWasmDecompiler = new BooleanSetting('prefer_wasm_decompiler', true);
+preferWasmDecompiler.observable
+    .pipe(distinctUntilChanged())
+    .subscribe((v) => decompiler.setRuntime(v));
+
+export const MAX_THREADS = navigator.hardwareConcurrency || 4;
+export const decompilerThreads = new NumberSetting("decompiler_threads", Math.max(MAX_THREADS / 2, 1));
+export const decompilerSplits = new NumberSetting("decompiler_splits", 100);
 
 export const supportsPermalinking = combineLatest([displayLambdas.observable, bytecode.observable]).pipe(
     map(([lambdaDisplay, bytecode]) => {

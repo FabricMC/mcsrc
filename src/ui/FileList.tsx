@@ -8,7 +8,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { Key } from 'antd/es/table/interface';
 import { openTab } from '../logic/Tabs';
 import { minecraftJar, type MinecraftJar } from '../logic/MinecraftApi';
-import { decompileClass, DECOMPILER_OPTIONS } from '../logic/Decompiler';
+import { decompileClass } from '../logic/Decompiler';
 import { selectedFile, usageQuery } from '../logic/State';
 import { compactPackages } from '../logic/Settings';
 
@@ -99,7 +99,7 @@ function getPathKeys(filePath: string): Key[] {
 const handleCopyContent = async (path: string, jar: MinecraftJar) => {
     try {
         message.loading({ content: 'Decompiling...', key: 'copy-content' });
-        const result = await decompileClass(path, jar.jar, DECOMPILER_OPTIONS);
+        const result = await decompileClass(path, jar.jar);
         await navigator.clipboard.writeText(result.source);
         message.success({ content: 'Content copied to clipboard', key: 'copy-content' });
     } catch (e) {

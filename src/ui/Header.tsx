@@ -4,6 +4,7 @@ import { useObservable } from "../utils/UseObservable";
 import { AboutModalButton } from "./AboutModal";
 import { SettingsModalButton } from "./SettingsModal";
 import { diffView, selectedMinecraftVersion } from "../logic/State";
+import { JarDecompilerModalButton } from "./JarDecompilerModal";
 
 const Header = () => {
     return (
@@ -52,6 +53,7 @@ const HeaderBody = () => {
                     ))}
                 </Select>
             </div>
+            <JarDecompilerModalButton />
             <SettingsModalButton />
             <AboutModalButton />
         </Space>

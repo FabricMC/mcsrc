@@ -12,8 +12,16 @@ export default defineConfig({
   test: {
     exclude: ['**/node_modules/**', '**/dist/**', 'tests/**'],
   },
-  // For javadoc API during development
   server: {
+    headers: {
+      // E2E tests will fail on WebKit if caching enabled.
+      // Only seem to be a problem in localhost.
+      // https://predr.ag/blog/debugging-safari-if-at-first-you-succeed/
+      'Cache-Control': 'no-store',
+      'Cross-Origin-Opener-Policy': 'same-origin',
+      'Cross-Origin-Embedder-Policy': 'require-corp',
+    },
+    // For javadoc API during development
     proxy: {
       '/v1': {
         target: 'http://localhost:8080',
