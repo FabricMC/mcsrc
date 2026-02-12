@@ -1,44 +1,55 @@
-import type { CancellationToken, IDisposable, IPosition, IRange, languages } from "monaco-editor";
+import type { CancellationToken, IPosition, IRange, languages } from "monaco-editor";
 import { editor, Range, Uri } from "monaco-editor";
-import { currentResult } from '../logic/Decompiler';
 import { openTab } from '../logic/Tabs';
-import { getTokenLocation, type Token } from '../logic/Tokens';
-import { filter, take } from "rxjs";
+import { getTokenLocation } from '../logic/Tokens';
 import { selectedFile } from "../logic/State";
 import type { DecompileResult } from "../workers/decompile/types";
+import { BehaviorSubject } from "rxjs";
+
+export type TokenJumpTarget = {
+    className: string;
+    targetType: 'method' | 'field' | 'class';
+    target: string;
+};
+
+export const pendingTokenJump = new BehaviorSubject<TokenJumpTarget | null>(null);
+
+export function requestTokenJump(className: string, targetType: 'method' | 'field' | 'class', target: string) {
+    pendingTokenJump.next({ className, targetType, target });
+}
+
+export function clearTokenJump() {
+    pendingTokenJump.next(null);
+}
 
 export function jumpToToken(
     result: DecompileResult,
     targetType: 'method' | 'field' | 'class',
     target: string,
-    editor: editor.ICodeEditor,
-    sameFile = false
+    editor: editor.ICodeEditor
 ) {
     for (const token of result.tokens) {
         if (!(token.declaration && token.type == targetType)) continue;
-        if (
-            !(targetType === "method" && "descriptor" in token && token.descriptor === target) &&
-            !(targetType === "field" && "name" in token && token.name === target) &&
-            !(targetType === "class" && token.className === target)
-        ) continue;
+
+        let tokenIdentifier: string | null = null;
+        if (targetType === "method" && "descriptor" in token) {
+            // For methods, target format is "methodName:descriptor"
+            tokenIdentifier = `${token.name}:${token.descriptor}`;
+        } else if (targetType === "field" && "name" in token) {
+            tokenIdentifier = token.name;
+        } else if (targetType === "class") {
+            tokenIdentifier = token.className;
+        }
+
+        if (tokenIdentifier !== target) continue;
 
         const { line, column } = getTokenLocation(result, token);
-        let listener: IDisposable;
-        const updateSelection = () => {
-            if (listener) listener.dispose();
-            editor.setSelection(new Range(line, column, line, column + token.length));
-        };
-        if (sameFile) {
-            updateSelection();
-            editor.revealLineInCenter(line, 0);
-        } else {
-            listener = editor.onDidChangeModelContent(() => {
-                // Wait for DOM to settle
-                queueMicrotask(updateSelection);
-            });
-        }
+        editor.setSelection(new Range(line, column, line, column + token.length));
+        editor.revealLineInCenter(line, 0);
         break;
     }
+
+    console.warn(`jumpToToken: Target ${targetType} "${target}" not found in ${result.className}`);
 }
 
 export function createDefinitionProvider(
@@ -83,7 +94,7 @@ export function createDefinitionProvider(
                         return {
                             uri: "descriptor" in token ?
                                 Uri.parse(`goto://class/${className}#${token.type}:${token.type === "method" ?
-                                    token.descriptor : token.name
+                                    `${token.name}:${token.descriptor}` : token.name
                                     }`) :
                                 Uri.parse(`goto://class/${className}`),
                             range
@@ -109,41 +120,47 @@ export function createEditorOpener(
     decompileResultRef: { current: DecompileResult | undefined; }
 ) {
     return {
-        openCodeEditor: function (editor: editor.ICodeEditor, resource: Uri, selectionOrPosition?: IRange | IPosition): boolean | Promise<boolean> {
+        openCodeEditor: function (editor: editor.ICodeEditor, resource: Uri, selectionOrPosition?: IRange | IPosition): boolean {
             if (!resource.scheme.startsWith("goto")) {
                 return false;
             }
 
             const className = resource.path.substring(1);
             const baseClassName = className.includes('$') ? className.split('$')[0] + ".class" : className;
-            console.log(className);
-            console.log(baseClassName);
 
             const jumpInSameFile = baseClassName === selectedFile.value;
-            const fragment = resource.fragment.split(":") as ['method' | 'field', string];
-            if (fragment.length === 2) {
-                const [targetType, target] = fragment;
-                if (jumpInSameFile) {
-                    jumpToToken(decompileResultRef.current!, targetType, target, editor, true);
-                } else {
-                    const subscription = currentResult.pipe(filter(value => value.className === baseClassName), take(1)).subscribe(value => {
-                        subscription.unsubscribe();
-                        jumpToToken(value, targetType, target, editor);
-                    });
+            const fragment = resource.fragment.split(":") as [string, ...string[]];
+
+            if (fragment.length >= 2) {
+                const targetType = fragment[0] as 'method' | 'field';
+
+                if (targetType === 'method' && fragment.length === 3) {
+                    // Format: method:methodName:descriptor
+                    const [_, methodName, descriptor] = fragment;
+                    const target = `${methodName}:${descriptor}`;
+                    requestTokenJump(baseClassName, targetType, target);
+                    if (!jumpInSameFile) {
+                        openTab(baseClassName);
+                    }
+                } else if (targetType === 'field' && fragment.length === 2) {
+                    // Format: field:fieldName
+                    const target = fragment[1];
+                    requestTokenJump(baseClassName, targetType, target);
+                    if (!jumpInSameFile) {
+                        openTab(baseClassName);
+                    }
                 }
             } else if (baseClassName != className) {
                 // Handle inner class navigation
                 const innerClassName = className.replace('.class', '');
-                if (jumpInSameFile) {
-                    jumpToToken(decompileResultRef.current!, 'class', innerClassName, editor, true);
-                } else {
-                    const subscription = currentResult.pipe(filter(value => value.className === baseClassName), take(1)).subscribe(value => {
-                        subscription.unsubscribe();
-                        jumpToToken(value, 'class', innerClassName, editor);
-                    });
+                // Always use the queue, even for same-file jumps
+                requestTokenJump(baseClassName, 'class', innerClassName);
+                if (!jumpInSameFile) {
+                    openTab(baseClassName);
                 }
+            } else {
+                openTab(baseClassName);
             }
-            openTab(baseClassName);
             return true;
         }
     };

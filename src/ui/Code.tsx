@@ -25,9 +25,12 @@ import {
     createViewInheritanceAction
 } from './CodeContextActions';
 import {
+    clearTokenJump,
     createDefinitionProvider,
     createEditorOpener,
-    createFoldingRangeProvider
+    createFoldingRangeProvider,
+    jumpToToken,
+    pendingTokenJump
 } from './CodeExtensions';
 import { bytecode } from '../logic/Settings';
 import { selectedFile, diffView, openTabs, selectedLines, tabHistory, usageQuery } from '../logic/State';
@@ -42,6 +45,7 @@ const Code = () => {
     const decompiling = useObservable(isDecompiling);
     const selectedLine = useObservable(selectedLines);
     const nextUsage = useObservable(nextUsageNavigation);
+    const tokenJump = useObservable(pendingTokenJump);
 
     const decorationsCollectionRef = useRef<editor.IEditorDecorationsCollection | null>(null);
     const lineHighlightRef = useRef<editor.IEditorDecorationsCollection | null>(null);
@@ -297,6 +301,20 @@ const Code = () => {
         }
         applyTokenDecorations(tab.model!);
     }, [decompileResult, resetViewTrigger, selectedLine]);
+
+    // Process pending token jumps after model is loaded
+    useEffect(() => {
+        if (!editorRef.current || !decompileResult || !tokenJump) return;
+
+        if (decompileResult.className + ".class" === tokenJump.className) {
+            requestAnimationFrame(() => {
+                if (editorRef.current && decompileResult) {
+                    jumpToToken(decompileResult, tokenJump.targetType, tokenJump.target, editorRef.current);
+                    clearTokenJump();
+                }
+            });
+        }
+    }, [decompileResult, tokenJump]);
 
     // Handle gutter clicks for line linking
     useEffect(() => {
