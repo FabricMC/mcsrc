@@ -14,8 +14,8 @@ test.describe('Tabs', () => {
         await searchBox.fill('Minecraft');
 
         const searchResult = page.getByText('net/minecraft/client/Minecraft', { exact: true });
-        await page.waitForTimeout(50);
         await searchResult.click();
+        await page.waitForTimeout(500);
 
         await waitForDecompiledContent(page, 'class Minecraft');
 
@@ -37,6 +37,7 @@ test.describe('Tabs', () => {
 
         const searchResult = page.getByText('net/minecraft/client/Minecraft', { exact: true });
         await searchResult.click();
+        await page.waitForTimeout(500);
 
         await waitForDecompiledContent(page, 'class Minecraft');
 
@@ -44,7 +45,6 @@ test.describe('Tabs', () => {
         await expect(tabs).toHaveCount(2);
 
         const closeButton = tabs.filter({ hasText: 'Minecraft' }).locator('.ant-tabs-tab-remove');
-        await page.waitForTimeout(50);
         await closeButton.click();
 
         await expect(tabs).toHaveCount(1);
@@ -59,10 +59,12 @@ test.describe('Tabs', () => {
 
         await searchBox.fill('Minecraft');
         await page.getByText('net/minecraft/client/Minecraft', { exact: true }).click();
+        await page.waitForTimeout(500);
         await waitForDecompiledContent(page, 'class Minecraft');
 
         await searchBox.fill('SystemReport');
         await page.getByText('net/minecraft/SystemReport', { exact: true }).click();
+        await page.waitForTimeout(500);
         await waitForDecompiledContent(page, 'class SystemReport');
 
         const tabs = page.locator('.ant-tabs-tab');
