@@ -5,7 +5,24 @@ import svgr from 'vite-plugin-svgr';
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [comlink(), react(), svgr()],
+  plugins: [
+    comlink(),
+    react(),
+    svgr(),
+    {
+      name: 'suppress-wasm-warnings',
+      configResolved(config) {
+        const originalWarn = config.logger.warn;
+        config.logger.warn = (msg, options) => {
+          // Suppress WASM runtime externalization warnings
+          if (msg.includes('externalized for browser compatibility') && msg.includes('wasm-runtime.js')) {
+            return;
+          }
+          originalWarn(msg, options);
+        };
+      },
+    },
+  ],
   worker: {
     plugins: () => [comlink()],
     format: 'es',
@@ -33,7 +50,15 @@ export default defineConfig({
   },
   build: {
     sourcemap: true,
+    chunkSizeWarningLimit: 10000,
     rollupOptions: {
+      onwarn(warning, warn) {
+        // Suppress "Module externalized for browser compatibility" warnings for WASM runtime files
+        if (warning.code === 'MODULE_EXTERNALIZED' && warning.message?.includes('wasm-runtime.js')) {
+          return;
+        }
+        warn(warning);
+      },
       output: {
         manualChunks: {
           'inheritance': ['@xyflow/react', 'dagre'],

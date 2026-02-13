@@ -24,6 +24,15 @@ abstract class Setting<T> {
         this.subject = new BehaviorSubject(initialValue);
         this.defaultValue = defaultValue;
         this.toString = toString;
+
+        window.addEventListener('storage', (event) => {
+            if (event.key === `setting_${this.key}` && event.newValue !== null) {
+                const newValue = fromString(event.newValue);
+                if (this.subject.value !== newValue) {
+                    this.subject.next(newValue);
+                }
+            }
+        });
     }
 
     get observable(): Observable<T> {

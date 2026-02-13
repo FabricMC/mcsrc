@@ -35,7 +35,22 @@ export interface MinecraftJar {
     blob: Blob;
 }
 
-export const minecraftVersions = new BehaviorSubject<VersionListEntry[]>([]);
+export const minecraftVersions = agreedEula.observable.pipe(
+    filter(agreed => agreed),
+    switchMap(() => from(fetchVersions())),
+    map(versionsList => versionsList.versions),
+    tap(versions => {
+        // On inital load, if we dont have a version selected or the selected version is not valid, default to the latest version.
+        const currentVersion = selectedMinecraftVersion.value;
+        const isValid = currentVersion !== null && versions.some(v => v.id === currentVersion);
+
+        if (!isValid && versions.length > 0) {
+            selectedMinecraftVersion.next(versions[0].id);
+        }
+    }),
+    shareReplay({ bufferSize: 1, refCount: false })
+);
+
 export const minecraftVersionIds = minecraftVersions.pipe(
     map(versions => versions.map(v => v.id))
 );
@@ -51,7 +66,7 @@ export function minecraftJarPipeline(source$: Observable<string | null>): Observ
         ),
         minecraftVersions
     ]).pipe(
-        map(([version, versions]) => getVersionEntryById(versions, version!)),
+        map(([version, versions]) => versions.find(v => v.id === version)),
         filter((version) => version !== undefined),
         tap((version) => console.log(`Opening Minecraft jar ${version.id}`)),
         switchMap(version => from(downloadMinecraftJar(version, downloadProgress))),
@@ -88,10 +103,6 @@ async function fetchVersions(): Promise<VersionsList> {
 
 async function fetchVersionManifest(version: VersionListEntry): Promise<VersionManifest> {
     return getJson<VersionManifest>(version.url);
-}
-
-function getVersionEntryById(versions: VersionListEntry[], id: string): VersionListEntry | undefined {
-    return versions.find(v => v.id === id);
 }
 
 async function cachedFetch(url: string): Promise<Response> {
@@ -150,24 +161,6 @@ async function downloadMinecraftJar(version: VersionListEntry, progress: Behavio
     progress.next(undefined);
     return { version: version.id, jar, blob };
 }
-
-async function initialize(version: string | null = null) {
-    const versions = (await fetchVersions()).versions;
-    minecraftVersions.next(versions);
-
-    // This triggers the download
-    selectedMinecraftVersion.next(version || versions[0].id);
-}
-
-let hasInitialized = false;
-
-// Automatically download the Minecraft jar only when the user has agreed to the EULA
-combineLatest([agreedEula.observable, selectedMinecraftVersion]).subscribe(([agreed, mcVersion]) => {
-    if (agreed && !hasInitialized) {
-        hasInitialized = true;
-        initialize(mcVersion);
-    }
-});
 
 // Hardcode as these are never going to change.
 const EXPERIMENTAL_VERSIONS: VersionsList = {
