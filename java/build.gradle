@@ -20,6 +20,30 @@ java {
     }
 }
 
+sourceSets {
+    dummy1
+    dummy2
+    dummy3
+}
+
+tasks.register('dummy1Jar', Jar) {
+    from sourceSets.dummy1.output
+    archiveBaseName = 'dummy1'
+    archiveClassifier = ''
+}
+
+tasks.register('dummy2Jar', Jar) {
+    from sourceSets.dummy2.output
+    archiveBaseName = 'dummy2'
+    archiveClassifier = ''
+}
+
+tasks.register('dummy3Jar', Jar) {
+    from sourceSets.dummy3.output
+    archiveBaseName = 'dummy3'
+    archiveClassifier = ''
+}
+
 teavm {
     all {
         mainClass = "mcsrc.Indexer"
@@ -40,4 +64,7 @@ tasks.named("build") {
     dependsOn tasks.generateJavaScript
     dependsOn tasks.generateWasmGC
     dependsOn tasks.copyWasmGCRuntime
+    dependsOn tasks.dummy1Jar
+    dependsOn tasks.dummy2Jar
+    dependsOn tasks.dummy3Jar
 }

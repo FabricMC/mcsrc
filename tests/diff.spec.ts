@@ -30,7 +30,7 @@ test.describe('Diff View', () => {
         await expect(page.locator('.ant-select-dropdown:visible')).toBeVisible({ timeout: 5000 });
         await page.waitForTimeout(500);
 
-        const leftOption = page.locator('.ant-select-dropdown:visible .ant-select-item-option').filter({ hasText: '26.1-snapshot-1' }).first();
+        const leftOption = page.locator('.ant-select-dropdown:visible .ant-select-item-option').filter({ hasText: '26.1-mock-1' }).first();
         await leftOption.click();
         await page.waitForTimeout(5000);
 
@@ -41,7 +41,7 @@ test.describe('Diff View', () => {
         await expect(page.locator('.ant-select-dropdown:visible')).toBeVisible({ timeout: 5000 });
         await page.waitForTimeout(500);
 
-        const rightOption = page.locator('.ant-select-dropdown:visible .ant-select-item-option').filter({ hasText: '26.1-snapshot-2' }).first();
+        const rightOption = page.locator('.ant-select-dropdown:visible .ant-select-item-option').filter({ hasText: '26.1-mock-2' }).first();
         await rightOption.click();
         await page.waitForTimeout(5000);
 
