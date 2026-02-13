@@ -18,6 +18,10 @@ jobs:
         with:
           name: dist
           path: dist/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: java-libs
+          path: java/build/libs/
 
   e2e-tests:
     needs: build
@@ -41,6 +45,10 @@ jobs:
         with:
           name: dist
           path: dist/
+      - uses: actions/download-artifact@v4
+        with:
+          name: java-libs
+          path: java/build/libs/
       - run: npm ci
       - run: npx playwright install --with-deps ${{ matrix.browser }}
       - run: npm run test:e2e -- --project=${{ matrix.browser }}
