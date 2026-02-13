@@ -1,11 +1,11 @@
 import { useObservable } from "../utils/UseObservable";
-import { formatUsage, goToUsage, useageResults } from "../logic/FindUsages";
-import type { UsageString } from "../workers/JarIndex";
+import { formatReference, goToReference, referenceResults } from "../logic/FindAllReferences";
+import type { ReferenceString } from "../workers/JarIndex";
 import { map, Observable } from "rxjs";
 import { openTab } from "../logic/Tabs";
-import { usageQuery } from "../logic/State";
+import { referencesQuery } from "../logic/State";
 
-function getUsageClass(usage: UsageString): string {
+function getUsageClass(usage: ReferenceString): string {
     if (usage.startsWith("m:") || usage.startsWith("f:")) {
         const parts = usage.slice(2).split(":");
         return parts[0];
@@ -15,14 +15,14 @@ function getUsageClass(usage: UsageString): string {
     return usage;
 }
 
-interface UsageGroup {
+interface ReferenceGroup {
     className: string;
-    usages: UsageString[];
+    references: ReferenceString[];
 }
 
-const groupedResults: Observable<UsageGroup[]> = useageResults.pipe(
+const groupedResults: Observable<ReferenceGroup[]> = referenceResults.pipe(
     map(results => {
-        const groups: Record<string, UsageString[]> = {};
+        const groups: Record<string, ReferenceString[]> = {};
 
         for (const usage of results) {
             const className = getUsageClass(usage);
@@ -32,19 +32,19 @@ const groupedResults: Observable<UsageGroup[]> = useageResults.pipe(
             groups[className].push(usage);
         }
 
-        return Object.entries(groups).map(([className, usages]) => ({
+        return Object.entries(groups).map(([className, references]) => ({
             className,
-            usages
+            references
         }));
     })
 );
 
 interface UsageGroupItemProps {
-    group: UsageGroup;
+    group: ReferenceGroup;
 }
 
 const UsageGroupItem = ({ group }: UsageGroupItemProps) => {
-    const query = useObservable(usageQuery)!;
+    const query = useObservable(referencesQuery)!;
 
     return (
         <div style={{ marginBottom: "4px" }}>
@@ -63,10 +63,10 @@ const UsageGroupItem = ({ group }: UsageGroupItemProps) => {
                 {group.className}
             </div>
             <div style={{ paddingLeft: "16px" }}>
-                {group.usages.map((usage, index) => (
+                {group.references.map((reference, index) => (
                     <div
                         key={index}
-                        onClick={() => goToUsage(query, usage)}
+                        onClick={() => goToReference(query, reference)}
                         style={{
                             cursor: "pointer",
                             fontSize: "12px",
@@ -76,7 +76,7 @@ const UsageGroupItem = ({ group }: UsageGroupItemProps) => {
                         onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.05)'}
                         onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                     >
-                        {formatUsage(usage)}
+                        {formatReference(reference)}
                     </div>
                 ))}
             </div>

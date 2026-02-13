@@ -131,7 +131,7 @@ public class ClassIndexVisitor extends ClassVisitor {
 		}
 
 		if (type.getSort() == Type.OBJECT) {
-			Indexer.addUsage(type.getInternalName(), method.usage());
+			Indexer.addReference(type.getInternalName(), method.reference());
 		}
 	}
 
@@ -144,23 +144,23 @@ public class ClassIndexVisitor extends ClassVisitor {
 		}
 
 		if (type.getSort() == Type.OBJECT) {
-			Indexer.addUsage(type.getInternalName(), field.usage());
+			Indexer.addReference(type.getInternalName(), field.reference());
 		}
 	}
 
 	public void indexClassReference(Entry.Method callerEntry, Entry.Class referencedEntry) {
-		Indexer.addUsage(referencedEntry.name(), callerEntry.usage());
+		Indexer.addReference(referencedEntry.name(), callerEntry.reference());
 	}
 
 	public void indexMethodReference(Entry.Method callerEntry, Entry.Method referencedEntry) {
-		Indexer.addUsage(referencedEntry.str(), callerEntry.usage());
+		Indexer.addReference(referencedEntry.str(), callerEntry.reference());
 
 		if (referencedEntry.name().equals("<init>")) {
-			Indexer.addUsage(referencedEntry.owner(), callerEntry.usage());
+			Indexer.addReference(referencedEntry.owner(), callerEntry.reference());
 		}
 	}
 
 	public void indexFieldReference(Entry.Method callerEntry, Entry.Field referencedEntry) {
-		Indexer.addUsage(referencedEntry.str(), callerEntry.usage());
+		Indexer.addReference(referencedEntry.str(), callerEntry.reference());
 	}
 }

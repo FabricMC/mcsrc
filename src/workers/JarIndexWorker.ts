@@ -1,7 +1,7 @@
 import { load } from "../../java/build/generated/teavm/wasm-gc/java.wasm-runtime.js";
 import indexerWasm from '../../java/build/generated/teavm/wasm-gc/java.wasm?url';
 import { openJar, type Jar } from "../utils/Jar.js";
-import type { UsageKey, UsageString } from "./JarIndex.js";
+import type { ReferenceKey, ReferenceString } from "./JarIndex.js";
 
 export type ClassDataString = `${string}|${string}|${number}|${string}`;
 
@@ -50,14 +50,14 @@ export const indexBatch = async (classNames: string[]): Promise<void> => {
     }
 };
 
-export const getUsage = async (key: UsageKey): Promise<[UsageString]> => {
+export const getReference = async (key: ReferenceKey): Promise<[ReferenceString]> => {
     const indexer = await getIndexer();
-    return indexer.getUsage(key);
+    return indexer.getReference(key);
 };
 
-export const getUsageSize = async (): Promise<number> => {
+export const getReferenceSize = async (): Promise<number> => {
     const indexer = await getIndexer();
-    return indexer.getUsageSize();
+    return indexer.getReferenceSize();
 };
 
 export const getBytecode = async (classData: ArrayBufferLike[]): Promise<string> => {
@@ -72,8 +72,8 @@ export const getClassData = async (): Promise<ClassDataString[]> => {
 
 interface Indexer {
     index(data: ArrayBufferLike): void;
-    getUsage(key: UsageKey): [UsageString];
-    getUsageSize(): number;
+    getReference(key: ReferenceKey): [ReferenceString];
+    getReferenceSize(): number;
     getBytecode(classData: ArrayBufferLike[]): string;
     getClassData(): ClassDataString[];
 }

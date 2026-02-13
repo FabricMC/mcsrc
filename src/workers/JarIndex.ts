@@ -6,9 +6,9 @@ import type { ClassDataString } from "./JarIndexWorker";
 export type Class = string;
 export type Method = `${string}:${string}:${string}`;
 export type Field = `${string}:${string}:${string}`;
-export type UsageKey = Class | Method | Field;
+export type ReferenceKey = Class | Method | Field;
 
-export type UsageString =
+export type ReferenceString =
     | `c:${Class}`
     | `m:${Method}`
     | `f:${Field}`;
@@ -114,7 +114,7 @@ export class JarIndex {
                         const batch = taskQueue.splice(0, batchSize);
 
                         if (batch.length === 0) {
-                            const indexed = await worker.getUsageSize();
+                            const indexed = await worker.getReferenceSize();
                             resolve(indexed);
                             return;
                         }
@@ -143,13 +143,13 @@ export class JarIndex {
         }
     }
 
-    async getUsage(key: UsageKey): Promise<UsageString[]> {
+    async getReference(key: ReferenceKey): Promise<ReferenceString[]> {
         await this.indexJar();
 
-        let results: Promise<UsageString[]>[] = [];
+        let results: Promise<ReferenceString[]>[] = [];
 
         for (const worker of this.workers) {
-            results.push(worker.getUsage(key));
+            results.push(worker.getReference(key));
         }
 
         return Promise.all(results).then(arrays => arrays.flat());

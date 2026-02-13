@@ -13,7 +13,7 @@ export const selectedFile = new BehaviorSubject<string>(initialState.file);
 export const openTabs = new BehaviorSubject<Tab[]>([new Tab(initialState.file)]);
 export const tabHistory = new BehaviorSubject<string[]>([initialState.file]);
 export const searchQuery = new BehaviorSubject("");
-export const usageQuery = new BehaviorSubject("");
+export const referencesQuery = new BehaviorSubject("");
 
 export interface SelectedLines {
   line: number;
