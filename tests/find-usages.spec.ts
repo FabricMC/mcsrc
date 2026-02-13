@@ -1,12 +1,12 @@
 import { test, expect } from '@playwright/test';
 import { waitForDecompiledContent, setupTest } from './test-utils';
 
-test.describe('Find Usages', () => {
+test.describe('Find All References', () => {
     test.beforeEach(async ({ page }) => {
         await setupTest(page);
     });
 
-    test('Triggers find usages action', async ({ page }) => {
+    test('Triggers find all references action', async ({ page }) => {
         await page.goto('/');
         await waitForDecompiledContent(page, 'enum ChatFormatting');
 

@@ -1,11 +1,11 @@
 package mcsrc;
 
 public sealed interface Entry permits Entry.Class, Entry.Member, Entry.Field, Entry.Method {
-    String usage();
+    String reference();
 
     record Class(String name) implements Entry {
         @Override
-        public String usage() {
+        public String reference() {
             return "s:%s".formatted(name);
         }
     }
@@ -19,7 +19,7 @@ public sealed interface Entry permits Entry.Class, Entry.Member, Entry.Field, En
         }
 
         @Override
-        public String usage() {
+        public String reference() {
             return "f:%s:%s:%s".formatted(owner, name, desc);
         }
     }
@@ -30,7 +30,7 @@ public sealed interface Entry permits Entry.Class, Entry.Member, Entry.Field, En
         }
 
         @Override
-        public String usage() {
+        public String reference() {
             return "m:%s:%s:%s".formatted(owner, name, desc);
         }
     }

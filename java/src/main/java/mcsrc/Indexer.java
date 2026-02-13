@@ -13,8 +13,8 @@ import java.io.StringWriter;
 import java.util.*;
 
 public class Indexer {
-    private static final Map<String, Set<String>> usages = new HashMap<>();
-    private static int usageSize = 0;
+    private static final Map<String, Set<String>> references = new HashMap<>();
+    private static int referenceSize = 0;
     
     private static final Map<String, ClassInheritanceInfo> inheritanceData = new HashMap<>();
 
@@ -27,13 +27,13 @@ public class Indexer {
     }
 
     @JSExport
-    public static String[] getUsage(String key) {
-        return usages.getOrDefault(key, Set.of()).toArray(String[]::new);
+    public static String[] getReference(String key) {
+        return references.getOrDefault(key, Set.of()).toArray(String[]::new);
     }
 
     @JSExport
-    public static int getUsageSize() {
-        return usageSize;
+    public static int getReferenceSize() {
+        return referenceSize;
     }
 
     @JSExport
@@ -56,13 +56,13 @@ public class Indexer {
         return result.toString();
     }
 
-    public static void addUsage(String key, String value) {
+    public static void addReference(String key, String value) {
         if (!isMinecraft(key)) {
             return;
         }
 
-        usages.computeIfAbsent(key, k -> new HashSet<>()).add(value);
-        usageSize++;
+        references.computeIfAbsent(key, k -> new HashSet<>()).add(value);
+        referenceSize++;
     }
 
     private static boolean isMinecraft(String str) {

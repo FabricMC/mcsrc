@@ -9,9 +9,9 @@ async function setClipboard(text: string): Promise<void> {
 }
 
 export function createCopyAwAction(
-    decompileResultRef: { current: DecompileResult | undefined },
-    classListRef: { current: string[] | undefined },
-    messageApi: { error: (msg: string) => void; success: (msg: string) => void }
+    decompileResultRef: { current: DecompileResult | undefined; },
+    classListRef: { current: string[] | undefined; },
+    messageApi: { error: (msg: string) => void; success: (msg: string) => void; }
 ) {
     return {
         id: 'copy_aw',
@@ -46,9 +46,9 @@ export function createCopyAwAction(
 }
 
 export function createCopyMixinAction(
-    decompileResultRef: { current: DecompileResult | undefined },
-    classListRef: { current: string[] | undefined },
-    messageApi: { error: (msg: string) => void; success: (msg: string) => void }
+    decompileResultRef: { current: DecompileResult | undefined; },
+    classListRef: { current: string[] | undefined; },
+    messageApi: { error: (msg: string) => void; success: (msg: string) => void; }
 ) {
     return {
         id: 'copy_mixin',
@@ -82,34 +82,34 @@ export function createCopyMixinAction(
     };
 }
 
-export function createFindUsagesAction(
-    decompileResultRef: { current: DecompileResult | undefined },
-    classListRef: { current: string[] | undefined },
-    messageApi: { error: (msg: string) => void },
-    usageQueryNext: (value: string) => void
+export function createFindAllReferencesAction(
+    decompileResultRef: { current: DecompileResult | undefined; },
+    classListRef: { current: string[] | undefined; },
+    messageApi: { error: (msg: string) => void; },
+    referenceQueryNext: (value: string) => void
 ) {
     return {
-        id: 'find_usages',
-        label: 'Find Usages',
+        id: 'find_all_references',
+        label: 'Find All References',
         contextMenuGroupId: 'navigation',
         contextMenuOrder: 1,
         precondition: IS_DEFINITION_CONTEXT_KEY_NAME,
         run: async function (editor: editor.ICodeEditor, ...args: any[]): Promise<void> {
             const token = findTokenAtPosition(editor, decompileResultRef.current, classListRef.current);
             if (!token) {
-                messageApi.error("Failed to find token for usages.");
+                messageApi.error("Failed to find token for references.");
                 return;
             }
 
             switch (token.type) {
                 case "class":
-                    usageQueryNext(token.className);
+                    referenceQueryNext(token.className);
                     break;
                 case "field":
-                    usageQueryNext(`${token.className}:${token.name}:${token.descriptor}`);
+                    referenceQueryNext(`${token.className}:${token.name}:${token.descriptor}`);
                     break;
                 case "method":
-                    usageQueryNext(`${token.className}:${token.name}:${token.descriptor}`);
+                    referenceQueryNext(`${token.className}:${token.name}:${token.descriptor}`);
                     break;
                 default:
                     messageApi.error("Token is not a class, field, or method.");
@@ -120,8 +120,8 @@ export function createFindUsagesAction(
 }
 
 export function createViewInheritanceAction(
-    decompileResultRef: { current: DecompileResult | undefined },
-    messageApi: { error: (msg: string) => void },
+    decompileResultRef: { current: DecompileResult | undefined; },
+    messageApi: { error: (msg: string) => void; },
     selectedInheritanceClassNameNext: (value: string) => void
 ) {
     return {

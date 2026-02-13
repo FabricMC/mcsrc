@@ -10,7 +10,7 @@ import { message, Spin } from 'antd';
 import { LoadingOutlined } from '@ant-design/icons';
 import { getTokenLocation } from '../logic/Tokens';
 import { pairwise, startWith } from "rxjs";
-import { getNextJumpToken, nextUsageNavigation } from '../logic/FindUsages';
+import { getNextJumpToken, nextReferenceNavigation } from '../logic/FindAllReferences';
 import { setupJavaBytecodeLanguage } from '../utils/JavaBytecode';
 import { IS_JAVADOC_EDITOR } from '../site';
 import { applyJavadocCodeExtensions } from '../javadoc/JavadocCodeExtensions';
@@ -21,7 +21,7 @@ import {
     IS_DEFINITION_CONTEXT_KEY_NAME,
     createCopyAwAction,
     createCopyMixinAction,
-    createFindUsagesAction,
+    createFindAllReferencesAction,
     createViewInheritanceAction
 } from './CodeContextActions';
 import {
@@ -33,7 +33,7 @@ import {
     pendingTokenJump
 } from './CodeExtensions';
 import { bytecode } from '../logic/Settings';
-import { selectedFile, diffView, openTabs, selectedLines, tabHistory, usageQuery } from '../logic/State';
+import { selectedFile, diffView, openTabs, selectedLines, tabHistory, referencesQuery } from '../logic/State';
 
 const Code = () => {
     const monaco = useMonaco();
@@ -44,7 +44,7 @@ const Code = () => {
     const hideMinimap = useObservable(isThin);
     const decompiling = useObservable(isDecompiling);
     const selectedLine = useObservable(selectedLines);
-    const nextUsage = useObservable(nextUsageNavigation);
+    const nextReference = useObservable(nextReferenceNavigation);
     const tokenJump = useObservable(pendingTokenJump);
 
     const decorationsCollectionRef = useRef<editor.IEditorDecorationsCollection | null>(null);
@@ -117,8 +117,8 @@ const Code = () => {
             createCopyMixinAction(decompileResultRef, classListRef, messageApi)
         );
 
-        const viewUsages = monaco.editor.addEditorAction(
-            createFindUsagesAction(decompileResultRef, classListRef, messageApi, (value) => usageQuery.next(value))
+        const viewAllReferences = monaco.editor.addEditorAction(
+            createFindAllReferencesAction(decompileResultRef, classListRef, messageApi, (value) => referencesQuery.next(value))
         );
 
         const viewInheritance = monaco.editor.addEditorAction(
@@ -131,7 +131,7 @@ const Code = () => {
             // Dispose in the oppsite order
             bytecode.dispose();
             viewInheritance.dispose();
-            viewUsages.dispose();
+            viewAllReferences.dispose();
             copyMixin.dispose();
             copyAw.dispose();
             foldingRange.dispose();
@@ -195,7 +195,7 @@ const Code = () => {
         }
     }, [decompileResult, selectedLine]);
 
-    // Scroll to a "Find usages" token
+    // Scroll to a "Find All References" token
     useEffect(() => {
         if (editorRef.current && decompileResult) {
             if (decompileResult.language !== "java") return;
@@ -219,7 +219,7 @@ const Code = () => {
                 executeScroll();
             });
         }
-    }, [decompileResult, nextUsage]);
+    }, [decompileResult, nextReference]);
 
     // Subscribe to tab changes and store model & viewstate of previously opened tab
     useEffect(() => {
