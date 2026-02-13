@@ -9,10 +9,10 @@ export async function waitForDecompiledContent(page: Page, expectedText: string)
     await expect(async () => {
         const decompiling = page.getByText('Decompiling...');
         await expect(decompiling).toBeHidden();
-    }).toPass({ timeout: 30000 });
+    }).toPass();
 
     const editor = page.getByRole("code").nth(0);
-    await expect(editor).toContainText(expectedText, { timeout: 30000 });
+    await expect(editor).toContainText(expectedText);
 }
 
 async function setupNetworkMocking(page: Page) {

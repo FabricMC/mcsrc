@@ -13,7 +13,7 @@ test.describe('Permalinks and Line Highlighting', () => {
 
         const editor = page.locator('.monaco-editor');
         const highlightedLines = editor.locator('.highlighted-line');
-        await expect(highlightedLines.first()).toBeVisible({ timeout: 5000 });
+        await expect(highlightedLines.first()).toBeVisible();
     });
 
     test('Permalink with line range highlights multiple lines (old hash format)', async ({ page }) => {
@@ -23,7 +23,7 @@ test.describe('Permalinks and Line Highlighting', () => {
 
         const editor = page.locator('.monaco-editor');
         const highlightedLines = editor.locator('.highlighted-line');
-        await expect(highlightedLines.first()).toBeVisible({ timeout: 5000 });
+        await expect(highlightedLines.first()).toBeVisible();
     });
 
     test('Shift-clicking line number creates line range', async ({ page }) => {
@@ -38,7 +38,7 @@ test.describe('Permalinks and Line Highlighting', () => {
         await lineNumbers.first().click();
 
         // Wait for URL to update
-        await page.waitForTimeout(500);
+        await page.waitForTimeout(10);
         const urlAfterFirstClick = page.url();
         expect(urlAfterFirstClick).toMatch(/\/1\/.*#L\d+$/);
 
@@ -46,7 +46,7 @@ test.describe('Permalinks and Line Highlighting', () => {
         await lineNumbers.nth(5).click({ modifiers: ['Shift'] });
 
         // Wait for URL to update
-        await page.waitForTimeout(500);
+        await page.waitForTimeout(10);
 
         // Check that URL now contains a line range (new path-based format)
         expect(page.url()).toMatch(/\/1\/.*#L\d+-\d+$/);
@@ -54,6 +54,6 @@ test.describe('Permalinks and Line Highlighting', () => {
 
         // Check that lines are highlighted
         const highlightedLine = editor.locator('.highlighted-line');
-        await expect(highlightedLine.first()).toBeVisible({ timeout: 2000 });
+        await expect(highlightedLine.first()).toBeVisible();
     });
 });

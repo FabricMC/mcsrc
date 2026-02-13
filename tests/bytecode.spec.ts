@@ -11,9 +11,8 @@ test.describe('Bytecode Setting', () => {
 
     test('Shows bytecode when enabled', async ({ page }) => {
         await page.goto('/');
-        await page.waitForTimeout(2000);
 
         const editor = page.getByRole("code").first();
-        await expect(editor).toContainText('// access flags', { timeout: 15000 });
+        await expect(editor).toContainText('// access flags');
     });
 });
