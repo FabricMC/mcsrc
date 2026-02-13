@@ -1,7 +1,7 @@
 import { Tree, Dropdown, message } from 'antd';
 import type { TreeDataNode, TreeProps, MenuProps } from 'antd';
 import { CaretDownFilled } from '@ant-design/icons';
-import { combineLatest, from, map, shareReplay, switchMap, type Observable } from 'rxjs';
+import { BehaviorSubject, combineLatest, from, map, Observable, shareReplay, switchMap } from 'rxjs';
 import { classesList } from '../logic/JarFile';
 import { useObservable } from '../utils/UseObservable';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -9,24 +9,36 @@ import type { Key } from 'antd/es/table/interface';
 import { openTab } from '../logic/Tabs';
 import { minecraftJar, type MinecraftJar } from '../logic/MinecraftApi';
 import { decompileClass } from '../logic/Decompiler';
-import { mobileDrawerOpen, selectedFile, usageQuery } from '../logic/State';
+import { selectedFile, usageQuery } from '../logic/State';
 import { compactPackages } from '../logic/Settings';
-import { jarIndex } from '../workers/JarIndex';
-import { ClassDataIcon, PackageIcon } from './intellij-icons';
+import { jarIndex, type ClassData } from '../workers/JarIndex';
+import { ClassDataIcon, JavaIcon, PackageIcon } from './intellij-icons';
 
-const classes = jarIndex.pipe(switchMap(j => from(j.getClassData())));
+const classData = new BehaviorSubject<Map<string, ClassData> | null>(null);
+jarIndex.subscribe(jarIndex => {
+    classData.next(null);
+    jarIndex.getClassData().then(classes => {
+        const map = new Map<string, ClassData>();
+        for (const data of classes) {
+            map.set(data.className, data);
+        }
+        classData.next(map);
+    });
+});
+
 const fileTree: Observable<TreeDataNode[]> = combineLatest([
-    classes,
+    classesList,
+    classData,
     compactPackages.observable
 ]).pipe(
-    map(([classes, compact]) => {
+    map(([classNames, classData, compact]) => {
         const dirs = new Map<string, TreeDataNode[]>();
         dirs.set('', []);
 
-        for (const classData of classes) {
-            const { className } = classData;
-            if (className.includes('$')) continue;
+        for (const classPath of classNames) {
+            if (classPath.includes('$')) continue;
 
+            const className = classPath.replace('.class', '');
             const i = className.lastIndexOf('/');
             const dirPath = className.slice(0, i);
 
@@ -49,11 +61,14 @@ const fileTree: Observable<TreeDataNode[]> = combineLatest([
                 });
             };
 
+            const data = classData?.get(className);
             dirs.get(dirPath)!.push({
                 title: className.slice(i + 1),
-                key: `${className}.class`,
-                icon: <ClassDataIcon data={classData} style={{ fontSize: '16px' }} />,
+                key: classPath,
                 isLeaf: true,
+                icon: data
+                    ? <ClassDataIcon data={data} style={{ fontSize: '16px' }} />
+                    : <JavaIcon style={{ fontSize: '16px' }} />,
             });
         }
 

@@ -11,7 +11,6 @@ import { ArrowLeftOutlined } from "@ant-design/icons";
 import { focusSearchEvent } from "../logic/Keybinds";
 import { useEffect, useRef } from "react";
 import { searchQuery, usageQuery } from "../logic/State";
-import IndexProgress from "./IndexProgress";
 
 const { Search } = Input;
 
@@ -69,16 +68,13 @@ const FileListOrSearchResults = () => {
     const showSearchResults = useObservable(isSearching);
     const showUsage = useObservable(isViewingUsages);
 
-    let children;
     if (showUsage) {
-        children = <UsageResults />;
+        return <UsageResults />;
     } else if (showSearchResults) {
-        children = <SearchResults />;
+        return <SearchResults />;
     } else {
-        children = <FileList />;
+        return <FileList />;
     }
-
-    return <IndexProgress children={children} />;
 };
 
 export default SideBar;
