@@ -36,17 +36,18 @@ const ClassFinalSvg = stack(ClassSvg, FinalMarkSvg);
 type IconProps = Partial<CustomIconComponentProps>;
 type IconFC = React.FC<IconProps>;
 
-export const AnnotationIcon: IconFC = (p) => (<Icon component={AnnotationSvg} {...p} />);
-export const ClassAbstractIcon: IconFC = (p) => (<Icon component={ClassAbstractSvg} {...p} />);
-export const ClassIcon: IconFC = (p) => (<Icon component={ClassSvg} {...p} />);
-export const ClassFinalIcon: IconFC = (p) => (<Icon component={ClassFinalSvg} {...p} />);
-export const EnumIcon: IconFC = (p) => (<Icon component={EnumSvg} {...p} />);
-export const ExceptionIcon: IconFC = (p) => (<Icon component={ExceptionSvg} {...p} />);
-export const FinalMarkIcon: IconFC = (p) => (<Icon component={FinalMarkSvg} {...p} />);
-export const InterfaceIcon: IconFC = (p) => (<Icon component={InterfaceSvg} {...p} />);
-export const JavaIcon: IconFC = (p) => (<Icon component={JavaSvg} {...p} />);
-export const RecordIcon: IconFC = (p) => (<Icon component={RecordSvg} {...p} />);
-export const PackageIcon: IconFC = (p) => (<Icon component={PackageSvg} {...p} />);
+const icon = (fc: SVGFC): IconFC => (props) => <Icon component={fc} {...props} />;
+export const AnnotationIcon = icon(AnnotationSvg);
+export const ClassAbstractIcon = icon(ClassAbstractSvg);
+export const ClassIcon = icon(ClassSvg);
+export const ClassFinalIcon = icon(ClassFinalSvg);
+export const EnumIcon = icon(EnumSvg);
+export const ExceptionIcon = icon(ExceptionSvg);
+export const FinalMarkIcon = icon(FinalMarkSvg);
+export const InterfaceIcon = icon(InterfaceSvg);
+export const JavaIcon = icon(JavaSvg);
+export const RecordIcon = icon(RecordSvg);
+export const PackageIcon = icon(PackageSvg);
 
 // https://asm.ow2.io/javadoc/org/objectweb/asm/Opcodes.html
 // https://asm.ow2.io/javadoc/constant-values.html

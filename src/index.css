@@ -89,6 +89,14 @@ html, body {margin: 0; height: 100%; overflow: hidden}
     margin-inline-end: 0 !important;
 }
 
+/* Fix file tree icon centering */
+.ant-tree-iconEle > .anticon {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
 /* Stop text in file tree from wrapping */
 .ant-tree-title {
     white-space: nowrap;
