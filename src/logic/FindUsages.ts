@@ -102,7 +102,7 @@ export function getNextJumpToken(decompileResult: DecompileResult): Token | unde
 
     const { className, query, usage } = usageNavigation;
 
-    if (decompileResult.className != className + ".class") {
+    if (decompileResult.className != className) {
         console.log("Decompile result class does not match usage navigation class", decompileResult.className, className);
         return undefined;
     }
