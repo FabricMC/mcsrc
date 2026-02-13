@@ -1,9 +1,10 @@
 import { test, expect } from '@playwright/test';
-import { waitForDecompiledContent, setupTest } from './test-utils';
+import { waitForDecompiledContent, setupTest, waitForIndexing } from './test-utils';
 
 test.describe('Inheritance', () => {
     test.beforeEach(async ({ page }) => {
         await setupTest(page);
+        await waitForIndexing(page);
     });
 
     test('Shows inheritance tree and graph views', async ({ page }) => {
