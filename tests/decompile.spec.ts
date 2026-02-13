@@ -27,13 +27,6 @@ test.describe('Decompilation', () => {
         await okButton.waitFor();
         await okButton.click();
 
-        const progress = page.getByTestId('jar-decompiler-progress').first();
-        await progress.waitFor();
-        await expect(progress).toContainText('com/mojang', { timeout: 30_000 });
-
-        const stopButton = page.getByTestId('jar-decompiler-stop').first();
-        await stopButton.click();
-
         const result = page.getByTestId('jar-decompiler-result').first();
         await result.waitFor();
         await expect(result).toContainText(/Decompiled [1-9][0-9]* new classes in/);

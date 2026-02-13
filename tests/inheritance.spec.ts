@@ -18,18 +18,18 @@ test.describe('Inheritance', () => {
         await inheritanceOption.click();
 
         const treeTab = page.getByRole('tab', { name: 'Tree' });
-        await expect(treeTab).toBeVisible({ timeout: 900000 });
+        await expect(treeTab).toBeVisible();
         await expect(treeTab).toHaveAttribute('aria-selected', 'true');
 
         const modal = page.getByRole('dialog');
         const treeView = modal.locator('.ant-tree');
-        await expect(treeView).toBeVisible({ timeout: 5000 });
+        await expect(treeView).toBeVisible();
 
         const graphTab = page.getByRole('tab', { name: 'Graph' });
         await graphTab.click();
         await expect(graphTab).toHaveAttribute('aria-selected', 'true');
 
         const graphView = modal.locator('.react-flow');
-        await expect(graphView).toBeVisible({ timeout: 10000 });
+        await expect(graphView).toBeVisible();
     });
 });
