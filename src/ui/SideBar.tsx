@@ -5,52 +5,52 @@ import type { InputRef, SearchProps } from "antd/es/input";
 import { useObservable } from "../utils/UseObservable";
 import { isSearching } from "../logic/JarFile";
 import SearchResults from "./SearchResults";
-import UsageResults from "./UsageResults";
-import { formatUsageQuery, isViewingUsages } from "../logic/FindUsages";
+import ReferenceResults from "./ReferenceResults";
+import { formatReferenceQuery, isViewingReferences } from "../logic/FindAllReferences";
 import { ArrowLeftOutlined } from "@ant-design/icons";
 import { focusSearchEvent } from "../logic/Keybinds";
 import { useEffect, useRef } from "react";
-import { searchQuery, usageQuery } from "../logic/State";
+import { searchQuery, referencesQuery } from "../logic/State";
 
 const { Search } = Input;
 
 const SideBar = () => {
-    const showUsage = useObservable(isViewingUsages);
-    const currentUsageQuery = useObservable(usageQuery);
+    const showReference = useObservable(isViewingReferences);
+    const currentReferenceQuery = useObservable(referencesQuery);
     const focusSearch = useObservable(focusSearchEvent);
     const searchRef = useRef<InputRef>(null);
 
     useEffect(() => {
         if (focusSearch) {
-            usageQuery.next("");
+            referencesQuery.next("");
             searchRef?.current?.focus();
         }
     }, [focusSearch]);
 
     useEffect(() => {
-        if (focusSearch && !showUsage) {
+        if (focusSearch && !showReference) {
             searchRef?.current?.focus();
         }
-    }, [focusSearch, showUsage]);
+    }, [focusSearch, showReference]);
 
     const onChange: SearchProps['onChange'] = (e) => {
         searchQuery.next(e.target.value);
     };
 
     const onBackClick = () => {
-        usageQuery.next("");
+        referencesQuery.next("");
     };
 
     return (
         <Flex vertical style={{ height: "100%", padding: "0 4px" }}>
             <Header />
-            {showUsage ? (
+            {showReference ? (
                 <>
                     <Button onClick={onBackClick} icon={<ArrowLeftOutlined />} block>
                         Back
                     </Button>
                     <div style={{ fontSize: "12px", textAlign: "center" }}>
-                        Usages of: {formatUsageQuery(currentUsageQuery || "")}
+                        References of: {formatReferenceQuery(currentReferenceQuery || "")}
                     </div>
                 </>
             ) : (
@@ -66,10 +66,10 @@ const SideBar = () => {
 
 const FileListOrSearchResults = () => {
     const showSearchResults = useObservable(isSearching);
-    const showUsage = useObservable(isViewingUsages);
+    const showReference = useObservable(isViewingReferences);
 
-    if (showUsage) {
-        return <UsageResults />;
+    if (showReference) {
+        return <ReferenceResults />;
     } else if (showSearchResults) {
         return <SearchResults />;
     } else {

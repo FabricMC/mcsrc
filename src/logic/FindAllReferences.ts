@@ -1,11 +1,11 @@
 import { BehaviorSubject, combineLatest, distinctUntilChanged, from, map, Observable, switchMap, throttleTime } from "rxjs";
-import { jarIndex, type UsageKey, type UsageString } from "../workers/JarIndex";
+import { jarIndex, type ReferenceKey, type ReferenceString } from "../workers/JarIndex";
 import { openTab } from "./Tabs";
-import { usageQuery } from "./State";
+import { referencesQuery } from "./State";
 import type { Token } from "./Tokens";
 import type { DecompileResult } from "../workers/decompile/types";
 
-export const useageResults = usageQuery
+export const referenceResults = referencesQuery
     .pipe(
         throttleTime(200),
         distinctUntilChanged(),
@@ -14,32 +14,32 @@ export const useageResults = usageQuery
                 return from([[]]);
             }
             return jarIndex.pipe(
-                switchMap((index) => from(index.getUsage(query)))
+                switchMap((index) => from(index.getReference(query)))
             );
         })
     );
 
-export const isViewingUsages = usageQuery.pipe(
+export const isViewingReferences = referencesQuery.pipe(
     map((query) => query.length > 0)
 );
 
-// Format the usage string to be displayed by the user
-export function formatUsage(usage: UsageString): string {
-    if (usage.startsWith("m:")) {
-        const parts = usage.slice(2).split(":");
+// Format the reference string to be displayed by the user
+export function formatReference(reference: ReferenceString): string {
+    if (reference.startsWith("m:")) {
+        const parts = reference.slice(2).split(":");
         return `${parts[1]}${parts[2]}`;
     }
-    if (usage.startsWith("f:")) {
-        const parts = usage.slice(2).split(":");
+    if (reference.startsWith("f:")) {
+        const parts = reference.slice(2).split(":");
         return parts[1];
     }
-    if (usage.startsWith("c:")) {
-        return usage.slice(2);
+    if (reference.startsWith("c:")) {
+        return reference.slice(2);
     }
-    return usage;
+    return reference;
 }
 
-export function formatUsageQuery(query: UsageKey): string {
+export function formatReferenceQuery(query: ReferenceKey): string {
     const type = getQueryType(query);
 
     switch (type) {
@@ -58,7 +58,7 @@ export function formatUsageQuery(query: UsageKey): string {
     }
 }
 
-function getQueryType(query: UsageKey): "class" | "method" | "field" {
+function getQueryType(query: ReferenceKey): "class" | "method" | "field" {
     if (query.includes(":")) {
         const parts = query.split(":");
         if (parts[2].includes("(")) {
@@ -70,57 +70,57 @@ function getQueryType(query: UsageKey): "class" | "method" | "field" {
     return "class";
 }
 
-interface UsageNavigation {
+interface ReferenceNavigation {
     // The class to navigate to
     className: string;
-    // The usage being navigated to
-    query: UsageKey;
-    // The location of where the usage is found
-    usage: UsageString;
+    // The reference being navigated to
+    query: ReferenceKey;
+    // The location of where the reference is found
+    reference: ReferenceString;
 }
 
-export const nextUsageNavigation = new BehaviorSubject<UsageNavigation | undefined>(undefined);
+export const nextReferenceNavigation = new BehaviorSubject<ReferenceNavigation | undefined>(undefined);
 
-export function goToUsage(query: UsageKey, usage: UsageString) {
-    const className = usage.slice(2).split(":")[0].split('$')[0];
+export function goToReference(query: ReferenceKey, reference: ReferenceString) {
+    const className = reference.slice(2).split(":")[0].split('$')[0];
     openTab(className + ".class");
 
-    if (usage.startsWith("c:")) {
+    if (reference.startsWith("c:")) {
         // Nothing to jump to
         return;
     }
 
-    nextUsageNavigation.next({ className, query, usage });
+    nextReferenceNavigation.next({ className, query, reference });
 }
 
 export function getNextJumpToken(decompileResult: DecompileResult): Token | undefined {
-    const usageNavigation = nextUsageNavigation.getValue();
+    const referenceNavigation = nextReferenceNavigation.getValue();
 
-    if (!usageNavigation) {
+    if (!referenceNavigation) {
         return undefined;
     }
 
-    const { className, query, usage } = usageNavigation;
+    const { className, query, reference } = referenceNavigation;
 
-    if (decompileResult.className != className + ".class") {
-        console.log("Decompile result class does not match usage navigation class", decompileResult.className, className);
+    if (decompileResult.className != className) {
+        console.log("Decompile result class does not match reference navigation class", decompileResult.className, className);
         return undefined;
     }
 
-    nextUsageNavigation.next(undefined);
+    nextReferenceNavigation.next(undefined);
 
-    // This works by first finding the token that matches the usage we are looking for.
+    // This works by first finding the token that matches the reference we are looking for.
     // We can then find the token that matches the declaration of the query we are looking for.
-    // This allows us to jump to the first usage of the query after the usage that was selected.
+    // This allows us to jump to the first reference of the query after the reference that was selected.
 
-    let usageTokenIndex: number | null = null;
+    let referenceTokenIndex: number | null = null;
 
-    { // First find the usage token
-        const parts = usage.slice(2).split(":");
+    { // First find the reference token
+        const parts = reference.slice(2).split(":");
         const classname = parts[0];
         const name = parts[1];
         const descriptor = parts[2];
-        const expectedType = usage.startsWith("m:") ? "method" : "field";
+        const expectedType = reference.startsWith("m:") ? "method" : "field";
 
         for (let i = 0; i < decompileResult.tokens.length; i++) {
             const token = decompileResult.tokens[i];
@@ -136,7 +136,7 @@ export function getNextJumpToken(decompileResult: DecompileResult): Token | unde
 
             if (token.className == classname && token.name == name && token.descriptor == descriptor) {
                 if (token.type == "field") {
-                    // For fields, just return the usage as there is only one declaration
+                    // For fields, just return the reference as there is only one declaration
                     return token;
                 }
 
@@ -147,14 +147,14 @@ export function getNextJumpToken(decompileResult: DecompileResult): Token | unde
                 }
 
                 // For methods we can keep looking for a token that matches the query after this
-                usageTokenIndex = i;
+                referenceTokenIndex = i;
                 break;
             }
         }
     }
 
-    if (!usageTokenIndex) {
-        console.log("Could not find usage token for", usage);
+    if (!referenceTokenIndex) {
+        console.log("Could not find reference token for", reference);
         return undefined;
     }
 
@@ -163,11 +163,11 @@ export function getNextJumpToken(decompileResult: DecompileResult): Token | unde
     const descriptor = parts[2];
     const queryType = getQueryType(query);
 
-    // Next continue searching from the usage token index to find the actual useage
-    for (let i = usageTokenIndex + 1; i < decompileResult.tokens.length; i++) {
+    // Next continue searching from the reference token index to find the actual reference
+    for (let i = referenceTokenIndex + 1; i < decompileResult.tokens.length; i++) {
         const token = decompileResult.tokens[i];
 
-        // Special case for constructor usage
+        // Special case for constructor reference
         if (name == "<init>" && token.type == "class" && token.className == parts[0]) {
             return token;
         }
@@ -182,7 +182,7 @@ export function getNextJumpToken(decompileResult: DecompileResult): Token | unde
     }
 
     // Give up if we reach another declaration, it means we didnt find it
-    // Just return the declaration that supposedly contains the usage
+    // Just return the declaration that supposedly contains the reference
     console.log("Could not find token for", query);
-    return decompileResult.tokens[usageTokenIndex];
+    return decompileResult.tokens[referenceTokenIndex];
 }

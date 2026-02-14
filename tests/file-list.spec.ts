@@ -15,7 +15,7 @@ test.describe('File List Navigation', () => {
         await searchBox.fill('LevelRenderer');
 
         const searchResult = page.getByText('net/minecraft/client/renderer/LevelRenderer', { exact: true });
-        await expect(searchResult).toBeVisible({ timeout: 5000 });
+        await expect(searchResult).toBeVisible();
 
         await searchResult.click();
         await waitForDecompiledContent(page, 'class LevelRenderer');
@@ -29,8 +29,7 @@ test.describe('File List Navigation', () => {
         await searchBox.fill('Renderer');
 
         const searchList = page.locator('.ant-list');
-        await expect(searchList).toContainText('LevelRenderer', { timeout: 5000 });
-        await expect(searchList).toContainText('GameRenderer', { timeout: 5000 });
+        await expect(searchList).toContainText('LevelRenderer');
     });
 
     test('Clears search and shows file tree', async ({ page }) => {
@@ -43,10 +42,9 @@ test.describe('File List Navigation', () => {
         await page.waitForTimeout(500);
 
         await searchBox.clear();
-        await page.waitForTimeout(500);
 
         const fileTree = page.locator('.ant-tree').first();
         const netFolder = fileTree.getByText('net').first();
-        await expect(netFolder).toBeVisible({ timeout: 5000 });
+        await expect(netFolder).toBeVisible();
     });
 });

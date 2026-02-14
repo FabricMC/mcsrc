@@ -9,7 +9,7 @@ import type { Key } from 'antd/es/table/interface';
 import { openTab } from '../logic/Tabs';
 import { minecraftJar, type MinecraftJar } from '../logic/MinecraftApi';
 import { decompileClass } from '../logic/Decompiler';
-import { selectedFile, usageQuery } from '../logic/State';
+import { selectedFile, referencesQuery } from '../logic/State';
 import { compactPackages } from '../logic/Settings';
 import { jarIndex, type ClassData } from '../workers/JarIndex';
 import { ClassDataIcon, JavaIcon, PackageIcon } from './intellij-icons';
@@ -211,11 +211,11 @@ const getMenuItems = (
             disabled: !isFile
         },
         {
-            key: 'find-usages',
-            label: 'Find Usages',
+            key: 'find-all-references',
+            label: 'Find All References',
             onClick: () => {
                 const cleanPath = path.replace('.class', '');
-                usageQuery.next(cleanPath);
+                referencesQuery.next(cleanPath);
             },
             disabled: !isFile
         },

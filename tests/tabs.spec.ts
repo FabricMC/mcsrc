@@ -15,6 +15,7 @@ test.describe('Tabs', () => {
 
         const searchResult = page.getByText('net/minecraft/client/Minecraft', { exact: true });
         await searchResult.click();
+        await page.waitForTimeout(500);
 
         await waitForDecompiledContent(page, 'class Minecraft');
 
@@ -36,6 +37,7 @@ test.describe('Tabs', () => {
 
         const searchResult = page.getByText('net/minecraft/client/Minecraft', { exact: true });
         await searchResult.click();
+        await page.waitForTimeout(500);
 
         await waitForDecompiledContent(page, 'class Minecraft');
 
@@ -54,25 +56,27 @@ test.describe('Tabs', () => {
         await waitForDecompiledContent(page, 'enum ChatFormatting');
 
         const searchBox = page.getByRole('searchbox', { name: 'Search classes' });
-        
+
         await searchBox.fill('Minecraft');
         await page.getByText('net/minecraft/client/Minecraft', { exact: true }).click();
+        await page.waitForTimeout(500);
         await waitForDecompiledContent(page, 'class Minecraft');
 
         await searchBox.fill('SystemReport');
         await page.getByText('net/minecraft/SystemReport', { exact: true }).click();
+        await page.waitForTimeout(500);
         await waitForDecompiledContent(page, 'class SystemReport');
 
         const tabs = page.locator('.ant-tabs-tab');
         await expect(tabs).toHaveCount(3);
 
         const minecraftTab = tabs.filter({ hasText: 'Minecraft' });
+        await page.waitForTimeout(50);
         await minecraftTab.click({ button: 'right' });
-        await page.waitForTimeout(300);
 
         const closeOthersOption = page.getByText('Close Other Tabs');
+        await page.waitForTimeout(50);
         await closeOthersOption.click();
-        await page.waitForTimeout(500);
 
         await expect(tabs).toHaveCount(1);
         await waitForDecompiledContent(page, 'class Minecraft');

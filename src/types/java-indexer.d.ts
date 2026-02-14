@@ -2,8 +2,8 @@
 
 declare module "*/java.js" {
     export function index(data: ArrayBufferLike): void;
-    export function getUsage(key: string): string[];
-    export function getUsageSize(): number;
+    export function getReference(key: string): string[];
+    export function getReferenceSize(): number;
     export function getBytecode(classData: ArrayBufferLike[]): string;
     export function getClassData(): string[];
 }
