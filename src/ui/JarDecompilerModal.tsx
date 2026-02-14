@@ -1,4 +1,4 @@
-import { Alert, Button, Form, message, Modal, Popconfirm, Space } from "antd";
+import { Alert, Button, Form, message, Modal, Popconfirm } from "antd";
 import { JavaOutlined } from '@ant-design/icons';
 import { BehaviorSubject } from "rxjs";
 import { useObservable } from "../utils/UseObservable";
@@ -52,13 +52,10 @@ export const JarDecompilerModal = () => {
         progressSubject.next("Decompiling...");
     };
 
-    const clearCache = (all: boolean) => {
+    const clearCache = () => {
         if (!jar) return;
-
-        deleteCache(all ? null : jar.jar.name)
-            .finally(() => messageApi.open({ type: "success", content: "Cache deleted" }));
+        deleteCache().then(c => messageApi.open({ type: "success", content: `Deleted ${c} clasess from cache.` }));
     };
-
 
     return (
         <Modal
@@ -72,7 +69,7 @@ export const JarDecompilerModal = () => {
             {modalCtx}
             <Alert
                 type="warning"
-                message="Decompiling the entire JAR will use large amount of resources and may crash the browser."
+                title="Decompiling the entire JAR will use large amount of resources and may crash the browser."
                 description="If the browser crashed, simply reopen the page and you can continue decompiling the rest of the classes by opening this menu again."
             />
             <br />
@@ -81,14 +78,9 @@ export const JarDecompilerModal = () => {
                 <NumberOption setting={decompilerThreads} title="Worker Threads" min={1} max={MAX_THREADS} />
                 <NumberOption testid="jar-decompiler-splits" setting={decompilerSplits} title="Worker Splits" min={1} />
                 <Form.Item label="Cache">
-                    <Space>
-                        <Popconfirm title="Are you sure?" onConfirm={() => clearCache(false)}>
-                            <Button color="danger" variant="outlined">Clear Current</Button>
-                        </Popconfirm>
-                        <Popconfirm title="Are you sure?" onConfirm={() => clearCache(true)}>
-                            <Button color="danger" variant="outlined">Clear ALL</Button>
-                        </Popconfirm>
-                    </Space>
+                    <Popconfirm title="Are you sure? This will also delete cache for all versions." onConfirm={clearCache}>
+                        <Button color="danger" variant="outlined">Clear</Button>
+                    </Popconfirm>
                 </Form.Item>
             </Form>
 

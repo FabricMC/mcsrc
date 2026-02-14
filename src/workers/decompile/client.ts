@@ -58,9 +58,9 @@ export async function setOptions(options: vf.Options) {
     await Promise.all(workers.map(w => w.setOptions(options, sab)));
 }
 
-export async function deleteCache(jarName: string | null) {
+export async function deleteCache(): Promise<number> {
     const worker = await findWorker();
-    await worker.clear();
+    return await worker.clear();
 }
 
 export type DecompileEntireJarOptions = {
@@ -79,21 +79,19 @@ export function decompileEntireJar(jar: Jar, options?: DecompileEntireJarOptions
     const state = new Uint32Array(sab);
     state[0] = 0;
 
-    const optThreads = Math.min(options?.threads ?? MAX_THREADS, MAX_THREADS);
-    const optSplits = options?.splits ?? 100;
-    const optLogger = options?.logger ? Comlink.proxy(options.logger) : null;
-
-    const classNames = new DecompileJar(jar).classes
-        .filter(n => !n.includes("$"));
-
+    const dJar = new DecompileJar(jar);
     return {
         async start() {
             try {
+                const optThreads = Math.min(options?.threads ?? MAX_THREADS, MAX_THREADS);
+                const optSplits = options?.splits ?? 100;
+                const optLogger = options?.logger ? Comlink.proxy(options.logger) : null;
+
                 await ensureWorkers(optThreads);
-                const workers2 = workers.slice(0, optThreads);
-                await Promise.all(workers2.map(w => w.registerJar(jar.name, jar.blob)));
-                const result = await Promise.all(workers2
-                    .map(w => w.decompileMany(jar.name, classNames, sab, optSplits, optLogger)));
+                const classNames = dJar.classes.filter(n => !n.includes("$"));
+                const result = await Promise.all((workers
+                    .slice(0, optThreads))
+                    .map(w => w.decompileMany(jar.name, jar.blob, classNames, sab, optSplits, optLogger)));
                 const total = result.reduce((acc, n) => acc + n, 0);
                 return total;
             } finally {
@@ -102,7 +100,7 @@ export function decompileEntireJar(jar: Jar, options?: DecompileEntireJarOptions
             }
         },
         stop() {
-            Atomics.store(state, 0, classNames.length);
+            Atomics.store(state, 0, dJar.classes.length);
         },
     };
 }

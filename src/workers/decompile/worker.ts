@@ -68,36 +68,25 @@ export const setOptions = (options: vf.Options, sab: SharedArrayBuffer) => sched
     await db.options.bulkAdd(Object.entries(options).map(([k, v]) => ({ key: k, value: v })));
 });
 
-const jars: Record<string, DecompileJar | undefined> = {};
-export const registerJar = (jarName: string, blob: Blob | null) => schedule(async () => {
-    if (blob) {
-        jars[jarName] = new DecompileJar(await openJar(jarName, blob));
-    } else {
-        delete jars[jarName];
-    }
-});
-
 export const loadVFRuntime = (preferWasm: boolean) => schedule(() =>
     vf.loadRuntime(preferWasm));
 
-export const clear = () => schedule(async () => {
+export const clear = (): Promise<number> => schedule(async () => {
+    const count = await db.results2.count();
     await db.results2.clear();
+    return count;
 });
 
 export const decompileMany = (
     jarName: string,
+    jarBlob: Blob,
     classNames: string[],
     sab: SharedArrayBuffer,
     splits: number,
     logger: DecompileLogger | null
 ): Promise<number> => schedule(async () => {
-    const jar = jars[jarName];
-    if (!jar) {
-        console.error(`No jar found for ${jarName}`);
-        return 0;
-    }
-
     const state = new Uint32Array(sab);
+    const jar = new DecompileJar(await openJar(jarName, jarBlob));
 
     let count = 0;
     while (true) {
