@@ -11,7 +11,6 @@ import { enableTabs } from '../logic/Settings.ts';
 import { MenuFoldOutlined } from '@ant-design/icons';
 import { TabsComponent } from './TabsComponent.tsx';
 import Modals from './Modals.tsx';
-import { BehaviorSubject } from 'rxjs';
 
 const App = () => {
     const isSmall = useObservable(isThin);
