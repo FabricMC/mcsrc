@@ -9,6 +9,7 @@ const initialState = getInitialState();
 
 export const selectedMinecraftVersion = new BehaviorSubject<string | null>(initialState.minecraftVersion);
 
+export const mobileDrawerOpen = new BehaviorSubject(false);
 export const selectedFile = new BehaviorSubject<string>(initialState.file);
 export const openTabs = new BehaviorSubject<Tab[]>([new Tab(initialState.file)]);
 export const tabHistory = new BehaviorSubject<string[]>([initialState.file]);

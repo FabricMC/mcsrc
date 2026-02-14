@@ -1,4 +1,4 @@
-import { Button, Card, Divider, Flex, Input } from "antd";
+import { Button, Divider, Flex, Input } from "antd";
 import Header from "./Header";
 import FileList from "./FileList";
 import type { InputRef, SearchProps } from "antd/es/input";
@@ -34,7 +34,6 @@ const SideBar = () => {
     }, [focusSearch, showReference]);
 
     const onChange: SearchProps['onChange'] = (e) => {
-
         searchQuery.next(e.target.value);
     };
 

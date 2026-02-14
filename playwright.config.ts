@@ -3,7 +3,7 @@ import { defineConfig, devices } from '@playwright/test';
 // https://playwright.dev/docs/test-configuration
 export default defineConfig({
     testDir: './tests',
-    timeout: process.env.CI ? 300000 : undefined, // 5 minutes
+    timeout: process.env.CI ? 300000 : 0, // 5 minutes
     fullyParallel: true,
     forbidOnly: !!process.env.CI,
     retries: process.env.CI ? 2 : 0,

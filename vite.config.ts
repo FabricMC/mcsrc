@@ -1,12 +1,14 @@
 import { defineConfig } from 'vitest/config';
 import { comlink } from "vite-plugin-comlink";
 import react from '@vitejs/plugin-react';
+import svgr from 'vite-plugin-svgr';
 
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [
     comlink(),
     react(),
+    svgr(),
     {
       name: 'suppress-wasm-warnings',
       configResolved(config) {
