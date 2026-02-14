@@ -80,16 +80,4 @@ export async function setupTest(page: Page) {
     await page.addInitScript(() => {
         localStorage.setItem('setting_eula', 'true');
     });
-
-    await page.goto('/');
-}
-
-export async function waitForIndexing(page: Page) {
-    const downloading = page.getByText('Downloading Minecraft Jar');
-    await downloading.waitFor();
-    await downloading.waitFor({ state: 'hidden', timeout: 300000 });
-
-    const indexing = page.getByText('Indexing Minecraft Jar');
-    await indexing.waitFor();
-    await indexing.waitFor({ state: 'hidden' });
 }

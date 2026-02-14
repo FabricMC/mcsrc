@@ -1,10 +1,9 @@
 import { test, expect } from '@playwright/test';
-import { waitForDecompiledContent, setupTest, waitForIndexing } from './test-utils';
+import { waitForDecompiledContent, setupTest } from './test-utils';
 
 test.describe('File List Navigation', () => {
     test.beforeEach(async ({ page }) => {
         await setupTest(page);
-        await waitForIndexing(page);
     });
 
     test('Navigates to file via search', async ({ page }) => {
