@@ -66,7 +66,7 @@ export async function deleteCache(): Promise<number> {
 export type DecompileEntireJarOptions = {
     threads?: number,
     splits?: number,
-    logger?: (className: string) => void,
+    logger?: (className: string, current: number, total: number) => void,
 };
 
 export type DecompileEntireJarTask = {
@@ -83,12 +83,18 @@ export function decompileEntireJar(jar: Jar, options?: DecompileEntireJarOptions
     return {
         async start() {
             try {
+                const classNames = dJar.classes.filter(n => !n.includes("$"));
+                options?.logger?.("Decompiling...", 0, classNames.length)
+
                 const optThreads = Math.min(options?.threads ?? MAX_THREADS, MAX_THREADS);
                 const optSplits = options?.splits ?? 100;
-                const optLogger = options?.logger ? Comlink.proxy(options.logger) : null;
+
+                let current = 0;
+                const optLogger = options?.logger ? Comlink.proxy((i: number) => {
+                    options.logger!(classNames[i], ++current, classNames.length);
+                }) : undefined;
 
                 await ensureWorkers(optThreads);
-                const classNames = dJar.classes.filter(n => !n.includes("$"));
                 const result = await Promise.all((workers
                     .slice(0, optThreads))
                     .map(w => w.decompileMany(jar.name, jar.blob, classNames, sab, optSplits, optLogger)));

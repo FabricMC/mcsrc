@@ -1,4 +1,4 @@
-import { Alert, Button, Form, message, Modal, Popconfirm } from "antd";
+import { Alert, Button, Flex, Form, message, Modal, Popconfirm, Progress } from "antd";
 import { JavaOutlined } from '@ant-design/icons';
 import { BehaviorSubject } from "rxjs";
 import { useObservable } from "../utils/UseObservable";
@@ -29,8 +29,8 @@ export const JarDecompilerModal = () => {
         const task = decompileEntireJar(jar.jar, {
             threads: decompilerThreads.value,
             splits: decompilerSplits.value,
-            logger(className) {
-                progressSubject.next(className);
+            logger(progress, current, total) {
+                progressSubject.next([progress, current, total]);
             },
         });
 
@@ -49,7 +49,6 @@ export const JarDecompilerModal = () => {
             taskSubject.next(undefined);
             progressSubject.next(undefined);
         });
-        progressSubject.next("Decompiling...");
     };
 
     const clearCache = () => {
@@ -88,17 +87,19 @@ export const JarDecompilerModal = () => {
     );
 };
 
-const progressSubject = new BehaviorSubject<string | undefined>(undefined);
+const progressSubject = new BehaviorSubject<[string, number, number] | undefined>(undefined);
 const taskSubject = new BehaviorSubject<DecompileEntireJarTask | undefined>(undefined);
 
 export const JarDecompilerProgressModal = () => {
-    const progress = useObservable(progressSubject);
+    const [text, current, total] = useObservable(progressSubject) ?? [];
     const task = useObservable(taskSubject);
+
+    const percent = (current ?? 0) / (total ?? 1) * 100;
 
     return (
         <Modal
             title="Decompiling JAR..."
-            open={progress ? true : false}
+            open={text ? true : false}
             closable={false}
             keyboard={false}
             mask={{ closable: false }}
@@ -112,17 +113,20 @@ export const JarDecompilerProgressModal = () => {
                 <OkBtn />
             )}
         >
-            <div data-testid="jar-decompiler-progress" style={{
-                fontFamily: "monospace",
-                padding: "10px 0",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                wordBreak: "break-all",
-                whiteSpace: "nowrap",
-                width: "100%"
-            }}>
-                {progress}
-            </div>
+            <Flex vertical>
+                <div data-testid="jar-decompiler-progress" style={{
+                    fontFamily: "monospace",
+                    padding: "10px 0",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    wordBreak: "break-all",
+                    whiteSpace: "nowrap",
+                    width: "100%"
+                }}>
+                    {text}
+                </div>
+                <Progress percent={percent} format={() => `${current}/${total}`} />
+            </Flex>
         </Modal>
     );
 };

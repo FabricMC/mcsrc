@@ -11,8 +11,6 @@ export type DecompileResult = {
 
 export type DecompileOption = { key: string, value: string; };
 
-export type DecompileLogger = (className: string) => void;
-
 export type DecompileData = {
     [className: string]: undefined | {
         checksum: number;

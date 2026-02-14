@@ -2,7 +2,7 @@ import * as vf from "../../logic/vf";
 import Dexie, { type EntityTable, type Table } from "dexie";
 import type { Token } from "../../logic/Tokens";
 import { getBytecode } from "../JarIndexWorker";
-import { type DecompileResult, type DecompileOption, type DecompileData, DecompileJar, type DecompileLogger } from "./types";
+import { type DecompileResult, type DecompileOption, type DecompileData, DecompileJar } from "./types";
 import { openJar } from "../../utils/Jar";
 
 let lastPromise: Promise<unknown> | undefined = undefined;
@@ -83,10 +83,21 @@ export const decompileMany = (
     classNames: string[],
     sab: SharedArrayBuffer,
     splits: number,
-    logger: DecompileLogger | null
+    logger?: (index: number) => Promise<void> | void,
 ): Promise<number> => schedule(async () => {
     const state = new Uint32Array(sab);
     const jar = new DecompileJar(await openJar(jarName, jarBlob));
+
+    let logPromises: Promise<void>[] = [];
+    let nameLogger;
+    if (logger) {
+        const class2index = new Map(classNames.map((v, i) => [v, i] as [string, number]));
+        nameLogger = (className: string) => {
+            if (!class2index) return;
+            const i = class2index.get(className);
+            if (i) logPromises.push(Promise.resolve(logger!(i)));
+        };
+    }
 
     let count = 0;
     while (true) {
@@ -105,17 +116,23 @@ export const decompileMany = (
                 .where("[className+checksum+language]")
                 .equals([className, checksum, "java"])
                 .count();
-            if (dbCount === 1) continue;
 
-            targetClassNames.push(className);
+            if (dbCount >= 1) {
+                nameLogger?.(className);
+            } else {
+                targetClassNames.push(className);
+            }
         }
 
         try {
-            const result = await _decompile(jar.classes, targetClassNames, jar.proxy, logger);
+            const result = await _decompile(jar.classes, targetClassNames, jar.proxy, nameLogger);
             count += result.length;
         } catch (e) {
             console.error("Error during decompilation:", e);
         }
+
+        await Promise.all(logPromises);
+        logPromises = [];
     }
 
     return count;
@@ -130,7 +147,7 @@ export const decompile = (
         const dbResult = await db.results2.get([className, classData[className]?.checksum, "java"]);
         if (dbResult) return dbResult;
 
-        const result = await _decompile(jarClasses, [className], classData, null);
+        const result = await _decompile(jarClasses, [className], classData);
         return result[0];
     } catch (e) {
         console.error(`Error during decompilation of class '${className}':`, e);
@@ -148,11 +165,12 @@ async function _decompile(
     jarClasses: string[],
     classNames: string[],
     classData: DecompileData,
-    logger: DecompileLogger | null,
+    logger?: (className: string) => void,
 ): Promise<DecompileResult[]> {
     const allTokens: Record<string, Token[]> = {};
     let currentContent: string | undefined;
     let currentTokens: Token[] | undefined;
+    let currentClassName: string | undefined;
 
     const sources = await vf.decompile(classNames, {
         source: async (name) => await classData[name]?.data ?? null,
@@ -166,7 +184,11 @@ async function _decompile(
                 }
             },
             startClass(className) {
-                if (logger) logger(className);
+                currentClassName = className;
+            },
+            endClass() {
+                if (logger && currentClassName) logger(currentClassName);
+                currentClassName = undefined;
             },
         },
         tokenCollector: {
