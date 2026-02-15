@@ -128,25 +128,21 @@ export class JarIndex {
             for (let i = 0; i < this.workers.length; i++) {
                 const worker = this.workers[i];
 
-                promises.push(new Promise((resolve) => {
-                    const processQueue = async () => {
-                        while (true) {
-                            const batch = taskQueue.splice(0, batchSize);
+                promises.push((async () => {
+                    while (true) {
+                        const batch = taskQueue.splice(0, batchSize);
 
-                            if (batch.length === 0) {
-                                const indexed = await worker.getReferenceSize();
-                                resolve(indexed);
-                                return;
-                            }
-
-                            await worker.indexBatch(batch);
-                            completed += batch.length;
-
-                            indexProgress.next(Math.round((completed / classNames.length) * 100));
+                        if (batch.length === 0) {
+                            const indexed = await worker.getReferenceSize();
+                            return indexed;
                         }
-                    };
-                    void processQueue();
-                }));
+
+                        await worker.indexBatch(batch);
+                        completed += batch.length;
+
+                        indexProgress.next(Math.round((completed / classNames.length) * 100));
+                    }
+                })());
             }
 
             const indexedCounts = await Promise.all(promises);
