@@ -10,11 +10,7 @@ import { isDecompiling } from "../../logic/Decompiler.ts";
 import { unifiedDiff } from '../../logic/Settings';
 import { selectedFile } from '../../logic/State.ts';
 
-interface DiffCodeProps {
-    height?: number | string;
-}
-
-const DiffCode = ({ height }: DiffCodeProps) => {
+const DiffCode = () => {
     const leftResult = useObservable(getLeftDiff().result);
     const rightResult = useObservable(getRightDiff().result);
     const editorRef = useRef<editor.IStandaloneDiffEditor | null>(null);
@@ -56,20 +52,17 @@ const DiffCode = ({ height }: DiffCodeProps) => {
             size={"large"}
             spinning={!!loading}
             description="Decompiling..."
-            style={{
-                height: '100%',
-                color: 'white'
+            styles={{
+                root: {
+                    height: '100%',
+                    color: 'white'
+                },
+                container: {
+                    height: '100%',
+                }
             }}
         >
-            {/*
-            Before the height is changed it is "70%", or whatever the default % is set to.
-            The wrapping elements for the output editor do not have the relevant context to know what the 70% is of,
-            so it falls back to 0. We must override this and specify that the height is for the viewport by swapping
-            the '%' out with 'vh'. If the height is a number literal then the size has been changed and will be an
-            exact pixel count
-            */}
             <DiffEditor
-                height={typeof height === "string" ? height.replace("\%", "vh") : height}
                 language="java"
                 theme="vs-dark"
                 original={leftResult?.source}
@@ -83,6 +76,7 @@ const DiffCode = ({ height }: DiffCodeProps) => {
                     readOnly: true,
                     domReadOnly: true,
                     renderSideBySide: !isUnified,
+                    scrollBeyondLastLine: false,
                     //tabSize: 3,
                 }} />
         </Spin>

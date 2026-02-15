@@ -352,14 +352,18 @@ const Code = () => {
             size={"large"}
             spinning={!!decompiling}
             description="Decompiling..."
-            style={{
-                height: '100%',
-                color: 'white'
+            styles={{
+                root: {
+                    height: '100%',
+                    color: 'white'
+                },
+                container: {
+                    height: '100%',
+                }
             }}
         >
             {contextHolder}
             <Editor
-                height="100vh"
                 defaultLanguage={"java"}
                 language={decompileResult?.language}
                 theme="vs-dark"
@@ -370,7 +374,8 @@ const Code = () => {
                     minimap: { enabled: !hideMinimap },
                     glyphMargin: true,
                     foldingImportsByDefault: true,
-                    foldingHighlight: false
+                    foldingHighlight: false,
+                    scrollBeyondLastLine: false,
                 }}
                 onMount={(codeEditor) => {
                     editorRef.current = codeEditor;
