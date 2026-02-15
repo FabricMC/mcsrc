@@ -52,7 +52,7 @@ export function setupJavaBytecodeLanguage(monaco: monaco): monaco_editor.IDispos
                 [/[a-zA-Z_$][\w$/]*/, 'identifier'],
 
                 // Operators and punctuation
-                [/[{}()\[\]]/, 'delimiter.bracket'],
+                [/[{}()[\]]/, 'delimiter.bracket'],
                 [/[<>]/, 'delimiter.angle'],
                 [/[:,.]/, 'delimiter'],
             ],

@@ -1,0 +1,9 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": [
+    "react"
+  ],
+  "rules": {
+    "eslint/no-unused-vars": "allow",
+  }
+}

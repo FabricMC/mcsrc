@@ -1,7 +1,8 @@
+// oxlint-disable typescript/no-base-to-string
 import { Tree, Dropdown, message } from 'antd';
 import type { TreeDataNode, TreeProps, MenuProps } from 'antd';
 import { CaretDownFilled } from '@ant-design/icons';
-import { BehaviorSubject, combineLatest, map, Observable, shareReplay } from 'rxjs';
+import { combineLatest, from, map, Observable, shareReplay, switchMap, startWith } from 'rxjs';
 import { classesList } from '../logic/JarFile';
 import { useObservable } from '../utils/UseObservable';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -14,17 +15,18 @@ import { compactPackages } from '../logic/Settings';
 import { jarIndex, type ClassData } from '../workers/JarIndex';
 import { ClassDataIcon, JavaIcon, PackageIcon } from './intellij-icons';
 
-const classData = new BehaviorSubject<Map<string, ClassData> | null>(null);
-jarIndex.subscribe(jarIndex => {
-    classData.next(null);
-    jarIndex.getClassData().then(classes => {
+const classData: Observable<Map<string, ClassData> | null> = jarIndex.pipe(
+    switchMap(jarIndex => from(jarIndex.getClassData())),
+    map(classes => {
         const map = new Map<string, ClassData>();
         for (const data of classes) {
             map.set(data.className, data);
         }
-        classData.next(map);
-    });
-});
+        return map;
+    }),
+    startWith(null),
+    shareReplay(1)
+);
 
 const fileTree: Observable<TreeDataNode[]> = combineLatest([
     classesList,
@@ -72,19 +74,19 @@ const fileTree: Observable<TreeDataNode[]> = combineLatest([
             });
         }
 
-        function traverse(dir: string, prefix: string, parent: TreeDataNode) {
+        function traverse(dir: string, parent: TreeDataNode) {
             const nodes = dirs.get(dir)!;
 
             if (compact && nodes.length === 1 && !nodes[0].isLeaf) {
                 const node = nodes[0];
-                parent.title = `${parent.title}/${node.title}`;
-                traverse(node.key as string, prefix, parent);
+                parent.title = `${parent.title?.toString()}/${node.title?.toString()}`;
+                traverse(node.key as string, parent);
             } else {
                 for (const node of nodes) {
                     parent.children!.push(node);
 
                     if (!node.isLeaf) {
-                        traverse(node.key as string, prefix, node);
+                        traverse(node.key as string, node);
                     };
                 }
             }
@@ -97,7 +99,7 @@ const fileTree: Observable<TreeDataNode[]> = combineLatest([
         }
 
         const root: TreeDataNode[] = [];
-        traverse('', '', { title: '', key: '', children: root });
+        traverse('', { title: '', key: '', children: root });
 
         return root;
     }),
@@ -173,7 +175,7 @@ const getMenuItems = (
             key: 'copy-package-path',
             label: renderLabel('Copy Package Path', packagePath),
             onClick: () => {
-                navigator.clipboard.writeText(packagePath);
+                void navigator.clipboard.writeText(packagePath);
                 message.success('Package Path copied');
             }
         },
@@ -181,7 +183,7 @@ const getMenuItems = (
             key: 'copy-path',
             label: renderLabel('Copy Path', path),
             onClick: () => {
-                navigator.clipboard.writeText(path);
+                void navigator.clipboard.writeText(path);
                 message.success('Path copied');
             }
         },
@@ -189,7 +191,7 @@ const getMenuItems = (
             key: 'copy-filename',
             label: renderLabel('Copy Filename', filename),
             onClick: () => {
-                navigator.clipboard.writeText(filename);
+                void navigator.clipboard.writeText(filename);
                 message.success('Filename copied');
             }
         },
@@ -198,7 +200,7 @@ const getMenuItems = (
             label: renderLabel('Copy Link', link),
             onClick: () => {
                 if (link) {
-                    navigator.clipboard.writeText(link);
+                    void navigator.clipboard.writeText(link);
                     message.success('Link copied');
                 }
             },
@@ -260,7 +262,7 @@ const FileList = () => {
 
     const menuItems = useMemo(() => getMenuItems(contextMenu, (path) => {
         if (jar) {
-            handleCopyContent(path, jar);
+            void handleCopyContent(path, jar);
         }
     }, jar), [contextMenu, jar]);
 

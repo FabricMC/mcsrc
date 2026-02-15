@@ -118,7 +118,7 @@ async function cachedFetch(url: string): Promise<Response> {
 
     const response = await fetch(url);
     if (response.ok) {
-        cache.put(url, response.clone());
+        await cache.put(url, response.clone());
     }
     return response;
 }

@@ -1,3 +1,4 @@
+// oxlint-disable typescript/no-redundant-type-constituents
 import { BehaviorSubject, combineLatest, distinctUntilChanged, map, Observable, switchMap } from "rxjs";
 import * as decompiler from "../workers/decompile/client";
 

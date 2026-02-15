@@ -7,7 +7,8 @@ import Dexie, { type EntityTable } from "dexie";
 export type Class = string;
 export type Method = `${string}:${string}:${string}`;
 export type Field = `${string}:${string}:${string}`;
-export type ReferenceKey = Class | Method | Field;
+// oxlint-disable-next-line typescript/no-redundant-type-constituents
+export type ReferenceKey = Class | Method;
 
 export type ReferenceString =
     | `c:${Class}`
@@ -127,14 +128,13 @@ export class JarIndex {
             for (let i = 0; i < this.workers.length; i++) {
                 const worker = this.workers[i];
 
-                promises.push(new Promise(async (resolve) => {
+                promises.push((async () => {
                     while (true) {
                         const batch = taskQueue.splice(0, batchSize);
 
                         if (batch.length === 0) {
                             const indexed = await worker.getReferenceSize();
-                            resolve(indexed);
-                            return;
+                            return indexed;
                         }
 
                         await worker.indexBatch(batch);
@@ -142,7 +142,7 @@ export class JarIndex {
 
                         indexProgress.next(Math.round((completed / classNames.length) * 100));
                     }
-                }));
+                })());
             }
 
             const indexedCounts = await Promise.all(promises);

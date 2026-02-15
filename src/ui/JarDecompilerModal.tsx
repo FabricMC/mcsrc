@@ -36,7 +36,7 @@ export const JarDecompilerModal = () => {
 
         const start = performance.now();
         taskSubject.next(task);
-        task.start().then((total) => {
+        void task.start().then((total) => {
             const elapsed = (performance.now() - start) / 1000;
             modalApi.info({
                 bodyProps: { "data-testid": "jar-decompiler-result" },
@@ -53,7 +53,7 @@ export const JarDecompilerModal = () => {
 
     const clearCache = () => {
         if (!jar) return;
-        deleteCache().then(c => messageApi.open({ type: "success", content: `Deleted ${c} clasess from cache.` }));
+        void deleteCache().then(c => messageApi.open({ type: "success", content: `Deleted ${c} clasess from cache.` }));
     };
 
     return (

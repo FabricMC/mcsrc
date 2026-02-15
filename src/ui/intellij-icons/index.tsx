@@ -62,6 +62,7 @@ export type ClassDataIconProps = IconProps & { data: ClassData; };
 export const ClassDataIcon: React.FC<ClassDataIconProps> = (p) => {
     const { className, accessFlags, superName } = p.data;
 
+    // oxlint-disable-next-line no-constant-binary-expression
     if (false
         || /^(.*\/)?package-info$/.test(className)
         || /^(.*\/)?module-info$/.test(className)) return <JavaIcon {...p} />;
@@ -70,6 +71,7 @@ export const ClassDataIcon: React.FC<ClassDataIconProps> = (p) => {
     if ((accessFlags & ACC_INTERFACE) !== 0) return <InterfaceIcon {...p} />;
     if ((accessFlags & ACC_ENUM) !== 0) return <EnumIcon {...p} />;
 
+    // oxlint-disable-next-line no-constant-binary-expression
     if (false
         || superName === 'java/lang/Exception'
         || superName === 'java/lang/RuntimeException'
