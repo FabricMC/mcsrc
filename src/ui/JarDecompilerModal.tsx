@@ -116,7 +116,7 @@ export const JarDecompilerProgressModal = () => {
             <Flex vertical>
                 <div data-testid="jar-decompiler-progress" style={{
                     fontFamily: "monospace",
-                    padding: "10px 0",
+                    fontSize: "small",
                     overflow: "hidden",
                     textOverflow: "ellipsis",
                     wordBreak: "break-all",
