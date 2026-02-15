@@ -1,7 +1,7 @@
 import { Tree, Dropdown, message } from 'antd';
 import type { TreeDataNode, TreeProps, MenuProps } from 'antd';
 import { CaretDownFilled } from '@ant-design/icons';
-import { BehaviorSubject, combineLatest, from, map, Observable, shareReplay, switchMap } from 'rxjs';
+import { BehaviorSubject, combineLatest, map, Observable, shareReplay } from 'rxjs';
 import { classesList } from '../logic/JarFile';
 import { useObservable } from '../utils/UseObservable';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -268,6 +268,7 @@ const FileList = () => {
         <>
             <Tree.DirectoryTree
                 showLine
+                motion={0}
                 switcherIcon={<CaretDownFilled />}
                 selectedKeys={selectedKeys}
                 onSelect={onSelect}
