@@ -1,7 +1,7 @@
 import { Tree, Dropdown, message } from 'antd';
 import type { TreeDataNode, TreeProps, MenuProps } from 'antd';
 import { CaretDownFilled } from '@ant-design/icons';
-import { combineLatest, map, shareReplay, type Observable } from 'rxjs';
+import { BehaviorSubject, combineLatest, map, Observable, shareReplay } from 'rxjs';
 import { classesList } from '../logic/JarFile';
 import { useObservable } from '../utils/UseObservable';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -11,18 +11,36 @@ import { minecraftJar, type MinecraftJar } from '../logic/MinecraftApi';
 import { decompileClass } from '../logic/Decompiler';
 import { selectedFile, referencesQuery } from '../logic/State';
 import { compactPackages } from '../logic/Settings';
+import { jarIndex, type ClassData } from '../workers/JarIndex';
+import { ClassDataIcon, JavaIcon, PackageIcon } from './intellij-icons';
+
+const classData = new BehaviorSubject<Map<string, ClassData> | null>(null);
+jarIndex.subscribe(jarIndex => {
+    classData.next(null);
+    jarIndex.getClassData().then(classes => {
+        const map = new Map<string, ClassData>();
+        for (const data of classes) {
+            map.set(data.className, data);
+        }
+        classData.next(map);
+    });
+});
 
 const fileTree: Observable<TreeDataNode[]> = combineLatest([
     classesList,
-    compactPackages.observable]
-).pipe(
-    map(([classFiles, compact]) => {
+    classData,
+    compactPackages.observable
+]).pipe(
+    map(([classNames, classData, compact]) => {
         const dirs = new Map<string, TreeDataNode[]>();
         dirs.set('', []);
 
-        for (const filePath of classFiles) {
-            const i = filePath.lastIndexOf('/');
-            const dirPath = filePath.slice(0, i);
+        for (const classPath of classNames) {
+            if (classPath.includes('$')) continue;
+
+            const className = classPath.replace('.class', '');
+            const i = className.lastIndexOf('/');
+            const dirPath = className.slice(0, i);
 
             if (!dirs.has(dirPath)) {
                 const parts = dirPath.split('/');
@@ -35,6 +53,7 @@ const fileTree: Observable<TreeDataNode[]> = combineLatest([
                         dirs.get(parent)!.push({
                             title: p,
                             key: current,
+                            icon: <PackageIcon style={{ fontSize: '16px' }} />,
                             children: [],
                             isLeaf: false,
                         });
@@ -42,12 +61,14 @@ const fileTree: Observable<TreeDataNode[]> = combineLatest([
                 });
             };
 
-            const dir = dirs.get(dirPath)!;
-
-            dir.push({
-                title: filePath.slice(i + 1).replace('.class', ''),
-                key: filePath,
+            const data = classData?.get(className);
+            dirs.get(dirPath)!.push({
+                title: className.slice(i + 1),
+                key: classPath,
                 isLeaf: true,
+                icon: data
+                    ? <ClassDataIcon data={data} style={{ fontSize: '16px' }} />
+                    : <JavaIcon style={{ fontSize: '16px' }} />,
             });
         }
 
@@ -247,6 +268,7 @@ const FileList = () => {
         <>
             <Tree.DirectoryTree
                 showLine
+                motion={0}
                 switcherIcon={<CaretDownFilled />}
                 selectedKeys={selectedKeys}
                 onSelect={onSelect}

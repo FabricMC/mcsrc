@@ -33,7 +33,7 @@ import {
     pendingTokenJump
 } from './CodeExtensions';
 import { bytecode } from '../logic/Settings';
-import { selectedFile, diffView, openTabs, selectedLines, tabHistory, referencesQuery } from '../logic/State';
+import { selectedFile, diffView, openTabs, selectedLines, tabHistory, referencesQuery, mobileDrawerOpen } from '../logic/State';
 
 const Code = () => {
     const monaco = useMonaco();
@@ -118,7 +118,10 @@ const Code = () => {
         );
 
         const viewAllReferences = monaco.editor.addEditorAction(
-            createFindAllReferencesAction(decompileResultRef, classListRef, messageApi, (value) => referencesQuery.next(value))
+            createFindAllReferencesAction(decompileResultRef, classListRef, messageApi, (value) => {
+                mobileDrawerOpen.next(true);
+                referencesQuery.next(value);
+            })
         );
 
         const viewInheritance = monaco.editor.addEditorAction(
