@@ -12,6 +12,7 @@ export default defineConfig({
     {
       name: 'suppress-wasm-warnings',
       configResolved(config) {
+        // oxlint-disable-next-line typescript/unbound-method
         const originalWarn = config.logger.warn;
         config.logger.warn = (msg, options) => {
           // Suppress WASM runtime externalization warnings

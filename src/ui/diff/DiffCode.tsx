@@ -69,7 +69,7 @@ const DiffCode = ({ height }: DiffCodeProps) => {
             exact pixel count
             */}
             <DiffEditor
-                height={typeof height === "string" ? height.replace("\%", "vh") : height}
+                height={typeof height === "string" ? height.replace("%", "vh") : height}
                 language="java"
                 theme="vs-dark"
                 original={leftResult?.source}

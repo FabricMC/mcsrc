@@ -84,7 +84,7 @@ export function decompileEntireJar(jar: Jar, options?: DecompileEntireJarOptions
         async start() {
             try {
                 const classNames = dJar.classes.filter(n => !n.includes("$"));
-                options?.logger?.("Decompiling...", 0, classNames.length)
+                options?.logger?.("Decompiling...", 0, classNames.length);
 
                 const optThreads = Math.min(options?.threads ?? MAX_THREADS, MAX_THREADS);
                 const optSplits = options?.splits ?? 100;
@@ -102,7 +102,7 @@ export function decompileEntireJar(jar: Jar, options?: DecompileEntireJarOptions
                 return total;
             } finally {
                 // kill all workers
-                setRuntime(preferWasmRuntime);
+                await setRuntime(preferWasmRuntime);
             }
         },
         stop() {

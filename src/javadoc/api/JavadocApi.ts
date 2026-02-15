@@ -70,7 +70,7 @@ class JavadocApi {
         }
 
         options.headers = {
-            ...options.headers,
+            ...(options.headers as Record<string, string>),
             'Authorization': `Bearer ${this.accessToken.value}`,
             'Content-Type': 'application/json'
         };
@@ -83,7 +83,7 @@ class JavadocApi {
 
             // Retry the request with the new token
             options.headers = {
-                ...options.headers,
+                ...(options.headers as Record<string, string>),
                 'Authorization': `Bearer ${this.accessToken.value}`,
                 'Content-Type': 'application/json'
             };

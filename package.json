@@ -12,7 +12,9 @@
     "test": "vitest run",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
-    "test:e2e:debug": "playwright test --debug"
+    "test:e2e:debug": "playwright test --debug",
+    "lint": "oxlint --type-aware --deny-warnings",
+    "lint:fix": "oxlint --fix --type-aware --deny-warnings"
   },
   "dependencies": {
     "@katana-project/zip": "^0.7.1",
@@ -36,6 +38,8 @@
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.1.4",
     "globals": "^17.3.0",
+    "oxlint": "^1.47.0",
+    "oxlint-tsgolint": "^0.13.0",
     "typescript": "~5.9.3",
     "vite": "^7.3.1",
     "vite-plugin-comlink": "^5.3.0",

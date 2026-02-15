@@ -13,6 +13,7 @@ export class ClassNode {
     }
 
     getRoot(): ClassNode {
+        // oxlint-disable-next-line typescript/no-this-alias
         let n: ClassNode = this;
 
         while (n.parents.length > 0) {
@@ -65,7 +66,7 @@ export const inheritanceIndex = combineLatest([jarIndex, minecraftJar]).pipe(
         const index = new InheritanceIndex();
 
         const classDataArray = await jarIndexInstance.getClassData();
-        
+
         const classNames = new Set(
             Object.keys(jarInstance.jar.entries)
                 .filter(name => name.endsWith(".class"))

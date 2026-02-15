@@ -142,7 +142,7 @@ const Code = () => {
             hoverProvider.dispose();
             definitionProvider.dispose();
         };
-    }, [monaco, decompileResult, classList, resetViewTrigger]);
+    }, [monaco, decompileResult, classList, resetViewTrigger, messageApi]);
 
     if (IS_JAVADOC_EDITOR) {
         useEffect(() => {
@@ -153,6 +153,7 @@ const Code = () => {
             return () => {
                 extensions.dispose();
             };
+            // oxlint-disable-next-line eslint-plugin-react-hooks/exhaustive-deps
         }, [monaco, editorRef.current, decompileResult]);
     }
 
@@ -264,6 +265,7 @@ const Code = () => {
             sub.unsubscribe();
             sub2.unsubscribe();
         };
+        // oxlint-disable-next-line eslint-plugin-react-hooks/exhaustive-deps
     }, []);
 
     // Handles setting the model and viewstate of the editor
@@ -303,7 +305,8 @@ const Code = () => {
             }
         }
         applyTokenDecorations(tab.model!);
-    }, [decompileResult, resetViewTrigger, selectedLine]);
+        // oxlint-disable-next-line eslint-plugin-react-hooks/exhaustive-deps
+    }, [decompileResult, resetViewTrigger, selectedLine, monaco]);
 
     // Process pending token jumps after model is loaded
     useEffect(() => {
@@ -344,6 +347,7 @@ const Code = () => {
         return () => {
             onMouseDown.dispose();
         };
+        // oxlint-disable-next-line eslint-plugin-react-hooks/exhaustive-deps
     }, [editorRef.current, selectedLine]);
 
     return (

@@ -37,7 +37,7 @@ const IndexProgressNotification = () => {
         return () => {
             sub.unsubscribe();
         };
-    }, []);
+    }, [notificationApi]);
 
     return contextHolder;
 };
