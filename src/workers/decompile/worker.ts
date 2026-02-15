@@ -2,7 +2,7 @@ import * as vf from "../../logic/vf";
 import Dexie, { type EntityTable, type Table } from "dexie";
 import type { Token } from "../../logic/Tokens";
 import { getBytecode } from "../JarIndexWorker";
-import { type DecompileResult, type DecompileOption, type DecompileData, DecompileJar, type DecompileLogger } from "./types";
+import { type DecompileResult, type DecompileOption, type DecompileData, DecompileJar } from "./types";
 import { openJar } from "../../utils/Jar";
 
 let lastPromise: Promise<unknown> | undefined = undefined;
@@ -25,11 +25,13 @@ export const scheduleClose = () => schedule(async () => close());
 
 const db = new Dexie("decompiler") as Dexie & {
     options: EntityTable<DecompileOption, "key">,
-    results: Table<DecompileResult, [string, string, string]>,
+    results2: Table<DecompileResult, [string, number, string]>,
 };
-db.version(1).stores({
-    options: "key, value",
-    results: "[owner+className+language], source, tokens",
+db.version(2).stores({
+    options: "key",
+    results2: "[className+checksum+language]",
+    // clear old data
+    results: null,
 });
 
 let _options: vf.Options | undefined = undefined;
@@ -59,111 +61,121 @@ export const setOptions = (options: vf.Options, sab: SharedArrayBuffer) => sched
     }
 
     if (changed || notVisited.size > 0) {
-        await db.results.clear();
+        await db.results2.clear();
     }
 
     await db.options.clear();
     await db.options.bulkAdd(Object.entries(options).map(([k, v]) => ({ key: k, value: v })));
 });
 
-const jars: Record<string, DecompileJar> = {};
-export const registerJar = (jarName: string, blob: Blob | null) => schedule(async () => {
-    if (blob) {
-        jars[jarName] = new DecompileJar(await openJar(jarName, blob));
-    } else {
-        delete jars[jarName];
-    }
-});
-
 export const loadVFRuntime = (preferWasm: boolean) => schedule(() =>
     vf.loadRuntime(preferWasm));
 
-export const clear = (jarName: string | null) => schedule(async () => {
-    if (jarName) {
-        await db.results.where("owner").equals(jarName).delete();
-    } else {
-        await db.results.clear();
-    }
+export const clear = (): Promise<number> => schedule(async () => {
+    const count = await db.results2.count();
+    await db.results2.clear();
+    return count;
 });
 
-export async function decompileMany(
+export const decompileMany = (
     jarName: string,
-    blob: Blob,
+    jarBlob: Blob,
     classNames: string[],
     sab: SharedArrayBuffer,
     splits: number,
-    logger: DecompileLogger | null
-): Promise<number> {
-    try {
-        await registerJar(jarName, blob);
-        const state = new Uint32Array(sab);
+    logger?: (index: number) => Promise<void> | void,
+): Promise<number> => schedule(async () => {
+    const state = new Uint32Array(sab);
+    const jar = new DecompileJar(await openJar(jarName, jarBlob));
 
-        let count = 0;
-        await schedule(async () => {
-            while (true) {
-                const i = Atomics.add(state, 0, splits);
-                if (i >= classNames.length) break;
-
-                const targetClassNames: string[] = [];
-                for (let j = 0; j < splits; j++) {
-                    if ((i + j) >= classNames.length) break;
-                    targetClassNames.push(classNames[i + j]);
-                }
-
-                try {
-                    const result = await _decompile(jarName, null, targetClassNames, null, logger, true);
-                    count += result.length;
-                } catch (e) {
-                    console.error("Error during decompilation:", e);
-                }
-            }
-        });
-
-        return count;
-    } finally {
-        await registerJar(jarName, null);
+    let logPromises: Promise<void>[] = [];
+    let nameLogger;
+    if (logger) {
+        const class2index = new Map(classNames.map((v, i) => [v, i] as [string, number]));
+        nameLogger = (className: string) => {
+            if (!class2index) return;
+            const i = class2index.get(className);
+            if (i) logPromises.push(Promise.resolve(logger!(i)));
+        };
     }
-}
+
+    let count = 0;
+    while (true) {
+        const i = Atomics.add(state, 0, splits);
+        if (i >= classNames.length) break;
+
+        const targetClassNames: string[] = [];
+        for (let j = 0; j < splits; j++) {
+            if ((i + j) >= classNames.length) break;
+
+            const className = classNames[i + j];
+            const checksum = jar.proxy[className]?.checksum;
+            if (!checksum) continue;
+
+            const dbCount = await db.results2
+                .where("[className+checksum+language]")
+                .equals([className, checksum, "java"])
+                .count();
+
+            if (dbCount >= 1) {
+                nameLogger?.(className);
+            } else {
+                targetClassNames.push(className);
+            }
+        }
+
+        try {
+            const result = await _decompile(jar.classes, targetClassNames, jar.proxy, nameLogger);
+            count += result.length;
+        } catch (e) {
+            console.error("Error during decompilation:", e);
+        }
+
+        await Promise.all(logPromises);
+        logPromises = [];
+    }
+
+    return count;
+});
 
 export const decompile = (
-    jarName: string,
     jarClasses: string[],
     className: string,
     classData: DecompileData
 ): Promise<DecompileResult> => schedule(async () => {
     try {
-        const result = await _decompile(jarName, jarClasses, [className], classData, null, false);
+        const dbResult = await db.results2.get([className, classData[className]?.checksum, "java"]);
+        if (dbResult) return dbResult;
+
+        const result = await _decompile(jarClasses, [className], classData);
         return result[0];
     } catch (e) {
         console.error(`Error during decompilation of class '${className}':`, e);
-        return { owner: jarName, className, source: `// Error during decompilation: ${(e as Error).message}`, tokens: [], language: "java" };
+        return {
+            className,
+            checksum: 0,
+            source: `// Error during decompilation: ${(e as Error).message}`,
+            tokens: [],
+            language: "java"
+        };
     }
 });
 
 async function _decompile(
-    jarName: string,
-    jarClasses: string[] | null,
+    jarClasses: string[],
     classNames: string[],
-    classData: DecompileData | null,
-    logger: DecompileLogger | null,
-    skipDb: boolean,
+    classData: DecompileData,
+    logger?: (className: string) => void,
 ): Promise<DecompileResult[]> {
-    if (!jarClasses) jarClasses = jars[jarName].classes;
-    if (!classData) classData = jars[jarName].proxy;
-
-    const dbResult = await db.results.bulkGet(classNames.map(n => [jarName, n, "java"] as [string, string, string]));
-    if (dbResult.every(t => t)) return skipDb ? [] : dbResult as DecompileResult[];
-
-    const options = await getOptions();
-
     const allTokens: Record<string, Token[]> = {};
     let currentContent: string | undefined;
     let currentTokens: Token[] | undefined;
+    let currentClassName: string | undefined;
 
     const sources = await vf.decompile(classNames, {
-        source: async (name) => await classData[name] ?? null,
+        source: async (name) => await classData[name]?.data ?? null,
         resources: jarClasses,
-        options,
+        options: await getOptions(),
         logger: {
             writeMessage(level, message, error) {
                 switch (level) {
@@ -172,7 +184,11 @@ async function _decompile(
                 }
             },
             startClass(className) {
-                if (logger) logger(className);
+                currentClassName = className;
+            },
+            endClass() {
+                if (logger && currentClassName) logger(currentClassName);
+                currentClassName = undefined;
             },
         },
         tokenCollector: {
@@ -205,6 +221,7 @@ async function _decompile(
 
     const res: DecompileResult[] = [];
     for (const [className, source] of Object.entries(sources)) {
+        const checksum = classData[className]?.checksum ?? 0;
         const tokens = allTokens[source] ?? [];
 
         const importRegex = /^\s*import\s+(?!static\b)([^\s;]+)\s*;/gm;
@@ -227,25 +244,25 @@ async function _decompile(
         }
 
         tokens.sort((a, b) => a.start - b.start);
-        res.push({ owner: jarName, className, source, tokens, language: "java" });
+        res.push({ className, checksum, source, tokens, language: "java" });
     }
 
-    await db.results.bulkPut(res);
+    await db.results2.bulkPut(res);
     return res;
 }
 
-export const getClassBytecode = (jarName: string, className: string, classData: ArrayBufferLike[]): Promise<DecompileResult> => schedule(async () => {
-    let result = await db.results.get([jarName, className, "bytecode"]);
+export const getClassBytecode = (className: string, checksum: number, classData: ArrayBufferLike[]): Promise<DecompileResult> => schedule(async () => {
+    let result = await db.results2.get([className, checksum, "bytecode"]);
     if (result) return result;
 
     try {
         const bytecode = await getBytecode(classData);
-        result = { owner: jarName, className, source: bytecode, tokens: [], language: "bytecode" };
+        result = { className, checksum, source: bytecode, tokens: [], language: "bytecode" };
     } catch (e) {
         console.error(`Error during bytecode retrieval of class '${className}':`, e);
-        result = { owner: jarName, className, source: `// Error during bytecode retrieval: ${(e as Error).message}`, tokens: [], language: "bytecode" };
+        result = { className, checksum, source: `// Error during bytecode retrieval: ${(e as Error).message}`, tokens: [], language: "bytecode" };
     }
 
-    await db.results.put(result);
+    await db.results2.put(result);
     return result;
 });

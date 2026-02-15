@@ -2,8 +2,8 @@ import type { Token } from "../../logic/Tokens";
 import type { Jar } from "../../utils/Jar";
 
 export type DecompileResult = {
-    owner: string;
     className: string;
+    checksum: number;
     source: string;
     tokens: Token[];
     language: 'java' | 'bytecode';
@@ -11,9 +11,12 @@ export type DecompileResult = {
 
 export type DecompileOption = { key: string, value: string; };
 
-export type DecompileLogger = (className: string) => void;
-
-export type DecompileData = Record<string, Uint8Array | Promise<Uint8Array>>;
+export type DecompileData = {
+    [className: string]: undefined | {
+        checksum: number;
+        data: Uint8Array | Promise<Uint8Array>;
+    };
+};
 
 export class DecompileJar {
     jar: Jar;
@@ -22,8 +25,12 @@ export class DecompileJar {
     constructor(jar: Jar) {
         this.jar = jar;
         this.proxy = new Proxy({}, {
-            get(_, className: string) {
-                return jar.entries[className + ".class"]?.bytes();
+            get(_, className: string): DecompileData[""] {
+                const entry = jar.entries[className + ".class"];
+                if (entry) return {
+                    checksum: entry.crc32,
+                    data: entry.bytes()
+                };
             }
         });
     }
