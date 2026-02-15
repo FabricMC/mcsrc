@@ -16,15 +16,16 @@ import { jarIndex, type ClassData } from '../workers/JarIndex';
 import { ClassDataIcon, JavaIcon, PackageIcon } from './intellij-icons';
 
 const classData: Observable<Map<string, ClassData> | null> = jarIndex.pipe(
-    switchMap(jarIndex => from(jarIndex.getClassData())),
-    map(classes => {
-        const map = new Map<string, ClassData>();
-        for (const data of classes) {
-            map.set(data.className, data);
-        }
-        return map;
-    }),
-    startWith(null),
+    switchMap(jarIndex => from(jarIndex.getClassData()).pipe(
+        map(classes => {
+            const map = new Map<string, ClassData>();
+            for (const data of classes) {
+                map.set(data.className, data);
+            }
+            return map;
+        }),
+        startWith(null)
+    )),
     shareReplay(1)
 );
 
