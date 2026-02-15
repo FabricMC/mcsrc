@@ -9,20 +9,20 @@ import { JarDecompilerModal, JarDecompilerProgressModal } from "./JarDecompilerM
 import IndexProgressNotification from "./IndexProgressNotification";
 
 const Modals = () => {
-    return (
-        <>
-            <IndexProgressNotification />
-            <ProgressModal />
-            <JavadocModal />
-            <LoginModal />
-            <InheritanceModal />
-            <AboutModal />
-            <SettingsModal />
-            <StructureModal />
-            <JarDecompilerModal />
-            <JarDecompilerProgressModal />
-        </>
-    );
+  return (
+    <>
+      <IndexProgressNotification />
+      <ProgressModal />
+      <JavadocModal />
+      <LoginModal />
+      <InheritanceModal />
+      <AboutModal />
+      <SettingsModal />
+      <StructureModal />
+      <JarDecompilerModal />
+      <JarDecompilerProgressModal />
+    </>
+  );
 };
 
 export default Modals;

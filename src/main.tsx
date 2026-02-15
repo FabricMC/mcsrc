@@ -1,8 +1,8 @@
-import { StrictMode } from 'react';
-import { createRoot } from 'react-dom/client';
-import * as monaco from 'monaco-editor';
-import { loader } from '@monaco-editor/react';
-import App from './ui/App.tsx';
+import { StrictMode } from "react";
+import { createRoot } from "react-dom/client";
+import * as monaco from "monaco-editor";
+import { loader } from "@monaco-editor/react";
+import App from "./ui/App.tsx";
 
 import "./index.css";
 import MonacoWorker from "monaco-editor/esm/vs/editor/editor.worker.js?worker";
@@ -11,13 +11,13 @@ import MonacoWorker from "monaco-editor/esm/vs/editor/editor.worker.js?worker";
 loader.config({ monaco });
 
 globalThis.MonacoEnvironment = {
-    getWorker() {
-        return new MonacoWorker();
-    }
+  getWorker() {
+    return new MonacoWorker();
+  },
 };
 
-createRoot(document.getElementById('root')!).render(
-    <StrictMode>
-        <App />
-    </StrictMode>,
+createRoot(document.getElementById("root")!).render(
+  <StrictMode>
+    <App />
+  </StrictMode>,
 );

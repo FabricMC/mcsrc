@@ -7,7 +7,9 @@ const initialState = getInitialState();
 
 /// All of the user controled global state should be defined here:
 
-export const selectedMinecraftVersion = new BehaviorSubject<string | null>(initialState.minecraftVersion);
+export const selectedMinecraftVersion = new BehaviorSubject<string | null>(
+  initialState.minecraftVersion,
+);
 
 export const mobileDrawerOpen = new BehaviorSubject(false);
 export const selectedFile = new BehaviorSubject<string>(initialState.file);

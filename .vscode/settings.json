@@ -1,12 +1,9 @@
 {
-  "[typescript]": {
-    "editor.formatOnSave": true,
-    "editor.defaultFormatter": "vscode.typescript-language-features"
-  },
+  "editor.defaultFormatter": "oxc.oxc-vscode",
+  "editor.formatOnSave": true,
+  "oxc.typeAware": true,
   "[typescriptreact]": {
-    "editor.formatOnSave": true,
-    "editor.defaultFormatter": "vscode.typescript-language-features"
+    "editor.defaultFormatter": "oxc.oxc-vscode"
   },
-  "typescript.format.semicolons": "insert",
-  "oxc.typeAware": true
+  "oxc.enable.oxfmt": true
 }

@@ -1,7 +1,7 @@
 {
   "name": "mcsrc",
-  "private": true,
   "version": "0.0.0",
+  "private": true,
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -14,7 +14,9 @@
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:debug": "playwright test --debug",
     "lint": "oxlint --type-aware --deny-warnings",
-    "lint:fix": "oxlint --fix --type-aware --deny-warnings"
+    "lint:fix": "oxlint --fix --type-aware --deny-warnings",
+    "format": "oxfmt --check",
+    "format:fix": "oxfmt"
   },
   "dependencies": {
     "@katana-project/zip": "^0.7.1",
@@ -38,6 +40,7 @@
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.1.4",
     "globals": "^17.3.0",
+    "oxfmt": "^0.32.0",
     "oxlint": "^1.47.0",
     "oxlint-tsgolint": "^0.13.0",
     "typescript": "~5.9.3",

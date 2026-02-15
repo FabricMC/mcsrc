@@ -3,11 +3,16 @@ body {
 }
 
 /* Prevent scrolling the body */
-html, body {margin: 0; height: 100%; overflow: hidden}
+html,
+body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+}
 
 /* Webkit adds scrollbars as element selectors rather than allowing the element to control their style */
 .webkit-scrollbar-hide::-webkit-scrollbar {
-    display: none
+  display: none;
 }
 
 .class-token-decoration {
@@ -79,27 +84,27 @@ html, body {margin: 0; height: 100%; overflow: hidden}
 
 /* Stop icon & text in file tree from wrapping */
 .ant-tree-node-content-wrapper {
-    display: flex;
-    flex-wrap: nowrap;
-    padding-inline: 0 !important;
+  display: flex;
+  flex-wrap: nowrap;
+  padding-inline: 0 !important;
 }
 
 /* Remove extraneous gap in file tree component */
 .ant-tree-switcher {
-    margin-inline-end: 0 !important;
+  margin-inline-end: 0 !important;
 }
 
 /* Fix file tree icon centering */
 .ant-tree-iconEle > .anticon {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
 }
 
 /* Stop text in file tree from wrapping */
 .ant-tree-title {
-    white-space: nowrap;
+  white-space: nowrap;
 }
 
 /* Don't have text overflow in the structure dialog */

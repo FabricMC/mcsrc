@@ -1,11 +1,11 @@
 export function isInterface(accessFlags: number): boolean {
-    return (accessFlags & 0x0200) !== 0;
+  return (accessFlags & 0x0200) !== 0;
 }
 
 export function isAbstract(accessFlags: number): boolean {
-    return (accessFlags & 0x0400) !== 0;
+  return (accessFlags & 0x0400) !== 0;
 }
 
 export function isEnum(accessFlags: number): boolean {
-    return (accessFlags & 0x4000) !== 0;
+  return (accessFlags & 0x4000) !== 0;
 }
