@@ -46,9 +46,11 @@ const LargeApp = () => {
                 <SideBar />
             </Splitter.Panel>
             <Splitter.Panel size={sizes[1]}>
-                {tabsEnabled && <TabsComponent />}
-                <FilepathHeader />
-                <Code />
+                <Flex vertical style={{ height: "100vh" }}>
+                    {tabsEnabled && <TabsComponent />}
+                    <FilepathHeader />
+                    <div style={{ flexGrow: 1 }}><Code /></div>
+                </Flex>
             </Splitter.Panel>
         </Splitter>
     );
@@ -67,7 +69,7 @@ const MobileApp = () => {
     };
 
     return (
-        <Flex vertical={true}>
+        <Flex vertical style={{ height: "100vh" }}>
             <Drawer
                 onClose={onClose}
                 open={open}
@@ -93,7 +95,7 @@ const MobileApp = () => {
                 }
             </Flex>
             <FilepathHeader />
-            <Code />
+            <div style={{ flexGrow: 1 }}><Code /></div>
         </Flex>
     );
 };
