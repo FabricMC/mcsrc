@@ -1,10 +1,13 @@
 import type { CancellationToken, IPosition, IRange, languages } from "monaco-editor";
+
 import { editor, Range, Uri } from "monaco-editor";
+import { BehaviorSubject } from "rxjs";
+
+import type { DecompileResult } from "../workers/decompile/types";
+
+import { selectedFile } from "../logic/State";
 import { openTab } from "../logic/Tabs";
 import { getTokenLocation } from "../logic/Tokens";
-import { selectedFile } from "../logic/State";
-import type { DecompileResult } from "../workers/decompile/types";
-import { BehaviorSubject } from "rxjs";
 
 export type TokenJumpTarget = {
   className: string;

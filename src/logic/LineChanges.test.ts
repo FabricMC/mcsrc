@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
+
 import { countLineDiff, updateLineChanges, calculatedLineChanges } from "./LineChanges";
 
 describe("LineChanges", () => {

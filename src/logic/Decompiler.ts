@@ -12,13 +12,15 @@ import {
   tap,
   throttleTime,
 } from "rxjs";
-import { minecraftJar, type MinecraftJar } from "./MinecraftApi";
-import { selectedFile } from "./State";
-import { bytecode, displayLambdas } from "./Settings";
-import type { Options } from "./vf";
-import type { DecompileResult } from "../workers/decompile/types";
-import * as worker from "../workers/decompile/client";
+
 import type { Jar } from "../utils/Jar";
+import type { DecompileResult } from "../workers/decompile/types";
+import type { Options } from "./vf";
+
+import * as worker from "../workers/decompile/client";
+import { minecraftJar, type MinecraftJar } from "./MinecraftApi";
+import { bytecode, displayLambdas } from "./Settings";
+import { selectedFile } from "./State";
 
 const decompilerCounter = new BehaviorSubject<number>(0);
 

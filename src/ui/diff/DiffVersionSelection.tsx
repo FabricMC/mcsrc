@@ -1,7 +1,8 @@
 import { Select, Flex } from "antd";
-import { useObservable } from "../../utils/UseObservable";
-import { minecraftVersionIds } from "../../logic/MinecraftApi";
+
 import { getLeftDiff, getRightDiff } from "../../logic/Diff";
+import { minecraftVersionIds } from "../../logic/MinecraftApi";
+import { useObservable } from "../../utils/UseObservable";
 
 const DiffVersionSelection = () => {
   const versions = useObservable(minecraftVersionIds);

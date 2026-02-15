@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+
 import { setupTest } from "./test-utils";
 
 test.describe("Bytecode Setting", () => {

@@ -1,7 +1,8 @@
-import { load } from "../../java/build/generated/teavm/wasm-gc/java.wasm-runtime.js";
-import indexerWasm from "../../java/build/generated/teavm/wasm-gc/java.wasm?url";
-import { openJar, type Jar } from "../utils/Jar.js";
 import type { ReferenceKey, ReferenceString } from "./JarIndex.js";
+
+import indexerWasm from "../../java/build/generated/teavm/wasm-gc/java.wasm?url";
+import { load } from "../../java/build/generated/teavm/wasm-gc/java.wasm-runtime.js";
+import { openJar, type Jar } from "../utils/Jar.js";
 
 export type ClassDataString = `${string}|${string}|${number}|${string}`;
 

@@ -1,11 +1,12 @@
-import { lazy, Suspense } from "react";
 import { Modal, Spin, Tabs } from "antd";
-import { useObservable } from "../../utils/UseObservable";
+import { lazy, Suspense } from "react";
+
 import {
   ClassNode,
   selectedInheritanceClassName,
   selectedInheritanceClassNode,
 } from "../../logic/Inheritance";
+import { useObservable } from "../../utils/UseObservable";
 
 const InheritanceTree = lazy(() => import("./InheritanceTree"));
 const InheritanceGraph = lazy(() => import("./InheritanceGraph"));

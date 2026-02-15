@@ -1,7 +1,8 @@
 import { Modal } from "antd";
 import { useEffect, useState } from "react";
-import { useObservable } from "../utils/UseObservable";
+
 import { showStructureEvent } from "../logic/Keybinds";
+import { useObservable } from "../utils/UseObservable";
 import StructureView from "./StructureView";
 
 const StructureModal = () => {

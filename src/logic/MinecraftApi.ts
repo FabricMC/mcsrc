@@ -11,8 +11,9 @@ import {
   Observable,
   withLatestFrom,
 } from "rxjs";
-import { agreedEula } from "./Settings";
+
 import { openJar, type Jar } from "../utils/Jar";
+import { agreedEula } from "./Settings";
 import { selectedMinecraftVersion } from "./State";
 
 const CACHE_NAME = "mcsrc-v1";

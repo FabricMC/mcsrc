@@ -1,7 +1,9 @@
 import { BehaviorSubject, map, Observable } from "rxjs";
+
 import type { Token } from "../logic/Tokens";
-import { javadocApi } from "./api/JavadocApi";
+
 import { selectedMinecraftVersion } from "../logic/State";
+import { javadocApi } from "./api/JavadocApi";
 
 export type JavadocString = string;
 

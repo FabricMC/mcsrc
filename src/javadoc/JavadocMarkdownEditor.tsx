@@ -1,8 +1,10 @@
-import { Editor, useMonaco } from "@monaco-editor/react";
-import { useObservable } from "../utils/UseObservable";
-import { currentResult } from "../logic/Decompiler";
-import { useEffect, useRef } from "react";
 import type { editor } from "monaco-editor";
+
+import { Editor, useMonaco } from "@monaco-editor/react";
+import { useEffect, useRef } from "react";
+
+import { currentResult } from "../logic/Decompiler";
+import { useObservable } from "../utils/UseObservable";
 import { JavdocCompletionProvider } from "./JavadocCmpletionProvider";
 
 const JavadocMarkdownEditor = ({

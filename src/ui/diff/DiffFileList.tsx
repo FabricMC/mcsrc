@@ -1,4 +1,5 @@
-import { Table, Tag, Input, Button, Flex, theme, Checkbox, Tooltip, Layout, Space } from "antd";
+import type { SearchProps } from "antd/es/input";
+
 import {
   SplitCellsOutlined,
   AlignLeftOutlined,
@@ -7,7 +8,11 @@ import {
   CodeOutlined,
   FileTextOutlined,
 } from "@ant-design/icons";
-import DiffVersionSelection from "./DiffVersionSelection";
+import { Table, Tag, Input, Button, Flex, theme, Checkbox, Tooltip, Layout, Space } from "antd";
+import { useEffect, useMemo } from "react";
+import { BehaviorSubject, map, combineLatest } from "rxjs";
+
+import { isDecompiling } from "../../logic/Decompiler.ts";
 import {
   getDiffChanges,
   type ChangeState,
@@ -16,13 +21,10 @@ import {
   getDiffSummary,
   type DiffSummary,
 } from "../../logic/Diff";
-import { BehaviorSubject, map, combineLatest } from "rxjs";
-import { useObservable } from "../../utils/UseObservable";
-import type { SearchProps } from "antd/es/input";
-import { isDecompiling } from "../../logic/Decompiler.ts";
-import { useEffect, useMemo } from "react";
 import { bytecode, unifiedDiff } from "../../logic/Settings.ts";
 import { selectedFile, diffView } from "../../logic/State.ts";
+import { useObservable } from "../../utils/UseObservable";
+import DiffVersionSelection from "./DiffVersionSelection";
 
 const statusColors: Record<ChangeState, string> = {
   modified: "gold",

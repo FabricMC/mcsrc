@@ -1,10 +1,11 @@
-import { Modal, Button, Divider, message } from "antd";
 import { GithubOutlined } from "@ant-design/icons";
+import { Modal, Button, Divider, message } from "antd";
+import { useState } from "react";
+
+import { agreedEula } from "../../logic/Settings";
 import { IS_JAVADOC_EDITOR } from "../../site";
 import { useObservable } from "../../utils/UseObservable";
 import { javadocApi } from "./JavadocApi";
-import { useState } from "react";
-import { agreedEula } from "../../logic/Settings";
 
 const LoginModal = () => {
   if (!IS_JAVADOC_EDITOR) {

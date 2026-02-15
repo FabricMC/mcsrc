@@ -1,22 +1,31 @@
-import Editor, { useMonaco } from "@monaco-editor/react";
-import { useObservable } from "../utils/UseObservable";
-import { currentResult, isDecompiling } from "../logic/Decompiler";
-import { useEffect, useRef, useState } from "react";
-import { editor, Range } from "monaco-editor";
-import { isThin } from "../logic/Browser";
-import { classesList } from "../logic/JarFile";
-import { getOpenTab } from "../logic/Tabs";
-import { message, Spin } from "antd";
 import { LoadingOutlined } from "@ant-design/icons";
-import { getTokenLocation } from "../logic/Tokens";
+import Editor, { useMonaco } from "@monaco-editor/react";
+import { message, Spin } from "antd";
+import { editor, Range } from "monaco-editor";
+import { useEffect, useRef, useState } from "react";
 import { pairwise, startWith } from "rxjs";
-import { getNextJumpToken, nextReferenceNavigation } from "../logic/FindAllReferences";
-import { setupJavaBytecodeLanguage } from "../utils/JavaBytecode";
-import { IS_JAVADOC_EDITOR } from "../site";
+
 import { applyJavadocCodeExtensions } from "../javadoc/JavadocCodeExtensions";
+import { isThin } from "../logic/Browser";
+import { currentResult, isDecompiling } from "../logic/Decompiler";
+import { getNextJumpToken, nextReferenceNavigation } from "../logic/FindAllReferences";
 import { selectedInheritanceClassName } from "../logic/Inheritance";
-import { createHoverProvider } from "./CodeHoverProvider";
-import { findTokenAtPosition } from "./CodeUtils";
+import { classesList } from "../logic/JarFile";
+import { bytecode } from "../logic/Settings";
+import {
+  selectedFile,
+  diffView,
+  openTabs,
+  selectedLines,
+  tabHistory,
+  referencesQuery,
+  mobileDrawerOpen,
+} from "../logic/State";
+import { getOpenTab } from "../logic/Tabs";
+import { getTokenLocation } from "../logic/Tokens";
+import { IS_JAVADOC_EDITOR } from "../site";
+import { setupJavaBytecodeLanguage } from "../utils/JavaBytecode";
+import { useObservable } from "../utils/UseObservable";
 import {
   IS_DEFINITION_CONTEXT_KEY_NAME,
   createCopyAwAction,
@@ -32,16 +41,8 @@ import {
   jumpToToken,
   pendingTokenJump,
 } from "./CodeExtensions";
-import { bytecode } from "../logic/Settings";
-import {
-  selectedFile,
-  diffView,
-  openTabs,
-  selectedLines,
-  tabHistory,
-  referencesQuery,
-  mobileDrawerOpen,
-} from "../logic/State";
+import { createHoverProvider } from "./CodeHoverProvider";
+import { findTokenAtPosition } from "./CodeUtils";
 
 const Code = () => {
   const monaco = useMonaco();

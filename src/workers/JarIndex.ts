@@ -1,8 +1,10 @@
+import Dexie, { type EntityTable } from "dexie";
 import { BehaviorSubject, distinctUntilChanged, map, shareReplay } from "rxjs";
 import { endpointSymbol } from "vite-plugin-comlink/symbol";
-import { minecraftJar, type MinecraftJar } from "../logic/MinecraftApi";
+
 import type { ClassDataString } from "./JarIndexWorker";
-import Dexie, { type EntityTable } from "dexie";
+
+import { minecraftJar, type MinecraftJar } from "../logic/MinecraftApi";
 
 export type Class = string;
 export type Method = `${string}:${string}:${string}`;

@@ -1,16 +1,18 @@
-import { Button, Divider, Flex, Input } from "antd";
-import Header from "./Header";
-import FileList from "./FileList";
 import type { InputRef, SearchProps } from "antd/es/input";
-import { useObservable } from "../utils/UseObservable";
-import { isSearching } from "../logic/JarFile";
-import SearchResults from "./SearchResults";
-import ReferenceResults from "./ReferenceResults";
-import { formatReferenceQuery, isViewingReferences } from "../logic/FindAllReferences";
+
 import { ArrowLeftOutlined } from "@ant-design/icons";
-import { focusSearchEvent } from "../logic/Keybinds";
+import { Button, Divider, Flex, Input } from "antd";
 import { useEffect, useRef } from "react";
+
+import { formatReferenceQuery, isViewingReferences } from "../logic/FindAllReferences";
+import { isSearching } from "../logic/JarFile";
+import { focusSearchEvent } from "../logic/Keybinds";
 import { searchQuery, referencesQuery } from "../logic/State";
+import { useObservable } from "../utils/UseObservable";
+import FileList from "./FileList";
+import Header from "./Header";
+import ReferenceResults from "./ReferenceResults";
+import SearchResults from "./SearchResults";
 
 const { Search } = Input;
 

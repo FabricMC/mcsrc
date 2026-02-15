@@ -1,19 +1,21 @@
-import Icon from "@ant-design/icons";
+import type { CustomIconComponentProps } from "@ant-design/icons/lib/components/Icon";
 import type React from "react";
 import type { SVGProps } from "react";
+
+import Icon from "@ant-design/icons";
+
 import type { ClassData } from "../../workers/JarIndex";
-import type { CustomIconComponentProps } from "@ant-design/icons/lib/components/Icon";
 
 import AnnotationSvg from "./annotation_dark.svg?react";
-import ClassAbstractSvg from "./classAbstract_dark.svg?react";
 import ClassSvg from "./class_dark.svg?react";
+import ClassAbstractSvg from "./classAbstract_dark.svg?react";
 import EnumSvg from "./enum_dark.svg?react";
 import ExceptionSvg from "./exception_dark.svg?react";
 import FinalMarkSvg from "./finalMark_dark.svg?react";
 import InterfaceSvg from "./interface_dark.svg?react";
 import JavaSvg from "./java_dark.svg?react";
-import RecordSvg from "./record_dark.svg?react";
 import PackageSvg from "./package_dark.svg?react";
+import RecordSvg from "./record_dark.svg?react";
 
 type SVGFC = React.FC<SVGProps<SVGSVGElement>>;
 const stack =

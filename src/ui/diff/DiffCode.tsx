@@ -1,14 +1,16 @@
+import type { editor } from "monaco-editor";
+
+import { LoadingOutlined } from "@ant-design/icons";
 import { DiffEditor } from "@monaco-editor/react";
-import { useObservable } from "../../utils/UseObservable";
+import { Spin } from "antd";
+import { useEffect, useRef } from "react";
+
+import { isDecompiling } from "../../logic/Decompiler.ts";
 import { getLeftDiff, getRightDiff } from "../../logic/Diff";
 import { updateLineChanges } from "../../logic/LineChanges";
-import { useEffect, useRef } from "react";
-import type { editor } from "monaco-editor";
-import { Spin } from "antd";
-import { LoadingOutlined } from "@ant-design/icons";
-import { isDecompiling } from "../../logic/Decompiler.ts";
 import { unifiedDiff } from "../../logic/Settings";
 import { selectedFile } from "../../logic/State.ts";
+import { useObservable } from "../../utils/UseObservable";
 
 const DiffCode = () => {
   const leftResult = useObservable(getLeftDiff().result);

@@ -1,4 +1,5 @@
 import { BehaviorSubject, map } from "rxjs";
+
 import { IS_JAVADOC_EDITOR } from "../../site";
 
 class JavadocApi {

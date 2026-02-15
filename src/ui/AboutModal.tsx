@@ -1,9 +1,10 @@
+import { InfoCircleOutlined } from "@ant-design/icons";
 import { Button, Checkbox, Modal } from "antd";
 import { useState } from "react";
-import { agreedEula } from "../logic/Settings";
-import { InfoCircleOutlined } from "@ant-design/icons";
-import { useObservable } from "../utils/UseObservable";
 import { BehaviorSubject } from "rxjs";
+
+import { agreedEula } from "../logic/Settings";
+import { useObservable } from "../utils/UseObservable";
 
 export const aboutModalOpen = new BehaviorSubject<boolean>(false);
 

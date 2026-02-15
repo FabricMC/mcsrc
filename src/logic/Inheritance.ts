@@ -7,6 +7,7 @@ import {
   shareReplay,
   switchMap,
 } from "rxjs";
+
 import { jarIndex } from "../workers/JarIndex";
 import { minecraftJar } from "./MinecraftApi";
 

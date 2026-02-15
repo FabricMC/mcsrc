@@ -1,8 +1,9 @@
 import { notification, Progress } from "antd";
-import { useObservable } from "../utils/UseObservable";
-import { distinctUntilChanged, map } from "rxjs";
-import { indexProgress } from "../workers/JarIndex";
 import { useEffect } from "react";
+import { distinctUntilChanged, map } from "rxjs";
+
+import { useObservable } from "../utils/UseObservable";
+import { indexProgress } from "../workers/JarIndex";
 
 const distinctJarIndexProgress = indexProgress.pipe(map(Math.round), distinctUntilChanged());
 

@@ -1,12 +1,12 @@
 import LoginModal from "../javadoc/api/LoginModal";
 import JavadocModal from "../javadoc/JavadocModal";
-import InheritanceModal from "./inheritance/InheritanceModal";
-import ProgressModal from "./ProgressModal";
 import AboutModal from "./AboutModal";
+import IndexProgressNotification from "./IndexProgressNotification";
+import InheritanceModal from "./inheritance/InheritanceModal";
+import { JarDecompilerModal, JarDecompilerProgressModal } from "./JarDecompilerModal";
+import ProgressModal from "./ProgressModal";
 import SettingsModal from "./SettingsModal";
 import StructureModal from "./StructureModal";
-import { JarDecompilerModal, JarDecompilerProgressModal } from "./JarDecompilerModal";
-import IndexProgressNotification from "./IndexProgressNotification";
 
 const Modals = () => {
   return (

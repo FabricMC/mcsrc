@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+
 import { performSearch, getCamelCaseAcronym, matchesCamelCase } from "./Search";
 
 describe("Search Algorithm", () => {

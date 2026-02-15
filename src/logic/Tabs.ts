@@ -1,5 +1,6 @@
-import { enableTabs } from "./Settings";
 import { editor } from "monaco-editor";
+
+import { enableTabs } from "./Settings";
 import { selectedFile, openTabs, tabHistory } from "./State";
 
 export class Tab {

@@ -1,9 +1,11 @@
-import { useObservable } from "../utils/UseObservable";
-import { formatReference, goToReference, referenceResults } from "../logic/FindAllReferences";
-import type { ReferenceString } from "../workers/JarIndex";
 import { map, Observable } from "rxjs";
-import { openTab } from "../logic/Tabs";
+
+import type { ReferenceString } from "../workers/JarIndex";
+
+import { formatReference, goToReference, referenceResults } from "../logic/FindAllReferences";
 import { referencesQuery } from "../logic/State";
+import { openTab } from "../logic/Tabs";
+import { useObservable } from "../utils/UseObservable";
 
 function getUsageClass(usage: ReferenceString): string {
   if (usage.startsWith("m:") || usage.startsWith("f:")) {

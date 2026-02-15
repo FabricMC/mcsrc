@@ -1,4 +1,7 @@
 import { editor, languages, type CancellationToken, type IDisposable } from "monaco-editor";
+
+import type { DecompileResult } from "../workers/decompile/types";
+
 import { getTokenLocation, type Token, type TokenLocation } from "../logic/Tokens";
 import {
   activeJavadocToken,
@@ -8,7 +11,6 @@ import {
   type JavadocData,
   type JavadocString,
 } from "./Javadoc";
-import type { DecompileResult } from "../workers/decompile/types";
 
 type monaco = typeof import("monaco-editor");
 

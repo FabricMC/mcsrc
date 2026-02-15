@@ -1,12 +1,14 @@
 import { Modal, Button, message } from "antd";
-import { activeJavadocToken, getJavadocForToken, javadocData, setTokenJavadoc } from "./Javadoc";
-import { useObservable } from "../utils/UseObservable";
-import { IS_JAVADOC_EDITOR } from "../site";
-import type { Token } from "../logic/Tokens";
-import JavadocMarkdownEditor from "./JavadocMarkdownEditor";
 import { useMemo, useState } from "react";
-import { javadocApi, type UpdateTarget } from "./api/JavadocApi";
+
+import type { Token } from "../logic/Tokens";
+
 import { selectedMinecraftVersion } from "../logic/State";
+import { IS_JAVADOC_EDITOR } from "../site";
+import { useObservable } from "../utils/UseObservable";
+import { javadocApi, type UpdateTarget } from "./api/JavadocApi";
+import { activeJavadocToken, getJavadocForToken, javadocData, setTokenJavadoc } from "./Javadoc";
+import JavadocMarkdownEditor from "./JavadocMarkdownEditor";
 
 const ModalBody = ({
   token,

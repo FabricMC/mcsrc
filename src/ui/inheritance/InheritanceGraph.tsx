@@ -7,11 +7,12 @@ import {
   ReactFlowProvider,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { ClassNode, selectedInheritanceClassName } from "../../logic/Inheritance";
-import { isInterface, isAbstract } from "../../utils/Classfile";
-import { useMemo, useCallback, useEffect } from "react";
 import dagre from "dagre";
+import { useMemo, useCallback, useEffect } from "react";
+
+import { ClassNode, selectedInheritanceClassName } from "../../logic/Inheritance";
 import { openTab } from "../../logic/Tabs";
+import { isInterface, isAbstract } from "../../utils/Classfile";
 
 function buildGraphData(classNode: ClassNode): { nodes: Node[]; edges: Edge[] } {
   const nodes: Node[] = [];

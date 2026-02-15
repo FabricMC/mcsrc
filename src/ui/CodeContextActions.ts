@@ -1,6 +1,8 @@
 import type { editor } from "monaco-editor";
-import { findTokenAtPosition } from "./CodeUtils";
+
 import type { DecompileResult } from "../workers/decompile/types";
+
+import { findTokenAtPosition } from "./CodeUtils";
 
 export const IS_DEFINITION_CONTEXT_KEY_NAME = "is_definition";
 

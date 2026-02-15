@@ -7,6 +7,7 @@ import {
   Observable,
   switchMap,
 } from "rxjs";
+
 import * as decompiler from "../workers/decompile/client";
 
 export type ModifierKey = "Ctrl" | "Alt" | "Shift";

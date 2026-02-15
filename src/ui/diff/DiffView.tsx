@@ -1,8 +1,9 @@
 import { Splitter } from "antd";
 import { useState } from "react";
-import DiffFileList from "./DiffFileList";
-import DiffCode from "./DiffCode";
+
 import { FilepathHeader } from "../FilepathHeader";
+import DiffCode from "./DiffCode";
+import DiffFileList from "./DiffFileList";
 
 const DiffView = () => {
   const [sizes, setSizes] = useState<(number | string)[]>(["70%", "30%"]);

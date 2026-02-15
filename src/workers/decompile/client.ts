@@ -1,7 +1,9 @@
 import * as Comlink from "comlink";
+
 import type * as vf from "../../logic/vf";
-import { DecompileJar, type DecompileData, type DecompileResult } from "./types";
 import type { Jar } from "../../utils/Jar";
+
+import { DecompileJar, type DecompileData, type DecompileResult } from "./types";
 
 type DecompileWorker = typeof import("./worker");
 function createWrorker() {

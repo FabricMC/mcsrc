@@ -1,4 +1,5 @@
 import { combineLatest } from "rxjs";
+
 import { resetPermalinkAffectingSettings, supportsPermalinking } from "./Settings";
 import { diffView, selectedFile, selectedLines, selectedMinecraftVersion } from "./State";
 

@@ -1,7 +1,9 @@
 import { editor, type IMarkdownString, type IPosition, Range } from "monaco-editor";
+
+import type { DecompileResult } from "../workers/decompile/types";
+
 import { type Token } from "../logic/Tokens";
 import { findTokenAtPosition } from "./CodeUtils";
-import type { DecompileResult } from "../workers/decompile/types";
 
 interface IntegerLiteral {
   value: number;

@@ -1,3 +1,6 @@
+import type React from "react";
+
+import { SettingOutlined } from "@ant-design/icons";
 import {
   Button,
   Modal,
@@ -7,9 +10,10 @@ import {
   InputNumber,
   type InputNumberProps,
 } from "antd";
-import { SettingOutlined } from "@ant-design/icons";
 import { Checkbox } from "antd";
-import { useObservable } from "../utils/UseObservable";
+import { BehaviorSubject } from "rxjs";
+
+import { capturingKeybind, rawKeydownEvent } from "../logic/Keybinds";
 import {
   BooleanSetting,
   enableTabs,
@@ -23,9 +27,7 @@ import {
   preferWasmDecompiler,
   compactPackages,
 } from "../logic/Settings";
-import { capturingKeybind, rawKeydownEvent } from "../logic/Keybinds";
-import { BehaviorSubject } from "rxjs";
-import type React from "react";
+import { useObservable } from "../utils/UseObservable";
 
 export const settingsModalOpen = new BehaviorSubject<boolean>(false);
 

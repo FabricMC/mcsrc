@@ -1,9 +1,10 @@
-import { Tree, type TreeDataNode } from "antd";
 import { ApiOutlined, CopyrightOutlined, NumberOutlined } from "@ant-design/icons";
+import { Tree, type TreeDataNode } from "antd";
 import { useCallback, useMemo, type Key } from "react";
+
 import { ClassNode, selectedInheritanceClassName } from "../../logic/Inheritance";
-import { isEnum, isInterface } from "../../utils/Classfile";
 import { openTab } from "../../logic/Tabs";
+import { isEnum, isInterface } from "../../utils/Classfile";
 
 function getSimpleClassName(fullName: string): string {
   const i = fullName.lastIndexOf("/");

@@ -1,6 +1,7 @@
+import type * as vf from "@run-slicer/vf";
+
 import wasmPath from "@run-slicer/vf/vf.wasm?url";
 import { load } from "@run-slicer/vf/vf.wasm-runtime.js";
-import type * as vf from "@run-slicer/vf";
 
 export type * from "@run-slicer/vf";
 

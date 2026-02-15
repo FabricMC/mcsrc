@@ -1,20 +1,21 @@
-import { Alert, Button, Flex, Form, message, Modal, Popconfirm, Progress } from "antd";
 import { JavaOutlined } from "@ant-design/icons";
+import { Alert, Button, Flex, Form, message, Modal, Popconfirm, Progress } from "antd";
 import { BehaviorSubject } from "rxjs";
-import { useObservable } from "../utils/UseObservable";
-import { BooleanOption, NumberOption } from "./SettingsModal";
+
+import { minecraftJar } from "../logic/MinecraftApi";
 import {
   decompilerSplits,
   decompilerThreads,
   MAX_THREADS,
   preferWasmDecompiler,
 } from "../logic/Settings";
+import { useObservable } from "../utils/UseObservable";
 import {
   decompileEntireJar,
   deleteCache,
   type DecompileEntireJarTask,
 } from "../workers/decompile/client";
-import { minecraftJar } from "../logic/MinecraftApi";
+import { BooleanOption, NumberOption } from "./SettingsModal";
 
 const modalOpen = new BehaviorSubject(false);
 

@@ -1,4 +1,5 @@
 import { editor } from "monaco-editor";
+
 import { type Token } from "../logic/Tokens";
 
 export function findTokenAtPosition(

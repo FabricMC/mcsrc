@@ -1,17 +1,19 @@
+import type { TreeDataNode, TreeProps, MenuProps } from "antd";
+import type { Key } from "antd/es/table/interface";
+
+import { CaretDownFilled } from "@ant-design/icons";
 // oxlint-disable typescript/no-base-to-string
 import { Tree, Dropdown, message } from "antd";
-import type { TreeDataNode, TreeProps, MenuProps } from "antd";
-import { CaretDownFilled } from "@ant-design/icons";
-import { combineLatest, from, map, Observable, shareReplay, switchMap, startWith } from "rxjs";
-import { classesList } from "../logic/JarFile";
-import { useObservable } from "../utils/UseObservable";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import type { Key } from "antd/es/table/interface";
-import { openTab } from "../logic/Tabs";
-import { minecraftJar, type MinecraftJar } from "../logic/MinecraftApi";
+import { combineLatest, from, map, Observable, shareReplay, switchMap, startWith } from "rxjs";
+
 import { decompileClass } from "../logic/Decompiler";
-import { selectedFile, referencesQuery } from "../logic/State";
+import { classesList } from "../logic/JarFile";
+import { minecraftJar, type MinecraftJar } from "../logic/MinecraftApi";
 import { compactPackages } from "../logic/Settings";
+import { selectedFile, referencesQuery } from "../logic/State";
+import { openTab } from "../logic/Tabs";
+import { useObservable } from "../utils/UseObservable";
 import { jarIndex, type ClassData } from "../workers/JarIndex";
 import { ClassDataIcon, JavaIcon, PackageIcon } from "./intellij-icons";
 

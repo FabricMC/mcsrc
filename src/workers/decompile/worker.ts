@@ -1,6 +1,9 @@
-import * as vf from "../../logic/vf";
 import Dexie, { type EntityTable, type Table } from "dexie";
+
 import type { Token } from "../../logic/Tokens";
+
+import * as vf from "../../logic/vf";
+import { openJar } from "../../utils/Jar";
 import { getBytecode } from "../JarIndexWorker";
 import {
   type DecompileResult,
@@ -8,7 +11,6 @@ import {
   type DecompileData,
   DecompileJar,
 } from "./types";
-import { openJar } from "../../utils/Jar";
 
 let lastPromise: Promise<unknown> | undefined = undefined;
 let _promiseCount = 0;

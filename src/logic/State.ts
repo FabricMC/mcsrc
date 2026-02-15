@@ -1,7 +1,8 @@
 import { BehaviorSubject } from "rxjs";
 import { pairwise } from "rxjs/operators";
-import { Tab } from "./Tabs";
+
 import { getInitialState } from "./Permalink";
+import { Tab } from "./Tabs";
 
 const initialState = getInitialState();
 

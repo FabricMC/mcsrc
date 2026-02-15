@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+
 import { waitForDecompiledContent, setupTest } from "./test-utils";
 
 test.describe("Inheritance", () => {

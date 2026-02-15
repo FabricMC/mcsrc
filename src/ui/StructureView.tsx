@@ -1,11 +1,13 @@
-import { Empty, Tree } from "antd";
 import type { TreeDataNode, TreeProps } from "antd";
+
+import { Empty, Tree } from "antd";
 import { useMemo } from "react";
-import { useObservable } from "../utils/UseObservable";
+
 import { currentResult } from "../logic/Decompiler";
-import { parseDescriptor } from "./CodeHoverProvider";
-import { getTokenLocation, type MemberToken, type Token } from "../logic/Tokens";
 import { selectedLines } from "../logic/State";
+import { getTokenLocation, type MemberToken, type Token } from "../logic/Tokens";
+import { useObservable } from "../utils/UseObservable";
+import { parseDescriptor } from "./CodeHoverProvider";
 
 type StructureNode = TreeDataNode & { token?: Token };
 

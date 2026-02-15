@@ -1,7 +1,7 @@
-import { defineConfig } from "vitest/config";
-import { comlink } from "vite-plugin-comlink";
 import react from "@vitejs/plugin-react";
+import { comlink } from "vite-plugin-comlink";
 import svgr from "vite-plugin-svgr";
+import { defineConfig } from "vitest/config";
 
 // https://vite.dev/config/
 export default defineConfig({

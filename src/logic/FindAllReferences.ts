@@ -8,11 +8,13 @@ import {
   switchMap,
   throttleTime,
 } from "rxjs";
-import { jarIndex, type ReferenceKey, type ReferenceString } from "../workers/JarIndex";
-import { openTab } from "./Tabs";
-import { referencesQuery } from "./State";
-import type { Token } from "./Tokens";
+
 import type { DecompileResult } from "../workers/decompile/types";
+import type { Token } from "./Tokens";
+
+import { jarIndex, type ReferenceKey, type ReferenceString } from "../workers/JarIndex";
+import { referencesQuery } from "./State";
+import { openTab } from "./Tabs";
 
 export const referenceResults = referencesQuery.pipe(
   throttleTime(200),

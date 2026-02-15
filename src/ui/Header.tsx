@@ -1,10 +1,11 @@
 import { Divider, Flex, Select, Space } from "antd";
+
 import { minecraftVersionIds } from "../logic/MinecraftApi";
+import { diffView, selectedMinecraftVersion } from "../logic/State";
 import { useObservable } from "../utils/UseObservable";
 import { AboutModalButton } from "./AboutModal";
-import { SettingsModalButton } from "./SettingsModal";
-import { diffView, selectedMinecraftVersion } from "../logic/State";
 import { JarDecompilerModalButton } from "./JarDecompilerModal";
+import { SettingsModalButton } from "./SettingsModal";
 
 const Header = () => {
   return (

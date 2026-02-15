@@ -1,4 +1,5 @@
 import { BehaviorSubject, filter, fromEvent, Observable, tap } from "rxjs";
+
 import { focusSearch, showStructure, type KeybindSetting } from "./Settings";
 
 // Set to true when the user is currently capturing a keybind

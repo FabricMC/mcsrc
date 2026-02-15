@@ -7,11 +7,13 @@ import {
   switchMap,
   shareReplay,
 } from "rxjs";
-import { minecraftJar, minecraftJarPipeline, type MinecraftJar } from "./MinecraftApi";
+
+import type { DecompileResult } from "../workers/decompile/types";
+
 import { currentResult, decompileResultPipeline } from "./Decompiler";
 import { calculatedLineChanges } from "./LineChanges";
+import { minecraftJar, minecraftJarPipeline, type MinecraftJar } from "./MinecraftApi";
 import { diffLeftselectedMinecraftVersion, selectedMinecraftVersion } from "./State";
-import type { DecompileResult } from "../workers/decompile/types";
 
 export const hideUnchangedSizes = new BehaviorSubject<boolean>(false);
 

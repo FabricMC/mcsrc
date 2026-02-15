@@ -8,6 +8,7 @@ import {
   switchMap,
   throttleTime,
 } from "rxjs";
+
 import { minecraftJar } from "./MinecraftApi";
 import { performSearch } from "./Search";
 import { searchQuery } from "./State";
