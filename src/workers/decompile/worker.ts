@@ -25,12 +25,13 @@ export const scheduleClose = () => schedule(async () => close());
 
 const db = new Dexie("decompiler") as Dexie & {
     options: EntityTable<DecompileOption, "key">,
-    results2: Table<DecompileResult, [string, number, string]>,
+    results3: Table<DecompileResult, [string, number, string]>,
 };
-db.version(3).stores({
+db.version(4).stores({
     options: "key",
-    results2: "[className+checksum+language]",
+    results3: "[className+checksum+language]",
     // clear old data
+    results2: null,
     results: null,
 });
 
@@ -61,7 +62,7 @@ export const setOptions = (options: vf.Options, sab: SharedArrayBuffer) => sched
     }
 
     if (changed || notVisited.size > 0) {
-        await db.results2.clear();
+        await db.results3.clear();
     }
 
     await db.options.clear();
@@ -72,8 +73,8 @@ export const loadVFRuntime = (preferWasm: boolean) => schedule(() =>
     vf.loadRuntime(preferWasm));
 
 export const clear = (): Promise<number> => schedule(async () => {
-    const count = await db.results2.count();
-    await db.results2.clear();
+    const count = await db.results3.count();
+    await db.results3.clear();
     return count;
 });
 
@@ -112,7 +113,7 @@ export const decompileMany = (
             const checksum = jar.proxy[className]?.checksum;
             if (!checksum) continue;
 
-            const dbCount = await db.results2
+            const dbCount = await db.results3
                 .where("[className+checksum+language]")
                 .equals([className, checksum, "java"])
                 .count();
@@ -146,7 +147,7 @@ export const decompile = (
     try {
         const jar = new DecompileJar(await openJar(jarName, jarBlob));
         const checksum = jar.proxy[className]?.checksum;
-        const dbResult = await db.results2.get([className, checksum, "java"]);
+        const dbResult = await db.results3.get([className, checksum, "java"]);
         if (dbResult) return dbResult;
 
         const result = await _decompile(jar.classes, [className], jar.proxy);
@@ -261,12 +262,12 @@ async function _decompile(
         res.push({ className, checksum, source, tokens, language: "java" });
     }
 
-    await db.results2.bulkPut(res);
+    await db.results3.bulkPut(res);
     return res;
 }
 
 export const getClassBytecode = (className: string, checksum: number, classData: ArrayBufferLike[]): Promise<DecompileResult> => schedule(async () => {
-    let result = await db.results2.get([className, checksum, "bytecode"]);
+    let result = await db.results3.get([className, checksum, "bytecode"]);
     if (result) return result;
 
     try {
@@ -277,6 +278,6 @@ export const getClassBytecode = (className: string, checksum: number, classData:
         result = { className, checksum, source: `// Error during bytecode retrieval: ${(e as Error).message}`, tokens: [], language: "bytecode" };
     }
 
-    await db.results2.put(result);
+    await db.results3.put(result);
     return result;
 });
