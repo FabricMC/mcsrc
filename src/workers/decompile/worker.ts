@@ -27,7 +27,7 @@ const db = new Dexie("decompiler") as Dexie & {
     options: EntityTable<DecompileOption, "key">,
     results2: Table<DecompileResult, [string, number, string]>,
 };
-db.version(2).stores({
+db.version(3).stores({
     options: "key",
     results2: "[className+checksum+language]",
     // clear old data
@@ -139,15 +139,17 @@ export const decompileMany = (
 });
 
 export const decompile = (
-    jarClasses: string[],
     className: string,
-    classData: DecompileData
+    jarName: string,
+    jarBlob: Blob,
 ): Promise<DecompileResult> => schedule(async () => {
     try {
-        const dbResult = await db.results2.get([className, classData[className]?.checksum, "java"]);
+        const jar = new DecompileJar(await openJar(jarName, jarBlob));
+        const checksum = jar.proxy[className]?.checksum;
+        const dbResult = await db.results2.get([className, checksum, "java"]);
         if (dbResult) return dbResult;
 
-        const result = await _decompile(jarClasses, [className], classData);
+        const result = await _decompile(jar.classes, [className], jar.proxy);
         return result[0];
     } catch (e) {
         console.error(`Error during decompilation of class '${className}':`, e);
@@ -173,7 +175,19 @@ async function _decompile(
     let currentClassName: string | undefined;
 
     const sources = await vf.decompile(classNames, {
-        source: async (name) => await classData[name]?.data ?? null,
+        source: async (name) => {
+            const data = await classData[name]?.data;
+
+            if (!data) {
+                if (name.startsWith("net/minecraft/")) {
+                    console.warn(`Class data not found for '${name}'`);
+                }
+
+                return null;
+            }
+
+            return data;
+        },
         resources: jarClasses,
         options: await getOptions(),
         logger: {

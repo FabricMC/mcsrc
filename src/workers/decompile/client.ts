@@ -123,27 +123,8 @@ export async function decompileClass(className: string, jar: Jar): Promise<Decom
         language: "java",
     };
 
-    const jarClasses = new DecompileJar(jar).classes;
-    const classData: DecompileData = {};
-    classData[className] = {
-        checksum: entry.crc32,
-        data: await entry.bytes(),
-    };
-
-    for (const classFile of jarClasses) {
-        if (!classFile.startsWith(`${className}\$`)) {
-            continue;
-        }
-
-        const entry = jar.entries[`${classFile}.class`];
-        classData[classFile] = {
-            checksum: entry.crc32,
-            data: await entry.bytes(),
-        };
-    }
-
     const worker = await findWorker();
-    return await worker.decompile(jarClasses, className, classData);
+    return await worker.decompile(className, jar.name, jar.blob);
 }
 
 export async function getClassBytecode(className: string, jar: Jar): Promise<DecompileResult> {
