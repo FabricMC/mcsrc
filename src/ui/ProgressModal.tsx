@@ -2,8 +2,9 @@ import { Modal, Progress } from "antd";
 import { downloadProgress } from "../logic/MinecraftApi";
 import { useObservable } from "../utils/UseObservable";
 
-const ProcesModal = () => {
+const ProgressModal = () => {
     const progress = useObservable(downloadProgress);
+    console.log(`ProgressModal: current progress is ${progress}%`);
 
     return (
         <Modal
@@ -17,4 +18,4 @@ const ProcesModal = () => {
     );
 };
 
-export default ProcesModal;
+export default ProgressModal;
