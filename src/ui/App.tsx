@@ -42,11 +42,11 @@ const LargeApp = () => {
 
     return (
         <Splitter onResize={setSizes}>
-            <Splitter.Panel collapsible defaultSize="200px" min="5%" size={sizes[0]} style={{ height: '100vh' }}>
+            <Splitter.Panel collapsible defaultSize="200px" min="5%" size={sizes[0]} style={{ height: '100%' }}>
                 <SideBar />
             </Splitter.Panel>
             <Splitter.Panel size={sizes[1]}>
-                <Flex vertical style={{ height: "100vh" }}>
+                <Flex vertical style={{ height: "100%" }}>
                     {tabsEnabled && <TabsComponent />}
                     <FilepathHeader />
                     <div style={{ flexGrow: 1 }}><Code /></div>
@@ -69,7 +69,7 @@ const MobileApp = () => {
     };
 
     return (
-        <Flex vertical style={{ height: "100vh" }}>
+        <Flex vertical style={{ height: "100%" }}>
             <Drawer
                 onClose={onClose}
                 open={open}
