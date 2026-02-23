@@ -3,7 +3,11 @@ body {
 }
 
 /* Prevent scrolling the body */
-html, body {margin: 0; height: 100%; overflow: hidden}
+html, body, #root {
+    margin: 0;
+    height: 100%;
+    overflow: hidden;
+}
 
 /* Webkit adds scrollbars as element selectors rather than allowing the element to control their style */
 .webkit-scrollbar-hide::-webkit-scrollbar {
