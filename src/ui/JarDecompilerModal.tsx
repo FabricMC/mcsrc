@@ -10,7 +10,7 @@ import { minecraftJar } from "../logic/MinecraftApi";
 const modalOpen = new BehaviorSubject(false);
 
 export const JarDecompilerModalButton = () => (
-    <Button data-testid="jar-decompiler" color="danger" variant="outlined" onClick={() => modalOpen.next(true)}>
+    <Button data-testid="jar-decompiler" variant="outlined" onClick={() => modalOpen.next(true)}>
         <JavaOutlined />
     </Button>
 );
