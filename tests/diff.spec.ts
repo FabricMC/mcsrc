@@ -45,6 +45,7 @@ test.describe('Diff View', () => {
         await expect(firstFileRow).toBeVisible();
         await firstFileRow.click();
 
+        await page.waitForTimeout(500);
         await expect(firstFileRow).toHaveClass(/ant-table-row-selected/);
 
         const decompilingMessage = page.getByText('Decompiling...');
