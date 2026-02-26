@@ -57,10 +57,9 @@ export const getOpenTab = (): (Tab | null) => {
 
 export const openTab = (key: string) => {
     if (!enableTabs.value) {
-        selectedFile.next(key);
-
         const currentTab = openTabs.value[0];
         if (currentTab && currentTab.key !== key) {
+            selectedFile.next(key);
             currentTab.invalidateCachedView();
             openTabs.next([new Tab(key)]);
         }
