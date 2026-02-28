@@ -20,6 +20,7 @@ import { findTokenAtPosition } from './CodeUtils';
 import {
     IS_DEFINITION_CONTEXT_KEY_NAME,
     createCopyAwAction,
+    createCopyAtAction,
     createCopyMixinAction,
     createFindAllReferencesAction,
     createViewInheritanceAction
@@ -113,6 +114,10 @@ const Code = () => {
             createCopyAwAction(decompileResultRef, classListRef, messageApi)
         );
 
+        const copyAt = monaco.editor.addEditorAction(
+            createCopyAtAction(decompileResultRef, classListRef, messageApi)
+        );
+
         const copyMixin = monaco.editor.addEditorAction(
             createCopyMixinAction(decompileResultRef, classListRef, messageApi)
         );
@@ -137,6 +142,7 @@ const Code = () => {
             viewAllReferences.dispose();
             copyMixin.dispose();
             copyAw.dispose();
+            copyAt.dispose();
             foldingRange.dispose();
             editorOpener.dispose();
             hoverProvider.dispose();
