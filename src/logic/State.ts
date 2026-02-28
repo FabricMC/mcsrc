@@ -1,5 +1,5 @@
 import { BehaviorSubject } from "rxjs";
-import { pairwise } from "rxjs/operators";
+import { filter, pairwise } from "rxjs/operators";
 import { Tab } from "./Tabs";
 import { getInitialState } from "./Permalink";
 
@@ -10,9 +10,9 @@ const initialState = getInitialState();
 export const selectedMinecraftVersion = new BehaviorSubject<string | null>(initialState.minecraftVersion);
 
 export const mobileDrawerOpen = new BehaviorSubject(false);
-export const selectedFile = new BehaviorSubject<string>(initialState.file);
-export const openTabs = new BehaviorSubject<Tab[]>([new Tab(initialState.file)]);
-export const tabHistory = new BehaviorSubject<string[]>([initialState.file]);
+export const selectedFile = new BehaviorSubject<string | undefined>(initialState.file);
+export const openTabs = new BehaviorSubject<Tab[]>(initialState.file ? [new Tab(initialState.file)] : []);
+export const tabHistory = new BehaviorSubject<string[]>(initialState.file ? [initialState.file] : []);
 export const searchQuery = new BehaviorSubject("");
 export const referencesQuery = new BehaviorSubject("");
 

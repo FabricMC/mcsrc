@@ -63,6 +63,8 @@ export const openTab = (key: string) => {
         if (currentTab && currentTab.key !== key) {
             currentTab.invalidateCachedView();
             openTabs.next([new Tab(key)]);
+        } else if (!currentTab) {
+            openTabs.next([new Tab(key)]);
         }
 
         return;
@@ -90,8 +92,6 @@ export const openTab = (key: string) => {
 };
 
 export const closeTab = (key: string) => {
-    if (openTabs.value.length <= 1) return;
-
     const tab = openTabs.value.find(o => o.key === key);
 
     tab?.invalidateCachedView();
@@ -103,7 +103,7 @@ export const closeTab = (key: string) => {
         let newKey = history.pop();
         tabHistory.next(history);
 
-        if (!newKey) {
+        if (!newKey && modifiedOpenTabs.length > 0) {
             // If undefined, open tab left of it
             let i = openTabs.value.findIndex(tab => tab.key === key) - 1;
             i = Math.max(i, 0);
@@ -111,7 +111,12 @@ export const closeTab = (key: string) => {
             newKey = modifiedOpenTabs[i].key;
         }
 
-        openTab(newKey);
+        if (newKey) {
+            openTab(newKey);
+        } else {
+            // No tabs left, clear selectedFile
+            selectedFile.next("");
+        }
     }
 
     openTabs.next(modifiedOpenTabs);

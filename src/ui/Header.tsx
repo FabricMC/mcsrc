@@ -1,7 +1,6 @@
 import { Divider, Flex, Select } from "antd";
 import { minecraftVersionIds } from "../logic/MinecraftApi";
 import { useObservable } from "../utils/UseObservable";
-import { AboutModalButton } from "./AboutModal";
 import { SettingsModalButton } from "./SettingsModal";
 import { diffView, selectedMinecraftVersion } from "../logic/State";
 import { JarDecompilerModalButton } from "./JarDecompilerModal";
@@ -62,9 +61,6 @@ const HeaderBody = () => {
             </div>
             <div style={{ flex: "0 0 auto" }}>
                 <SettingsModalButton />
-            </div>
-            <div style={{ flex: "0 0 auto" }}>
-                <AboutModalButton />
             </div>
         </Flex>
     );

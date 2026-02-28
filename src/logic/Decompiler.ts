@@ -45,6 +45,10 @@ export function decompileResultPipeline(jar: Observable<MinecraftJar>): Observab
         distinctUntilChanged(),
         throttleTime(250),
         switchMap(([className, jar, bytecode]) => {
+            if (!className) {
+                return of();
+            }
+
             if (bytecode) {
                 return from(getClassBytecode(className, jar.jar));
             }
