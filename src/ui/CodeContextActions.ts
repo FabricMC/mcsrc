@@ -45,6 +45,43 @@ export function createCopyAwAction(
     };
 }
 
+export function createCopyAtAction(
+    decompileResultRef: { current: DecompileResult | undefined; },
+    classListRef: { current: string[] | undefined; },
+    messageApi: { error: (msg: string) => void; success: (msg: string) => void; }
+) {
+    return {
+        id: 'copy_at',
+        label: 'Copy Access Transformer',
+        contextMenuGroupId: '9_cutcopypaste',
+        precondition: IS_DEFINITION_CONTEXT_KEY_NAME,
+        run: async function (editor: editor.ICodeEditor, ...args: any[]): Promise<void> {
+            const token = findTokenAtPosition(editor, decompileResultRef.current, classListRef.current);
+            if (!token) {
+                messageApi.error("Failed to find token for Access Transformer entry.");
+                return;
+            }
+
+            switch (token.type) {
+                case "class":
+                    await setClipboard(`public ${token.className.replaceAll("/", ".")}`);
+                    break;
+                case "field":
+                    await setClipboard(`public ${token.className.replaceAll("/", ".")} ${token.name}`);
+                    break;
+                case "method":
+                    await setClipboard(`public ${token.className.replaceAll("/", ".")} ${token.name}${token.descriptor}`);
+                    break;
+                default:
+                    messageApi.error("Token is not a class, field, or method.");
+                    return;
+            }
+
+            messageApi.success("Copied Access Transformer entry to clipboard.");
+        }
+    };
+}
+
 export function createCopyMixinAction(
     decompileResultRef: { current: DecompileResult | undefined; },
     classListRef: { current: string[] | undefined; },
