@@ -141,8 +141,8 @@ const Code = () => {
             viewInheritance.dispose();
             viewAllReferences.dispose();
             copyMixin.dispose();
-            copyAw.dispose();
             copyAt.dispose();
+            copyAw.dispose();
             foldingRange.dispose();
             editorOpener.dispose();
             hoverProvider.dispose();
