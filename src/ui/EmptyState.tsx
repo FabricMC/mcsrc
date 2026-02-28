@@ -1,13 +1,15 @@
 import React from "react";
 import { GithubOutlined, SearchOutlined, LinkOutlined, BranchesOutlined, CopyOutlined, CodeOutlined, FileSearchOutlined, AimOutlined } from '@ant-design/icons';
-import { Card, Typography, Space, Tooltip } from 'antd';
+import { Card, Typography, Space, Tooltip, theme } from 'antd';
 import { classesList } from "../logic/JarFile";
 import { openTab } from "../logic/Tabs";
 import { useObservable } from "../utils/UseObservable";
 
 const { Title, Paragraph } = Typography;
+const { useToken } = theme;
 
 export const EmptyState = () => {
+    const { token } = useToken();
     const outerClasses = useObservable(classesList);
 
     const openRandomClass = () => {
@@ -24,7 +26,7 @@ export const EmptyState = () => {
         {
             icon: <LinkOutlined style={{ fontSize: "18px", color: "#722ed1" }} />,
             title: "Version Comparison",
-            description: "Selecte \"Compare\" in the version selection dropdown to compare two versions side by side and see what changed"
+            description: "Select \"Compare\" in the version selection dropdown to compare two versions side by side and see what changed"
         },
         {
             icon: <BranchesOutlined style={{ fontSize: "18px", color: "#eb2f96" }} />,
@@ -62,7 +64,8 @@ export const EmptyState = () => {
                 height: "100%",
                 color: "#d9d9d9",
                 padding: "3rem 2rem",
-                overflowY: "auto"
+                overflowY: "auto",
+                fontFamily: token.fontFamily
             }}
         >
             <Space direction="vertical" size="large" align="center" style={{ width: "100%" }}>

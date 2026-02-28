@@ -3,7 +3,6 @@ import { useObservable } from "../utils/UseObservable";
 import { closeTab, openTab, setTabPosition, closeOtherTabs } from "../logic/Tabs";
 import React, { useEffect, useRef, useState } from "react";
 import { selectedFile, openTabs } from "../logic/State";
-import { EmptyState } from "./EmptyState";
 
 export const TabsComponent = () => {
     // variables - tabs
@@ -205,7 +204,7 @@ export const TabsComponent = () => {
 
     return (
         <>
-            {tabs && tabs.length > 0 ? (
+            {tabs && tabs.length > 0 && (
                 <Tabs
                     hideAdd
                     type="editable-card"
@@ -235,8 +234,6 @@ export const TabsComponent = () => {
                         </DefaultTabBar>
                     )}
                 />
-            ) : (
-                <EmptyState />
             )}
 
             {contextMenu && (
