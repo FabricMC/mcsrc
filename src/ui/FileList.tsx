@@ -108,7 +108,7 @@ const fileTree: Observable<TreeDataNode[]> = combineLatest([
 );
 
 const selectedFileKeys = selectedFile.pipe(
-    map(file => [file])
+    map(file => file ? [file] : [])
 );
 
 function getPathKeys(filePath: string): Key[] {
@@ -241,10 +241,24 @@ const FileList = () => {
     const treeData = useObservable(fileTree);
 
     useEffect(() => {
-        if (expandedKeys === undefined && selectedKeys?.[0]) {
-            setExpandedKeys(getPathKeys(selectedKeys[0] as string));
+        if (expandedKeys === undefined) {
+            if (selectedKeys?.[0]) {
+                setExpandedKeys(getPathKeys(selectedKeys[0] as string));
+            } else {
+                setExpandedKeys(['net', 'net/minecraft']);
+            }
         }
     }, [expandedKeys, selectedKeys]);
+
+    useEffect(() => {
+        if (selectedKeys?.[0] && expandedKeys !== undefined) {
+            const pathKeys = getPathKeys(selectedKeys[0] as string);
+            const newKeys = [...new Set([...expandedKeys, ...pathKeys])];
+            if (newKeys.length !== expandedKeys.length) {
+                setExpandedKeys(newKeys);
+            }
+        }
+    }, [selectedKeys, expandedKeys]);
 
     useEffect(() => {
         const closeMenu = () => setContextMenu(null);

@@ -28,6 +28,7 @@ test.describe('Permalinks and Line Highlighting', () => {
 
     test('Shift-clicking line number creates line range', async ({ page }) => {
         await page.goto('/');
+        await page.getByText('ChatFormatting', { exact: true }).click();
         await waitForDecompiledContent(page, 'enum ChatFormatting');
 
         const editor = page.locator('.monaco-editor');
