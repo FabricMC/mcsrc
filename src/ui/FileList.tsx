@@ -258,7 +258,7 @@ const FileList = () => {
                 setExpandedKeys(newKeys);
             }
         }
-    }, [selectedKeys]);
+    }, [selectedKeys, expandedKeys]);
 
     useEffect(() => {
         const closeMenu = () => setContextMenu(null);
