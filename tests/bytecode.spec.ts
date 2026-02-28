@@ -11,7 +11,7 @@ test.describe('Bytecode Setting', () => {
 
     test('Shows bytecode when enabled', async ({ page }) => {
         await page.goto('/');
-
+        await page.getByText('ChatFormatting', { exact: true }).click();
         const editor = page.getByRole("code").first();
         await expect(editor).toContainText('// access flags');
     });

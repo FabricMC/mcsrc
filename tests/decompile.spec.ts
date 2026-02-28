@@ -8,11 +8,13 @@ test.describe('Decompilation', () => {
 
     test('Decompiles default class on initial load', async ({ page }) => {
         await page.goto('/');
+        await page.getByText('ChatFormatting', { exact: true }).click();
         await waitForDecompiledContent(page, 'enum ChatFormatting');
     });
 
     test('Decompile many classes', async ({ page }) => {
         await page.goto('/');
+        await page.getByText('ChatFormatting', { exact: true }).click();
         await waitForDecompiledContent(page, 'enum ChatFormatting');
 
         const modalButton = page.getByTestId('jar-decompiler').first();

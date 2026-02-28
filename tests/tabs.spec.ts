@@ -8,6 +8,7 @@ test.describe('Tabs', () => {
 
     test('Opens multiple tabs and switches between them', async ({ page }) => {
         await page.goto('/');
+        await page.getByText('ChatFormatting', { exact: true }).click();
         await waitForDecompiledContent(page, 'enum ChatFormatting');
 
         const searchBox = page.getByRole('searchbox', { name: 'Search classes' });
@@ -30,6 +31,7 @@ test.describe('Tabs', () => {
 
     test('Closes tabs', async ({ page }) => {
         await page.goto('/');
+        await page.getByText('ChatFormatting', { exact: true }).click();
         await waitForDecompiledContent(page, 'enum ChatFormatting');
 
         const searchBox = page.getByRole('searchbox', { name: 'Search classes' });
@@ -53,6 +55,7 @@ test.describe('Tabs', () => {
 
     test('Closes other tabs via context menu', async ({ page }) => {
         await page.goto('/');
+        await page.getByText('ChatFormatting', { exact: true }).click();
         await waitForDecompiledContent(page, 'enum ChatFormatting');
 
         const searchBox = page.getByRole('searchbox', { name: 'Search classes' });

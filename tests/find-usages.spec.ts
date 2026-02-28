@@ -8,6 +8,7 @@ test.describe('Find All References', () => {
 
     test('Triggers find all references action', async ({ page }) => {
         await page.goto('/');
+        await page.getByText('ChatFormatting', { exact: true }).click();
         await waitForDecompiledContent(page, 'enum ChatFormatting');
 
         const methodToken = page.locator('.method-token-decoration').first();
