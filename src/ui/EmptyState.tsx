@@ -207,7 +207,7 @@ export const EmptyState = () => {
                     }}
                 >
                     <GithubOutlined style={{ fontSize: "20px" }} />
-                    Fork on GitHub
+                    Star on GitHub
                 </a>
             </Space>
         </div>
