@@ -8,6 +8,7 @@ test.describe('Inheritance', () => {
 
     test('Shows inheritance tree and graph views', async ({ page }) => {
         await page.goto('/');
+        await page.getByText('ChatFormatting', { exact: true }).click();
         await waitForDecompiledContent(page, 'enum ChatFormatting');
 
         const editor = page.locator('.monaco-editor').first();

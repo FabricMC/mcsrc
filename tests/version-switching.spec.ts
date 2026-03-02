@@ -8,6 +8,7 @@ test.describe('Version Switching', () => {
 
     test('Switches between Minecraft versions', async ({ page }) => {
         await page.goto('/');
+        await page.getByText('ChatFormatting', { exact: true }).click();
         await waitForDecompiledContent(page, 'enum ChatFormatting');
 
         const versionSelect = page.locator('.ant-select').first();
@@ -28,6 +29,7 @@ test.describe('Version Switching', () => {
 
     test('Preserves file when switching versions', async ({ page }) => {
         await page.goto('/');
+        await page.getByText('ChatFormatting', { exact: true }).click();
         await waitForDecompiledContent(page, 'enum ChatFormatting');
 
         const searchBox = page.getByRole('searchbox', { name: 'Search classes' });

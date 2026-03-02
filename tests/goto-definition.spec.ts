@@ -8,6 +8,7 @@ test.describe('Go to Definition', () => {
 
     test('Ctrl+click on fromEnum navigates to StringRepresentable', async ({ page }) => {
         await page.goto('/');
+        await page.getByText('ChatFormatting', { exact: true }).click();
         await waitForDecompiledContent(page, 'enum ChatFormatting');
 
         const methodToken = page.locator('.method-token-decoration-pointer').filter({ hasText: 'fromEnum' }).first();

@@ -5,7 +5,7 @@ import { diffView, selectedFile, selectedLines, selectedMinecraftVersion } from 
 export interface State {
     version: number; // Allows us to change the permalink structure in the future
     minecraftVersion: string;
-    file: string;
+    file: string | undefined;
     selectedLines: {
         line: number;
         lineEnd?: number;
@@ -15,7 +15,7 @@ export interface State {
 const DEFAULT_STATE: State = {
     version: 0,
     minecraftVersion: "",
-    file: "net/minecraft/ChatFormatting.class",
+    file: undefined,
     selectedLines: null
 };
 
@@ -100,6 +100,13 @@ if (typeof window !== "undefined") {
             supported,
             diffView
         ]) => {
+            if (!file) {
+                document.title = "mcsrc.dev";
+                window.location.hash = '';
+                window.history.replaceState({}, '', '/');
+                return;
+            }
+
             const className = file.split('/').pop()?.replace('.class', '') || file;
             document.title = className;
 

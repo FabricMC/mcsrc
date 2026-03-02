@@ -1,19 +1,10 @@
-import { Button, Checkbox, Modal } from "antd";
+import { Checkbox, Modal } from "antd";
 import { useState } from "react";
 import { agreedEula } from "../logic/Settings";
-import { InfoCircleOutlined } from '@ant-design/icons';
 import { useObservable } from "../utils/UseObservable";
 import { BehaviorSubject } from "rxjs";
 
 export const aboutModalOpen = new BehaviorSubject<boolean>(false);
-
-export const AboutModalButton = () => {
-    return (
-        <Button type="default" onClick={() => aboutModalOpen.next(true)}>
-            <InfoCircleOutlined />
-        </Button>
-    );
-};
 
 const AboutModal = () => {
     const accepted = useObservable(agreedEula.observable);
@@ -43,10 +34,6 @@ const AboutModal = () => {
             footer={null}
         >
             <p>NOTE! This website is not redistributing any Minecraft code or compiled bytecode. The minecraft jar is downloaded directly from Mojang's servers to your device when you use this tool. Check your browser's network requests!</p>
-            <p>The <a href="https://github.com/Vineflower/vineflower">Vineflower</a> decompiler is used after being compiled to wasm as part of the <a href="https://www.npmjs.com/package/@run-slicer/vf">@run-slicer/vf</a> project.</p>
-
-            <p><a href="https://github.com/FabricMC/mcsrc">GitHub</a></p>
-
             <Eula onAccept={() => aboutModalOpen.next(false)} />
         </Modal>
     );
