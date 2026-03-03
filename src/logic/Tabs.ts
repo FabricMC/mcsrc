@@ -63,6 +63,7 @@ export const openTab = (key: string) => {
             currentTab.invalidateCachedView();
             openTabs.next([new Tab(key)]);
         } else if (!currentTab) {
+            selectedFile.next(key);
             openTabs.next([new Tab(key)]);
         }
 
