@@ -3,7 +3,7 @@ import { Tree, Dropdown, message } from 'antd';
 import type { TreeDataNode, TreeProps, MenuProps } from 'antd';
 import { CaretDownFilled } from '@ant-design/icons';
 import { combineLatest, from, map, Observable, shareReplay, switchMap, startWith } from 'rxjs';
-import { classesList } from '../logic/JarFile';
+import { outerClassesList } from '../logic/JarFile';
 import { useObservable } from '../utils/UseObservable';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { Key } from 'antd/es/table/interface';
@@ -30,7 +30,7 @@ const classData: Observable<Map<string, ClassData> | null> = jarIndex.pipe(
 );
 
 const fileTree: Observable<TreeDataNode[]> = combineLatest([
-    classesList,
+    outerClassesList,
     classData,
     compactPackages.observable
 ]).pipe(
@@ -231,7 +231,7 @@ const FileList = () => {
 
     const jar = useObservable(minecraftJar);
     const selectedKeys = useObservable(selectedFileKeys);
-    const classes = useObservable(classesList);
+    const classes = useObservable(outerClassesList);
     const onSelect: TreeProps['onSelect'] = useCallback((selectedKeys: Key[]) => {
         if (selectedKeys.length === 0) return;
         if (!classes || !classes.includes(selectedKeys[0] as string)) return;
