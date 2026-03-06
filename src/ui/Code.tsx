@@ -4,7 +4,7 @@ import { currentResult, isDecompiling } from '../logic/Decompiler';
 import { useEffect, useRef, useState } from 'react';
 import { editor, Range } from "monaco-editor";
 import { isThin } from '../logic/Browser';
-import { classesList } from '../logic/JarFile';
+import { outerClassesList } from '../logic/JarFile';
 import { getOpenTab } from '../logic/Tabs';
 import { message, Spin } from 'antd';
 import { LoadingOutlined } from '@ant-design/icons';
@@ -40,7 +40,7 @@ const Code = () => {
     const monaco = useMonaco();
 
     const decompileResult = useObservable(currentResult);
-    const classList = useObservable(classesList);
+    const classList = useObservable(outerClassesList);
     const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
     const hideMinimap = useObservable(isThin);
     const decompiling = useObservable(isDecompiling);
