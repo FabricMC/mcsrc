@@ -63,12 +63,11 @@ export const EmptyState = () => {
                 alignItems: "center",
                 height: "100%",
                 color: "#d9d9d9",
-                padding: "3rem 2rem",
                 overflowY: "auto",
                 fontFamily: token.fontFamily
             }}
         >
-            <Space direction="vertical" size="large" align="center" style={{ width: "100%" }}>
+            <Space direction="vertical" size="large" align="center" style={{ padding: "2rem", margin: "auto" }}>
                 <img
                     src="/assets/mcsrc_favicon.svg"
                     alt="mcsrc logo"
@@ -84,7 +83,6 @@ export const EmptyState = () => {
                     color: "#d9d9d9",
                     textAlign: "center",
                     fontWeight: "500",
-                    maxWidth: "700px"
                 }}>
                     mcsrc.dev is a browser-based tool for viewing decompiled Minecraft Java Edition source code
                 </Paragraph>
