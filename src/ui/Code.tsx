@@ -36,6 +36,8 @@ import {
 import { bytecode } from '../logic/Settings';
 import { selectedFile, diffView, openTabs, selectedLines, tabHistory, referencesQuery, mobileDrawerOpen } from '../logic/State';
 
+const IS_ANDROID_CHROME = /Android/.test(navigator.userAgent) && /Chrome/.test(navigator.userAgent);
+
 const Code = () => {
     const monaco = useMonaco();
 
@@ -386,6 +388,7 @@ const Code = () => {
                     foldingImportsByDefault: true,
                     foldingHighlight: false,
                     scrollBeyondLastLine: false,
+                    editContext: IS_ANDROID_CHROME ? false : undefined, // Disable content editable on Android Chrome to attempt to stop the virtual keyboard from appearing
                 }}
                 onMount={(codeEditor) => {
                     editorRef.current = codeEditor;
