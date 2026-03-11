@@ -1,7 +1,7 @@
 import React from "react";
 import { GithubOutlined, SearchOutlined, LinkOutlined, BranchesOutlined, CopyOutlined, CodeOutlined, FileSearchOutlined, AimOutlined } from '@ant-design/icons';
 import { Card, Typography, Space, Tooltip, theme } from 'antd';
-import { classesList } from "../logic/JarFile";
+import { outerClassesList } from "../logic/JarFile";
 import { openTab } from "../logic/Tabs";
 import { useObservable } from "../utils/UseObservable";
 
@@ -10,7 +10,7 @@ const { useToken } = theme;
 
 export const EmptyState = () => {
     const { token } = useToken();
-    const outerClasses = useObservable(classesList);
+    const outerClasses = useObservable(outerClassesList);
 
     const openRandomClass = () => {
         if (outerClasses && outerClasses.length > 0) {
