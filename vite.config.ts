@@ -61,8 +61,10 @@ export default defineConfig({
         warn(warning);
       },
       output: {
-        manualChunks: {
-          'inheritance': ['@xyflow/react', 'dagre'],
+        manualChunks(id) {
+          if (id.includes('@xyflow/react') || id.includes('dagre')) {
+            return 'inheritance';
+          }
         },
       },
     },
