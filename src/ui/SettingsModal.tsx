@@ -34,7 +34,7 @@ const SettingsModal = () => {
                 <BooleanOption setting={compactPackages} title={"Compact Packages"} tooltip="Collapse packages with one child into one." />
                 <BooleanOption setting={displayLambdas} title={"Lambda Names"} tooltip="Display lambda names as inline comments. Does not support permalinking." disabled={bytecodeValue} />
                 <BooleanOption setting={bytecode} title={"Show Bytecode"} tooltip="Show bytecode instructions alongside decompiled source. Does not support permalinking." disabled={displayLambdasValue} />
-                <BooleanOption setting={preferWasmDecompiler} title={"Prefer WASM Decompiler"} tooltip="WASM deompiler might be faster than JavaScript."/>
+                <BooleanOption setting={preferWasmDecompiler} title={"Prefer WASM Decompiler"} tooltip="WASM decompiler might be faster than JavaScript."/>
                 <KeybindOption setting={focusSearch} title={"Focus Search"} captureId="focus_search" />
                 <KeybindOption setting={showStructure} title={"Show Structure"} captureId="show_structure" />
             </Form>

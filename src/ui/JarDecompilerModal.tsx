@@ -73,7 +73,7 @@ export const JarDecompilerModal = () => {
             />
             <br />
             <Form layout="horizontal" labelCol={{ span: 9 }} wrapperCol={{ span: 8 }}>
-                <BooleanOption setting={preferWasmDecompiler} title="Prefer WASM Decompiler" tooltip="WASM deompiler might be faster than JavaScript." />
+                <BooleanOption setting={preferWasmDecompiler} title="Prefer WASM Decompiler" tooltip="WASM decompiler might be faster than JavaScript." />
                 <NumberOption setting={decompilerThreads} title="Worker Threads" min={1} max={MAX_THREADS} />
                 <NumberOption testid="jar-decompiler-splits" setting={decompilerSplits} title="Worker Splits" min={1} />
                 <Form.Item label="Cache">
