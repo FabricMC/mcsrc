@@ -45,7 +45,10 @@ export const minecraftVersions = agreedEula.observable.pipe(
         const isValid = currentVersion !== null && versions.some(v => v.id === currentVersion);
 
         if (!isValid && versions.length > 0) {
-            selectedMinecraftVersion.next(versions[0].id);
+            // Select the latest stable release version if it exists, otherwise fall back to the latest version
+            const latestRelease = versions.find(v => v.type === "release");
+            const defaultVersion = latestRelease ? latestRelease.id : versions[0].id;
+            selectedMinecraftVersion.next(defaultVersion);
         }
     }),
     shareReplay({ bufferSize: 1, refCount: false })
