@@ -1,7 +1,7 @@
-import { BehaviorSubject, combineLatest, distinct, distinctUntilChanged, map, Observable, switchMap, throttleTime } from 'rxjs';
+import { combineLatest, distinctUntilChanged, map, Observable } from 'rxjs';
 import { minecraftJar } from './MinecraftApi';
-import { performSearch } from './Search';
 import { searchQuery } from './State';
+import Fuse from 'fuse.js';
 
 export const fileList = minecraftJar.pipe(
     distinctUntilChanged(),
@@ -9,18 +9,36 @@ export const fileList = minecraftJar.pipe(
 );
 
 // File list that only contains outer class files
-export const classesList = fileList.pipe(
+export const outerClassesList = fileList.pipe(
     map(files => files.filter(file => file.endsWith('.class') && !file.includes('$')))
 );
 
+export const outerClassSearch = outerClassesList.pipe(
+    map(classes => {
+        const list = classes.map(className => {
+            let simpleClassName = className;
+
+            const pos = className.lastIndexOf('/');
+            if (pos !== -1) simpleClassName = className.substring(pos);
+
+            return { 'class': simpleClassName, key: className };
+        });
+
+        return new Fuse(list, {
+            minMatchCharLength: 3,
+            keys: ['class']
+        });
+    })
+);
+
 const debouncedSearchQuery: Observable<string> = searchQuery.pipe(
-    throttleTime(200),
     distinctUntilChanged()
 );
 
-export const searchResults: Observable<string[]> = combineLatest([classesList, debouncedSearchQuery]).pipe(
-    switchMap(([classes, query]) => {
-        return [performSearch(query, classes)];
+export const searchResults: Observable<string[]> = combineLatest([outerClassSearch, debouncedSearchQuery]).pipe(
+    map(([search, query]) => {
+        const results = search.search(query);
+        return results.map(r => r.item.key);
     })
 );
 
