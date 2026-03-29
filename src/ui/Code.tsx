@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 import { editor, Range } from "monaco-editor";
 import { isThin } from '../logic/Browser';
 import { classesList } from '../logic/JarFile';
-import { getOpenTab } from '../logic/Tabs';
+import { CodeTab, getOpenTab } from '../logic/Tabs';
 import { message, Spin } from 'antd';
 import { LoadingOutlined } from '@ant-design/icons';
 import { getTokenLocation } from '../logic/Tokens';
@@ -235,22 +235,10 @@ const Code = () => {
 
     // Subscribe to tab changes and store model & viewstate of previously opened tab
     useEffect(() => {
-        const sub = selectedFile.pipe(
-            startWith(selectedFile.value),
-            pairwise()
-        ).subscribe(([prev, curr]) => {
-            if (prev === curr) return;
-
-            const previousTab = openTabs.getValue().find(o => o.key === prev);
-            previousTab?.cacheView(
-                editorRef.current?.saveViewState() || null,
-                editorRef.current?.getModel() || null
-            );
-        });
-
         // Cache if diffview is opened and restore if it is closed;
-        const sub2 = diffView.subscribe((open) => {
+        const sub = diffView.subscribe((open) => {
             const openTab = getOpenTab();
+            if (!(openTab instanceof CodeTab)) return;
             if (open) {
                 openTab?.cacheView(
                     editorRef.current?.saveViewState() || null,
@@ -271,7 +259,6 @@ const Code = () => {
 
         return () => {
             sub.unsubscribe();
-            sub2.unsubscribe();
         };
         // oxlint-disable-next-line eslint-plugin-react-hooks/exhaustive-deps
     }, []);
@@ -282,23 +269,16 @@ const Code = () => {
         if (!monaco || !decompileResult) return;
 
         const tab = getOpenTab();
-        if (!tab) return;
-        const lang = bytecode.value ? "bytecode" : "java";
+        if (!tab || !(tab instanceof CodeTab)) return;
 
-        // Create new model with the current decompilation source
-        let newModel = monaco.editor.createModel(
+        tab.editorRef = editorRef.current;
+
+        // Set new model with the current decompilation source
+        tab.setModel(monaco.editor.createModel(
             decompileResult.source,
-            lang,
+            bytecode.value ? "bytecode" : "java",
             monaco.Uri.parse(`inmemory://${Date.now()}`)
-        );
-
-        // Check if the model is different to the cached one. If yes -> invalidate view
-        if (!tab.isCachedModelEqualTo(newModel)) {
-            tab.invalidateCachedView();
-            tab.model = newModel;
-        } else {
-            newModel.dispose();
-        }
+        ));
 
         // Only restore view state if there's no line to jump to
         // Otherwise the line highlighting effect will handle scrolling

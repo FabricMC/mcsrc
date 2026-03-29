@@ -3,7 +3,7 @@ import { ApiOutlined, CopyrightOutlined, NumberOutlined } from "@ant-design/icon
 import { useCallback, useMemo, type Key } from "react";
 import { ClassNode, selectedInheritanceClassName } from "../../logic/Inheritance";
 import { isEnum, isInterface } from "../../utils/Classfile";
-import { openTab } from "../../logic/Tabs";
+import { openCodeTab } from "../../logic/Tabs";
 
 function getSimpleClassName(fullName: string): string {
     const i = fullName.lastIndexOf('/');
@@ -89,7 +89,7 @@ const InheritanceTree = ({ data }: { data: ClassNode; }) => {
         if (!selected) return;
 
         // Convert internal class name format (e.g., "net/minecraft/ChatFormatting") to file path
-        openTab(`${selected}.class`);
+        openCodeTab(`${selected}.class`);
         selectedInheritanceClassName.next(null);
     }, []);
 

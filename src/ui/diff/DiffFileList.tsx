@@ -16,7 +16,7 @@ import { isDecompiling } from "../../logic/Decompiler.ts";
 import { useEffect, useMemo } from 'react';
 import { bytecode, unifiedDiff } from "../../logic/Settings.ts";
 import { selectedFile, diffView } from '../../logic/State.ts';
-import { openTab } from '../../logic/Tabs.ts';
+import { openCodeTab } from '../../logic/Tabs.ts';
 
 const statusColors: Record<ChangeState, string> = {
     modified: 'gold',
@@ -205,7 +205,7 @@ const DiffFileList = () => {
                             if (loading) return;
                             if (currentFile === record.file) return;
 
-                            openTab(record.file);
+                            openCodeTab(record.file);
                         }
                     })}
                     style={{

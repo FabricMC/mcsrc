@@ -1,7 +1,7 @@
 import { List } from "antd";
 import { searchResults } from "../logic/JarFile";
 import { useObservable } from "../utils/UseObservable";
-import { openTab } from "../logic/Tabs";
+import { openCodeTab } from "../logic/Tabs";
 
 const SearchResults = () => {
     const results = useObservable(searchResults);
@@ -12,7 +12,7 @@ const SearchResults = () => {
             dataSource={results}
             renderItem={(item) => (
                 <List.Item
-                    onClick={() => openTab(item)}
+                    onClick={() => openCodeTab(item)}
                     style={{
                         cursor: "pointer",
                         padding: "2px 8px",

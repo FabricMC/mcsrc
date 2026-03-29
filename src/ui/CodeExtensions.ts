@@ -1,6 +1,6 @@
 import type { CancellationToken, IPosition, IRange, languages } from "monaco-editor";
 import { editor, Range, Uri } from "monaco-editor";
-import { openTab } from '../logic/Tabs';
+import { openCodeTab } from '../logic/Tabs';
 import { getTokenLocation } from '../logic/Tokens';
 import { selectedFile } from "../logic/State";
 import type { DecompileResult } from "../workers/decompile/types";
@@ -140,14 +140,14 @@ export function createEditorOpener(
                     const target = `${methodName}:${descriptor}`;
                     requestTokenJump(baseClassName, targetType, target);
                     if (!jumpInSameFile) {
-                        openTab(baseClassName);
+                        openCodeTab(baseClassName);
                     }
                 } else if (targetType === 'field' && fragment.length === 2) {
                     // Format: field:fieldName
                     const target = fragment[1];
                     requestTokenJump(baseClassName, targetType, target);
                     if (!jumpInSameFile) {
-                        openTab(baseClassName);
+                        openCodeTab(baseClassName);
                     }
                 }
             } else if (baseClassName != className) {
@@ -156,10 +156,10 @@ export function createEditorOpener(
                 // Always use the queue, even for same-file jumps
                 requestTokenJump(baseClassName, 'class', innerClassName);
                 if (!jumpInSameFile) {
-                    openTab(baseClassName);
+                    openCodeTab(baseClassName);
                 }
             } else {
-                openTab(baseClassName);
+                openCodeTab(baseClassName);
             }
             return true;
         }

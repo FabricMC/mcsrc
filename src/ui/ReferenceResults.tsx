@@ -2,7 +2,7 @@ import { useObservable } from "../utils/UseObservable";
 import { formatReference, goToReference, referenceResults } from "../logic/FindAllReferences";
 import type { ReferenceString } from "../workers/JarIndex";
 import { map, Observable } from "rxjs";
-import { openTab } from "../logic/Tabs";
+import { openCodeTab } from "../logic/Tabs";
 import { referencesQuery } from "../logic/State";
 
 function getUsageClass(usage: ReferenceString): string {
@@ -49,7 +49,7 @@ const UsageGroupItem = ({ group }: UsageGroupItemProps) => {
     return (
         <div style={{ marginBottom: "4px" }}>
             <div
-                onClick={() => openTab(group.className + ".class")}
+                onClick={() => openCodeTab(group.className + ".class")}
                 style={{
                     cursor: "pointer",
                     fontSize: "13px",

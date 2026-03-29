@@ -1,6 +1,6 @@
 import { Tabs } from "antd";
 import { useObservable } from "../utils/UseObservable";
-import { closeTab, openTab, setTabPosition, closeOtherTabs } from "../logic/Tabs";
+import { closeTab, setTabPosition, closeOtherTabs, openCodeTab } from "../logic/Tabs";
 import React, { useEffect, useRef, useState } from "react";
 import { selectedFile, openTabs } from "../logic/State";
 
@@ -170,7 +170,7 @@ export const TabsComponent = () => {
             placeIndexRef.current !== currentIndex
         ) {
             setTabPosition(draggingKey.current, placeIndexRef.current);
-            openTab(draggingKey.current);
+            openCodeTab(draggingKey.current);
         }
 
         draggingKey.current = "";
@@ -210,7 +210,7 @@ export const TabsComponent = () => {
                     type="editable-card"
                     activeKey={activeKey}
                     onEdit={onEdit}
-                    onTabClick={(key) => openTab(key)}
+                    onTabClick={(key) => openCodeTab(key)}
                     items={tabs?.map(({ key }) => ({
                         key,
                         label: (
