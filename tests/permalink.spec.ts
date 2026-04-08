@@ -57,4 +57,22 @@ test.describe('Permalinks and Line Highlighting', () => {
         const highlightedLine = editor.locator('.highlighted-line');
         await expect(highlightedLine.first()).toBeVisible();
     });
+
+    test('Diff permalink restores left and right versions and opens diff view', async ({ page }) => {
+        await page.goto('/1/diff/26.1-mock-1/26.1-mock-2/net/minecraft/client/renderer/LevelRenderer');
+
+        const diffEditor = page.locator('.monaco-diff-editor');
+        await expect(diffEditor).toBeVisible();
+
+        const leftVersionSelect = page.locator('.ant-select').nth(0);
+        const rightVersionSelect = page.locator('.ant-select').nth(1);
+
+        await expect(leftVersionSelect).toContainText('26.1-mock-1');
+        await expect(rightVersionSelect).toContainText('26.1-mock-2');
+
+        const decompilingMessage = page.getByText('Decompiling...');
+        await expect(decompilingMessage).toBeHidden();
+
+        await expect(diffEditor).toContainText('net.minecraft.client.renderer');
+    });
 });

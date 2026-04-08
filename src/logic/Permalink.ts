@@ -1,6 +1,6 @@
 import { combineLatest } from "rxjs";
 import { resetPermalinkAffectingSettings, supportsPermalinking } from "./Settings";
-import { diffView, selectedFile, selectedLines, selectedMinecraftVersion } from "./State";
+import { diffLeftSelectedMinecraftVersion, diffView, selectedFile, selectedLines, selectedMinecraftVersion } from "./State";
 
 export interface State {
     version: number; // Allows us to change the permalink structure in the future
@@ -10,6 +10,9 @@ export interface State {
         line: number;
         lineEnd?: number;
     } | null;
+    diff?: {
+        leftMinecraftVersion: string;
+    };
 }
 
 const DEFAULT_STATE: State = {
@@ -39,6 +42,23 @@ export const parsePathToState = (path: string): State | null => {
     }
 
     const version = parseInt(segments[0], 10);
+
+    if (segments[1] === 'diff') {
+        if (segments.length < 5) {
+            return null;
+        }
+        const leftMinecraftVersion = decodeURIComponent(segments[2]);
+        const rightMinecraftVersion = decodeURIComponent(segments[3]);
+        const filePath = segments.slice(4).join('/');
+        return {
+            version,
+            minecraftVersion: rightMinecraftVersion,
+            file: filePath + (filePath.endsWith('.class') ? '' : '.class'),
+            selectedLines: null,
+            diff: { leftMinecraftVersion }
+        };
+    }
+
     let minecraftVersion = decodeURIComponent(segments[1]);
     const filePath = segments.slice(2).join('/');
 
@@ -89,12 +109,14 @@ if (typeof window !== "undefined") {
     window.addEventListener('load', () => {
         combineLatest([
             selectedMinecraftVersion,
+            diffLeftSelectedMinecraftVersion,
             selectedFile,
             selectedLines,
             supportsPermalinking,
             diffView
         ]).subscribe(([
             minecraftVersion,
+            diffLeftMinecraftVersion,
             file,
             selectedLines,
             supported,
@@ -110,20 +132,26 @@ if (typeof window !== "undefined") {
             const className = file.split('/').pop()?.replace('.class', '') || file;
             document.title = className;
 
-            if (!supported || diffView) {
+            if (!supported) {
                 window.location.hash = '';
                 window.history.replaceState({}, '', '/');
                 return;
             }
 
-            let url = `/1/${minecraftVersion}/${file.replace(".class", "")}`;
+            let url = '/1/';
 
-            if (selectedLines) {
-                const { line, lineEnd } = selectedLines;
-                if (lineEnd && lineEnd !== line) {
-                    url += `#L${Math.min(line, lineEnd)}-${Math.max(line, lineEnd)}`;
-                } else {
-                    url += `#L${line}`;
+            if (diffView) {
+                url += `diff/${diffLeftMinecraftVersion}/${minecraftVersion}/${file.replace(".class", "")}`;
+            } else {
+                url += `${minecraftVersion}/${file.replace(".class", "")}`;
+
+                if (selectedLines) {
+                    const { line, lineEnd } = selectedLines;
+                    if (lineEnd && lineEnd !== line) {
+                        url += `#L${Math.min(line, lineEnd)}-${Math.max(line, lineEnd)}`;
+                    } else {
+                        url += `#L${line}`;
+                    }
                 }
             }
 

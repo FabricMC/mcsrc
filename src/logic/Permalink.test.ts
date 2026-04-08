@@ -147,6 +147,45 @@ describe('Permalink', () => {
             });
         });
 
+        describe('Diff Path Parsing', () => {
+            it('should parse a diff permalink', () => {
+                const state = parsePathToState('1/diff/1.21/1.21.4/net/minecraft/ChatFormatting')!;
+
+                expect(state.version).toBe(1);
+                expect(state.minecraftVersion).toBe('1.21.4');
+                expect(state.file).toBe('net/minecraft/ChatFormatting.class');
+                expect(state.selectedLines).toBe(null);
+                expect(state.diff).toEqual({ leftMinecraftVersion: '1.21' });
+            });
+
+            it('should parse a diff permalink with a nested file path', () => {
+                const state = parsePathToState('1/diff/1.21/1.21.4/net/minecraft/world/entity/player/Player')!;
+
+                expect(state.file).toBe('net/minecraft/world/entity/player/Player.class');
+                expect(state.diff).toEqual({ leftMinecraftVersion: '1.21' });
+            });
+
+            it('should not append .class if already present in diff path', () => {
+                const state = parsePathToState('1/diff/1.21/1.21.4/net/minecraft/ChatFormatting.class')!;
+                expect(state.file).toBe('net/minecraft/ChatFormatting.class');
+            });
+
+            it('should URL-decode versions in diff path', () => {
+                const state = parsePathToState('1/diff/1.21%2B/1.21.4%2B/net/minecraft/ChatFormatting')!;
+                expect(state.diff).toEqual({ leftMinecraftVersion: '1.21+' });
+                expect(state.minecraftVersion).toBe('1.21.4+');
+            });
+
+            it('should return null when diff path has insufficient segments', () => {
+                expect(parsePathToState('1/diff/1.21/1.21.4')).toBeNull();
+            });
+
+            it('should not set diff when path is not a diff path', () => {
+                const state = parsePathToState('1/1.21.4/net/minecraft/ChatFormatting')!;
+                expect(state.diff).toBeUndefined();
+            });
+        });
+
         describe('Real-world Examples', () => {
             it('should parse multiline permalink', () => {
                 const state = parsePathToState('1/1.21.4/net/minecraft/server/MinecraftServer#L250-260')!;
@@ -158,6 +197,15 @@ describe('Permalink', () => {
                     line: 250,
                     lineEnd: 260
                 });
+            });
+
+            it('should parse a real-world diff permalink', () => {
+                const state = parsePathToState('1/diff/1.21.4/1.21.5/net/minecraft/server/MinecraftServer')!;
+
+                expect(state.version).toBe(1);
+                expect(state.minecraftVersion).toBe('1.21.5');
+                expect(state.file).toBe('net/minecraft/server/MinecraftServer.class');
+                expect(state.diff).toEqual({ leftMinecraftVersion: '1.21.4' });
             });
         });
     });
