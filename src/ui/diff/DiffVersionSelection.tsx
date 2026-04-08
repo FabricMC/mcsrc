@@ -11,7 +11,7 @@ const DiffVersionSelection = () => {
 
     if (!leftVersion) {
         // This will trigger the jar to load
-        getLeftDiff().selectedVersion.next(versions?.[1] || null);
+        getLeftDiff().selectedVersion.next(versions?.[0] || null);
     }
 
     return (
