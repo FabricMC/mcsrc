@@ -2,7 +2,7 @@ import React from "react";
 import { GithubOutlined, SearchOutlined, LinkOutlined, BranchesOutlined, CopyOutlined, CodeOutlined, FileSearchOutlined, AimOutlined } from '@ant-design/icons';
 import { Card, Typography, Space, Tooltip, theme } from 'antd';
 import { classesList } from "../logic/JarFile";
-import { openTab } from "../logic/Tabs";
+import { openCodeTab } from "../logic/Tabs";
 import { useObservable } from "../utils/UseObservable";
 
 const { Title, Paragraph } = Typography;
@@ -17,7 +17,7 @@ export const EmptyState = () => {
             const filteredClasses = outerClasses.filter(cls => !cls.endsWith('package-info.class'));
             if (filteredClasses.length > 0) {
                 const randomIndex = Math.floor(Math.random() * filteredClasses.length);
-                openTab(filteredClasses[randomIndex]);
+                openCodeTab(filteredClasses[randomIndex]);
             }
         }
     };

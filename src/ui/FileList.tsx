@@ -7,7 +7,7 @@ import { classesList } from '../logic/JarFile';
 import { useObservable } from '../utils/UseObservable';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { Key } from 'antd/es/table/interface';
-import { openTab } from '../logic/Tabs';
+import { openCodeTab } from '../logic/Tabs';
 import { minecraftJar, type MinecraftJar } from '../logic/MinecraftApi';
 import { decompileClass } from '../logic/Decompiler';
 import { selectedFile, referencesQuery } from '../logic/State';
@@ -235,7 +235,7 @@ const FileList = () => {
     const onSelect: TreeProps['onSelect'] = useCallback((selectedKeys: Key[]) => {
         if (selectedKeys.length === 0) return;
         if (!classes || !classes.includes(selectedKeys[0] as string)) return;
-        openTab(selectedKeys.join("/"));
+        openCodeTab(selectedKeys.join("/"));
     }, [classes]);
 
     const treeData = useObservable(fileTree);
