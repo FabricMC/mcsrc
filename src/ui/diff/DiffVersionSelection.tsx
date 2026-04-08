@@ -1,4 +1,5 @@
-import { Select, Flex } from "antd";
+import { Select, Flex, Button, Tooltip } from "antd";
+import { SwapOutlined } from "@ant-design/icons";
 import { useObservable } from "../../utils/UseObservable";
 import { minecraftVersionIds } from "../../logic/MinecraftApi";
 import { getLeftDiff, getRightDiff } from "../../logic/Diff";
@@ -25,7 +26,18 @@ const DiffVersionSelection = () => {
                     <Select.Option key={v} value={v}>{v}</Select.Option>
                 ))}
             </Select>
-            <span style={{ fontSize: 12, color: '#888' }}>→</span>
+            <Tooltip title="Swap versions">
+                <Button
+                    icon={<SwapOutlined />}
+                    size="small"
+                    onClick={() => {
+                        const left = getLeftDiff().selectedVersion.getValue();
+                        const right = getRightDiff().selectedVersion.getValue();
+                        getLeftDiff().selectedVersion.next(right);
+                        getRightDiff().selectedVersion.next(left);
+                    }}
+                />
+            </Tooltip>
             <Select
                 value={rightVersion || versions?.[0]}
                 onChange={(v) => {
