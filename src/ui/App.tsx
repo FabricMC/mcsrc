@@ -17,15 +17,6 @@ const App = () => {
     const isSmall = useObservable(isThin);
     const enableDiff = useObservable(diffView);
 
-    useEffect(() => {
-        const handler = (e: BeforeUnloadEvent) => {
-            e.stopPropagation(); e.preventDefault(); return false;
-        };
-
-        window.addEventListener("beforeunload", handler, true);
-        return () => window.removeEventListener("beforeunload", handler, true);
-    }, []);
-
     return (
         <ConfigProvider
             theme={{
