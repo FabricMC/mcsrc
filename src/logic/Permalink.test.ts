@@ -24,7 +24,7 @@ describe('Permalink', () => {
                 expect(parsePathToState('')).toEqual(null);
             });
 
-            it('should return default state when path has less than 3 segments', () => {
+            it('should return null when path has insufficient segments', () => {
                 expect(parsePathToState('1')).toEqual(null);
                 expect(parsePathToState('1/1.21')).toEqual(null);
             });
@@ -176,8 +176,19 @@ describe('Permalink', () => {
                 expect(state.minecraftVersion).toBe('1.21.4+');
             });
 
+            it('should parse a diff permalink without a file', () => {
+                const state = parsePathToState('1/diff/1.21/1.21.4')!;
+
+                expect(state.version).toBe(1);
+                expect(state.minecraftVersion).toBe('1.21.4');
+                expect(state.file).toBeUndefined();
+                expect(state.selectedLines).toBe(null);
+                expect(state.diff).toEqual({ leftMinecraftVersion: '1.21' });
+            });
+
             it('should return null when diff path has insufficient segments', () => {
-                expect(parsePathToState('1/diff/1.21/1.21.4')).toBeNull();
+                expect(parsePathToState('1/diff/1.21')).toBeNull();
+                expect(parsePathToState('1/diff')).toBeNull();
             });
 
             it('should not set diff when path is not a diff path', () => {
