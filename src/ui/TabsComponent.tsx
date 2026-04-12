@@ -1,12 +1,13 @@
 import { Tabs } from "antd";
 import { useObservable } from "../utils/UseObservable";
-import { closeTab, setTabPosition, closeOtherTabs, openCodeTab } from "../logic/Tabs";
+import { closeTab, setTabPosition, closeOtherTabs, openUnknownTypeTab, InheritanceViewTab } from "../logic/Tabs";
 import React, { useEffect, useRef, useState } from "react";
-import { selectedFile, openTabs } from "../logic/State";
+import { openTabs, openTab } from "../logic/State";
+import { HierarchyIcon } from "./intellij-icons";
 
 export const TabsComponent = () => {
     // variables - tabs
-    const activeKey = useObservable(selectedFile);
+    const activeKey = useObservable(openTab)?.key;
     const tabs = useObservable(openTabs);
     const tabRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
@@ -170,7 +171,7 @@ export const TabsComponent = () => {
             placeIndexRef.current !== currentIndex
         ) {
             setTabPosition(draggingKey.current, placeIndexRef.current);
-            openCodeTab(draggingKey.current);
+            openUnknownTypeTab(draggingKey.current);
         }
 
         draggingKey.current = "";
@@ -210,19 +211,22 @@ export const TabsComponent = () => {
                     type="editable-card"
                     activeKey={activeKey}
                     onEdit={onEdit}
-                    onTabClick={(key) => openCodeTab(key)}
-                    items={tabs?.map(({ key }) => ({
-                        key,
+                    onTabClick={(key) => openUnknownTypeTab(key)}
+                    items={tabs?.map(tab => ({
+                        key: tab.key,
                         label: (
                             <div
-                                onMouseDown={(e) => { handleMouseDown(e, key); }}
-                                onContextMenu={(e) => { handleContextMenu(e, key); }}
-                                ref={(el) => { tabRefs.current[key] = el; }}
-                                style={{ userSelect: "none", }}
+                                onMouseDown={(e) => { handleMouseDown(e, tab.key); }}
+                                onContextMenu={(e) => { handleContextMenu(e, tab.key); }}
+                                ref={(el) => { tabRefs.current[tab.key] = el; }}
+                                style={{ userSelect: "none", display: "inline" }}
                             >
-                                {key.replace(".class", "").split("/").pop()}
+                                {tab.key.replace(".class", "").split("/").pop()}
                             </div>
-                        )
+                        ),
+                        icon: (<span>
+                            {tab instanceof InheritanceViewTab ? <HierarchyIcon /> : ""}
+                        </span>)
                     }))}
                     renderTabBar={(tabBarProps, DefaultTabBar) => (
                         <DefaultTabBar {...tabBarProps}>

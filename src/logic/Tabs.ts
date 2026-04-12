@@ -1,6 +1,8 @@
-import { enableTabs } from "./Settings";
 import { editor } from "monaco-editor";
-import { selectedFile, openTabs, tabHistory } from "./State";
+import { selectedFile, openTabs, tabHistory, openTab } from "./State";
+import type { Key } from "react";
+import type { TreeDataNode } from "antd";
+import { enableTabs } from "./Settings";
 
 export abstract class Tab {
     public key: string;
@@ -11,15 +13,38 @@ export abstract class Tab {
     }
 
     public open() {
-        const openTab = getOpenTab();
-        if (openTab) openTab.onBlur();
+        if (openTab.value && openTab.value.key === this.key) return;
+        const activeTab = getOpenTab();
+        activeTab?.onBlur();
+
+        if (enableTabs.value) {
+            // Get tabs and find index of currently open one
+            const tabs = [...openTabs.value];
+            let openTabIndex = -1;
+            if (openTab.value != null) {
+                // openTabIndex = tabs.indexOf(openTab.value);
+                openTabIndex = tabs.findIndex(t => t.key === openTab.value?.key);
+            }
+
+            // If class is not already in open tabs array, add it
+            if (!tabs.some(tab => tab.key === this.key)) {
+                const insertIndex = openTabIndex >= 0 ? openTabIndex + 1 : tabs.length;
+                tabs.splice(insertIndex, 0, this);
+                openTabs.next(tabs);
+            }
+        } else {
+            openTabs.next([this]);
+        }
+
+        this.pushToTabHistory();
+        openTab.next(this);
     }
 
     public onClose() {
         openTabs.next(openTabs.value.filter(t => t.key !== this.key));
     };
 
-    abstract onBlur(): void;
+    protected onBlur() { };
 
     protected pushToTabHistory() {
         if (tabHistory.value.length < 50) {
@@ -45,7 +70,7 @@ export abstract class Tab {
         // Get the last tab
         let tab = openTabs.value.find(t => t.key === lastTabKeyFromHistory);
 
-        // If no tab can be find in the tab history, we simply to the first open Tab
+        // If no tab can be found in the tab history, we simply default to the first open one
         if (!tab) tab = openTabs.value[0];
         if (!tab) return;
 
@@ -57,6 +82,8 @@ export abstract class Tab {
         openTabs.value.forEach(t => {
             if (t.key !== this.key) t.onClose();
         });
+
+        openTabs.value.find(t => t.key === this.key)?.open();
     }
 }
 
@@ -64,10 +91,6 @@ export class CodeTab extends Tab {
     public editorRef: editor.IStandaloneCodeEditor | null = null;
     public viewState: editor.ICodeEditorViewState | null = null;
     public model: editor.ITextModel | null = null;
-
-    constructor(key: string) {
-        super(key);
-    }
 
     public open() {
         super.open();
@@ -77,38 +100,30 @@ export class CodeTab extends Tab {
             if (currentTab && currentTab.key !== this.key) {
                 selectedFile.next(this.key);
                 if (currentTab instanceof CodeTab) currentTab.invalidateCachedView();
-                openTabs.next([this]);
             } else if (!currentTab) {
                 selectedFile.next(this.key);
-                openTabs.next([this]);
             }
 
             return;
         }
 
-        const tabs = [...openTabs.value];
-        const activeIndex = tabs.findIndex(tab => tab.key === selectedFile.value);
-
-        // If class is not already open, open it
-        if (!tabs.some(tab => tab.key === this.key)) {
-            const insertIndex = activeIndex >= 0 ? activeIndex + 1 : tabs.length;
-            tabs.splice(insertIndex, 0, this);
-            openTabs.next(tabs);
-        }
-
-        // Switch to the newly opened tab, if not already open to the right class
+        // Update selectedFile
         if (selectedFile.value !== this.key) {
             selectedFile.next(this.key);
-            this.pushToTabHistory();
         }
     }
 
     public onBlur() {
-        // Save viewstate before a new tab is opened
-        this.cacheView(
-            this.editorRef?.saveViewState() || null,
-            this.editorRef?.getModel() || null
-        );
+        super.onBlur();
+
+        // Save viewstate & model before a new tab is opened
+        this.viewState = this.editorRef?.saveViewState() || null;
+        this.model = this.editorRef?.getModel() || null;
+
+        // Setting the editor's model here separates the two.
+        // Otherwise - if monaco is unmounted - all models are disposed.
+        // This allows for caching while a different tab type other than the code view is open
+        this.editorRef?.setModel(null);
     }
 
     public onClose() {
@@ -142,14 +157,6 @@ export class CodeTab extends Tab {
         return true;
     }
 
-    public cacheView(
-        viewState: editor.ICodeEditorViewState | null,
-        model: editor.ITextModel | null
-    ) {
-        this.viewState = viewState;
-        this.model = model;
-    }
-
     private invalidateCachedView() {
         this.viewState = null;
 
@@ -159,36 +166,107 @@ export class CodeTab extends Tab {
     }
 
     public applyViewToEditor(editor: editor.IStandaloneCodeEditor) {
-        if (!this.model) return;
+        if (!this.model) {
+            this.invalidateCachedView();
+            return;
+        }
+
         editor.setModel(this.model);
-        if (this.viewState) editor.restoreViewState(this.viewState);
+        editor.restoreViewState(this.viewState);
     }
 
     public closeOtherTabs(): void {
         super.closeOtherTabs();
+    }
+}
 
-        if (selectedFile.value !== this.key) {
-            selectedFile.next(this.key);
-        }
+export class InheritanceViewTab extends Tab {
+    public innerTabs: {
+        active: string,
+        tree: {
+            initialized: boolean,
+            nodes: TreeDataNode[],
+            expanded: Key[];
+        },
+        graph: {
+            initialized: boolean,
+            nodes: any[],
+            edges: any[],
+            viewport: undefined | { x: number, y: number, zoom: number; },
+        };
+    } = {
+            active: "tree",
+            tree: {
+                initialized: false,
+                nodes: [],
+                expanded: []
+            },
+            graph: {
+                initialized: false,
+                nodes: [] as any[],
+                edges: [] as any[],
+                viewport: undefined
+            }
+        };
+
+    constructor(key: string) {
+        super(`hierarchy::${key}`);
+    }
+
+    public open(): void {
+        super.open();
+
+        selectedFile.next("");
+
+        (async () => {
+            // We need to unfortunately do an async import here because else we'll get
+            // a circular import (minecraftJar)
+            const { selectedInheritanceClassName } = await import("./Inheritance");
+            selectedInheritanceClassName.next(this.key.replace("hierarchy::", ""));
+        })();
+    }
+
+    protected onBlur(): void {
+        super.onBlur();
+
+        (async () => {
+            const { selectedInheritanceClassName } = await import("./Inheritance");
+            selectedInheritanceClassName.next(null);
+        })();
     }
 }
 
 export const getOpenTab = <T extends Tab>(): T | null => {
-    return openTabs.value.find(o => o.key === selectedFile.value) as T || null;
+    // return openTabs.value.find(o => o.key === selectedFile.value) as T || null;
+    return openTab.value as T | null;
 };
 
-export const openCodeTab = (key: string) => {
+const openTabOfType = <T extends Tab>(
+    key: string,
+    TabClass: new (key: string) => T
+) => {
     const existing = openTabs.value.find(
-        t => t.key === key && t instanceof CodeTab
-    );
+        t => t.key === key && t instanceof TabClass
+    ) as T | undefined;
 
     if (existing) {
         existing.open();
         return;
     }
 
-    new CodeTab(key).open();
+    new TabClass(key).open();
 };
+
+// Looks for tab by key and opens it
+export const openUnknownTypeTab = (key: string) => {
+    if (openTab.value && openTab.value.key === key) return;
+    const existing = openTabs.value.find(t => t.key === key);
+    if (!existing) return;
+    existing.open();
+};
+
+export const openCodeTab = (key: string) => openTabOfType(key, CodeTab);
+export const openInheritanceViewTab = (key: string) => openTabOfType(key, InheritanceViewTab);
 
 export const closeTab = (key: string) => {
     const tab = openTabs.value.find(o => o.key === key);

@@ -1,9 +1,9 @@
 import { Tree, type TreeDataNode } from "antd";
 import { ApiOutlined, CopyrightOutlined, NumberOutlined } from "@ant-design/icons";
-import { useCallback, useMemo, type Key } from "react";
-import { ClassNode, selectedInheritanceClassName } from "../../logic/Inheritance";
+import { useCallback, type Key } from "react";
+import { ClassNode } from "../../logic/Inheritance";
 import { isEnum, isInterface } from "../../utils/Classfile";
-import { openCodeTab } from "../../logic/Tabs";
+import { InheritanceViewTab, openCodeTab } from "../../logic/Tabs";
 
 function getSimpleClassName(fullName: string): string {
     const i = fullName.lastIndexOf('/');
@@ -78,11 +78,18 @@ function buildTreeData(root: ClassNode, selectedName: string): { nodes: TreeData
     };
 }
 
-const InheritanceTree = ({ data }: { data: ClassNode; }) => {
-    const { nodes, expanded } = useMemo(() => {
-        if (!data) return { nodes: [], expanded: [] };
-        return buildTreeData(data.getRoot(), data.name);
-    }, [data]);
+const InheritanceTree = ({ tab, data }: { tab: InheritanceViewTab, data: ClassNode; }) => {
+    if (!tab.innerTabs.tree.initialized && data) {
+        const { nodes, expanded } = buildTreeData(data.getRoot(), data.name);
+
+        tab.innerTabs.tree.nodes = nodes;
+        tab.innerTabs.tree.expanded = expanded;
+        tab.innerTabs.tree.initialized = true;
+    }
+
+    const nodes = tab.innerTabs.tree.nodes;
+
+    const expanded = tab.innerTabs.tree.expanded;
 
     const onSelect = useCallback((selectedKeys: Key[]) => {
         const selected = selectedKeys[0];
@@ -90,16 +97,16 @@ const InheritanceTree = ({ data }: { data: ClassNode; }) => {
 
         // Convert internal class name format (e.g., "net/minecraft/ChatFormatting") to file path
         openCodeTab(`${selected}.class`);
-        selectedInheritanceClassName.next(null);
     }, []);
 
     return (
         <Tree
-            style={{ width: "100%", height: "80vh", overflow: "auto" }}
+            styles={{ root: { background: "transparent" } }}
             key={data?.name ?? "inheritance-tree"}
             treeData={nodes}
             selectedKeys={data ? [data.name] : []}
             defaultExpandedKeys={expanded}
+            onExpand={(expanded) => tab.innerTabs.tree.expanded = expanded}
             showLine
             showIcon
             onSelect={onSelect}
