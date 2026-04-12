@@ -1,6 +1,6 @@
 import { Tabs } from "antd";
 import { useObservable } from "../utils/UseObservable";
-import { closeTab, setTabPosition, closeOtherTabs, openUnknownTypeTab, InheritanceViewTab } from "../logic/Tabs";
+import { closeTab, setTabPosition, closeOtherTabs, openUnknownTypeTab, InheritanceViewTab } from "../logic/tabs";
 import React, { useEffect, useRef, useState } from "react";
 import { openTabs, openTab } from "../logic/State";
 import { HierarchyIcon } from "./intellij-icons";

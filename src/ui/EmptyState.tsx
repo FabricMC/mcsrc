@@ -1,8 +1,8 @@
 import React from "react";
-import { GithubOutlined, SearchOutlined, LinkOutlined, BranchesOutlined, CopyOutlined, CodeOutlined, FileSearchOutlined, AimOutlined } from '@ant-design/icons';
+import { GithubOutlined, SearchOutlined, LinkOutlined, BranchesOutlined, CopyOutlined, CodeOutlined, AimOutlined } from '@ant-design/icons';
 import { Card, Typography, Space, Tooltip, theme } from 'antd';
 import { classesList } from "../logic/JarFile";
-import { openCodeTab } from "../logic/Tabs";
+import { openCodeTab } from "../logic/tabs";
 import { useObservable } from "../utils/UseObservable";
 
 const { Title, Paragraph } = Typography;

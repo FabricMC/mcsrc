@@ -12,7 +12,7 @@ import { MenuFoldOutlined } from '@ant-design/icons';
 import { TabsComponent } from './TabsComponent.tsx';
 import Modals from './Modals.tsx';
 import { EmptyState } from './EmptyState.tsx';
-import { CodeTab, InheritanceViewTab } from '../logic/Tabs.ts';
+import { CodeTab, InheritanceViewTab } from '../logic/tabs';
 import { InheritanceView } from './inheritance/InheritanceView.tsx';
 
 const App = () => {

@@ -2,7 +2,7 @@ import { useObservable } from "../utils/UseObservable";
 import { formatReference, goToReference, referenceResults } from "../logic/FindAllReferences";
 import type { ReferenceString } from "../workers/JarIndex";
 import { map, Observable } from "rxjs";
-import { openCodeTab } from "../logic/Tabs";
+import { openCodeTab } from "../logic/tabs";
 import { referencesQuery } from "../logic/State";
 
 function getUsageClass(usage: ReferenceString): string {

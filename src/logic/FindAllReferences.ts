@@ -1,6 +1,6 @@
-import { BehaviorSubject, combineLatest, distinctUntilChanged, from, map, Observable, switchMap, throttleTime } from "rxjs";
+import { BehaviorSubject, distinctUntilChanged, from, map, Observable, switchMap, throttleTime } from "rxjs";
 import { jarIndex, type ReferenceKey, type ReferenceString } from "../workers/JarIndex";
-import { openCodeTab } from "./Tabs";
+import { openCodeTab } from "./tabs";
 import { referencesQuery } from "./State";
 import type { Token } from "./Tokens";
 import type { DecompileResult } from "../workers/decompile/types";

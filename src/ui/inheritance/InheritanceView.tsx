@@ -1,7 +1,7 @@
 import { useObservable } from "../../utils/UseObservable";
 import { selectedInheritanceClassNode } from "../../logic/Inheritance";
 import { lazy } from "react";
-import type { InheritanceViewTab } from "../../logic/Tabs";
+import type { InheritanceViewTab } from "../../logic/tabs";
 import { Tabs } from "antd";
 
 const InheritanceTree = lazy(() => import("./InheritanceTree"));
