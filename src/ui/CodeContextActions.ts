@@ -1,7 +1,7 @@
 import type { editor } from "monaco-editor";
 import { findTokenAtPosition } from './CodeUtils';
 import type { DecompileResult } from "../workers/decompile/types";
-import { openInheritanceViewTab } from "../logic/Tabs";
+import { openInheritanceViewTab } from "../logic/tabs";
 
 export const IS_DEFINITION_CONTEXT_KEY_NAME = "is_definition";
 

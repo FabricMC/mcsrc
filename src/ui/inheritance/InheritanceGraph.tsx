@@ -1,10 +1,10 @@
 import { ReactFlow, type Node, type Edge, Background, useReactFlow, ReactFlowProvider, applyNodeChanges } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { ClassNode, selectedInheritanceClassName } from "../../logic/Inheritance";
+import { ClassNode } from "../../logic/Inheritance";
 import { isInterface, isAbstract } from "../../utils/Classfile";
-import { useMemo, useCallback, useEffect, useLayoutEffect } from "react";
+import { useLayoutEffect } from "react";
 import dagre from "dagre";
-import { InheritanceViewTab, openCodeTab } from "../../logic/Tabs";
+import { InheritanceViewTab, openCodeTab } from "../../logic/tabs";
 
 function buildGraphData(classNode: ClassNode): { nodes: Node[]; edges: Edge[]; } {
     const nodes: Node[] = [];

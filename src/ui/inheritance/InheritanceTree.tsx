@@ -3,7 +3,7 @@ import { ApiOutlined, CopyrightOutlined, NumberOutlined } from "@ant-design/icon
 import { useCallback, type Key } from "react";
 import { ClassNode } from "../../logic/Inheritance";
 import { isEnum, isInterface } from "../../utils/Classfile";
-import { InheritanceViewTab, openCodeTab } from "../../logic/Tabs";
+import { InheritanceViewTab, openCodeTab } from "../../logic/tabs";
 
 function getSimpleClassName(fullName: string): string {
     const i = fullName.lastIndexOf('/');

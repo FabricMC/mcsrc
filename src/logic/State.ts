@@ -1,6 +1,6 @@
 import { BehaviorSubject } from "rxjs";
-import { filter, pairwise } from "rxjs/operators";
-import { CodeTab, Tab } from "./Tabs";
+import { pairwise } from "rxjs/operators";
+import { Tab, CodeTab } from "./tabs";
 import { getInitialState } from "./Permalink";
 
 const initialState = getInitialState();

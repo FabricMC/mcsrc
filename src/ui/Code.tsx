@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 import { editor, Range } from "monaco-editor";
 import { isThin } from '../logic/Browser';
 import { classesList } from '../logic/JarFile';
-import { CodeTab, getOpenTab } from '../logic/Tabs';
+import { CodeTab, getOpenTab } from '../logic/tabs';
 import { message, Spin } from 'antd';
 import { LoadingOutlined } from '@ant-design/icons';
 import { getTokenLocation } from '../logic/Tokens';
