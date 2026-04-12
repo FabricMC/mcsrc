@@ -42,7 +42,6 @@
     "oxlint-tsgolint": "^0.13.0",
     "typescript": "~5.9.3",
     "vite": "^7.3.1",
-    "vite-plugin-comlink": "^5.3.0",
     "vite-plugin-svgr": "^4.5.0",
     "vitest": "^4.0.18",
     "wrangler": "^4.81.1"
