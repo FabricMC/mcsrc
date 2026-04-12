@@ -14,6 +14,7 @@ import InterfaceSvg from './interface_dark.svg?react';
 import JavaSvg from './java_dark.svg?react';
 import RecordSvg from './record_dark.svg?react';
 import PackageSvg from './package_dark.svg?react';
+import HierarchySvg from './hierarchy_dark.svg?react';
 
 type SVGFC = React.FC<SVGProps<SVGSVGElement>>;
 const stack = (...svgs: SVGFC[]): SVGFC => (props) => (
@@ -48,6 +49,7 @@ export const InterfaceIcon = icon(InterfaceSvg);
 export const JavaIcon = icon(JavaSvg);
 export const RecordIcon = icon(RecordSvg);
 export const PackageIcon = icon(PackageSvg);
+export const HierarchyIcon = icon(HierarchySvg);
 
 // https://asm.ow2.io/javadoc/org/objectweb/asm/Opcodes.html
 // https://asm.ow2.io/javadoc/constant-values.html
