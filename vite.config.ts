@@ -58,9 +58,13 @@ export default defineConfig({
         warn(warning);
       },
       output: {
-        manualChunks: {
-          'inheritance': ['@xyflow/react', 'dagre'],
-          'monaco': ['monaco-editor', '@monaco-editor/react'],
+        manualChunks(id) {
+          if (id.includes('@xyflow/react') || id.includes('dagre')) {
+            return 'inheritance';
+          }
+          if (id.includes('monaco-editor')) {
+            return 'monaco';
+          }
         },
       },
     },
