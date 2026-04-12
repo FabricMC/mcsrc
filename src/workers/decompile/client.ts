@@ -5,7 +5,7 @@ import type { Jar } from "../../utils/Jar";
 import type { DecompileWorker } from "./worker";
 
 function createWorker() {
-    const worker = new Worker(new URL("./worker.ts", import.meta.url), { type: "module" });
+    const worker = new Worker(new URL("./worker.ts", import.meta.url), { type: "module", name: "decompiler" });
     return Comlink.wrap<DecompileWorker>(worker);
 }
 type WorkerInstance = ReturnType<typeof createWorker>;

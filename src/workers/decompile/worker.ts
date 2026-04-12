@@ -4,7 +4,7 @@ import Dexie, { type EntityTable, type Table } from "dexie";
 import type { Token } from "../../logic/Tokens";
 import { type DecompileResult, type DecompileOption, type DecompileData, DecompileJar } from "./types";
 import { openJar } from "../../utils/Jar";
-import { JarIndexWorker } from "../JarIndexWorker";
+import { JarIndexer } from "../jar-index/types";
 
 export class DecompileWorker {
     #lastPromise: Promise<unknown> | undefined = undefined;
@@ -271,7 +271,7 @@ export class DecompileWorker {
         return res;
     }
 
-    #indexer = new JarIndexWorker();
+    #indexer = new JarIndexer();
     getClassBytecode = (className: string, checksum: number, classData: ArrayBufferLike[]): Promise<DecompileResult> => this.schedule(async () => {
         let result = await this.db.results3.get([className, checksum, "bytecode"]);
         if (result) return result;

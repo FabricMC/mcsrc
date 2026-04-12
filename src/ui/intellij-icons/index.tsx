@@ -1,7 +1,7 @@
 import Icon from '@ant-design/icons';
 import type React from 'react';
 import type { SVGProps } from 'react';
-import type { ClassData } from '../../workers/JarIndex';
+import type { ClassData } from '../../workers/jar-index/client';
 import type { CustomIconComponentProps } from '@ant-design/icons/lib/components/Icon';
 
 import AnnotationSvg from './annotation_dark.svg?react';

@@ -1,19 +1,9 @@
 import * as Comlink from "comlink";
 import { BehaviorSubject, distinctUntilChanged, map, shareReplay } from "rxjs";
-import { minecraftJar, type MinecraftJar } from "../logic/MinecraftApi";
-import type { ClassDataString, JarIndexWorker } from "./JarIndexWorker";
+import { minecraftJar, type MinecraftJar } from "../../logic/MinecraftApi";
+import type { ClassDataString, JarIndexer, ReferenceKey, ReferenceString } from "./types";
 import Dexie, { type EntityTable } from "dexie";
 
-export type Class = string;
-export type Method = `${string}:${string}:${string}`;
-export type Field = `${string}:${string}:${string}`;
-// oxlint-disable-next-line typescript/no-redundant-type-constituents
-export type ReferenceKey = Class | Method;
-
-export type ReferenceString =
-    | `c:${Class}`
-    | `m:${Method}`
-    | `f:${Field}`;
 
 export interface ClassData {
     className: string;
@@ -112,7 +102,7 @@ export class JarIndex {
             console.log(`Indexing minecraft jar using ${this.workers.length} workers`);
 
             // Initialize all workers in parallel
-            await Promise.all(this.workers.map(worker => worker.c.setWorkerJar(this.minecraftJar.version, this.minecraftJar.blob)));
+            await Promise.all(this.workers.map(worker => worker.c.setJar(this.minecraftJar.version, this.minecraftJar.blob)));
 
             const jar = this.minecraftJar.jar;
             const classNames = Object.keys(jar.entries)
@@ -155,7 +145,7 @@ export class JarIndex {
             this.indexPromise = null;
             throw error;
         } finally {
-            await Promise.all(this.workers.map(worker => worker.c.setWorkerJar("", null)));
+            await Promise.all(this.workers.map(worker => worker.c.setJar("", null)));
         }
     }
 
@@ -216,9 +206,9 @@ export async function getBytecode(classData: ArrayBufferLike[]): Promise<string>
 }
 
 function createWrorker() {
-    const worker = new Worker(new URL("./JarIndexWorker2.ts", import.meta.url), { type: "module" });
+    const worker = new Worker(new URL("./worker.ts", import.meta.url), { type: "module", name: "jar-indexer" });
     return {
-        c: Comlink.wrap<JarIndexWorker>(worker),
+        c: Comlink.wrap<JarIndexer>(worker),
         w: worker,
-    }
+    };
 }
