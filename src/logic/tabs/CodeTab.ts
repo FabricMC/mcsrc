@@ -11,18 +11,6 @@ export class CodeTab extends Tab {
     public open() {
         super.open();
 
-        if (!enableTabs.value) {
-            const currentTab = openTabs.value[0];
-            if (currentTab && currentTab.key !== this.key) {
-                selectedFile.next(this.key);
-                if (currentTab instanceof CodeTab) currentTab.invalidateCachedView();
-            } else if (!currentTab) {
-                selectedFile.next(this.key);
-            }
-
-            return;
-        }
-
         // Update selectedFile
         if (selectedFile.value !== this.key) {
             selectedFile.next(this.key);
