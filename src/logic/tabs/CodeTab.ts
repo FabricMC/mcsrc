@@ -1,7 +1,6 @@
 import type { editor } from "monaco-editor";
 import { Tab } from "./Tabs";
-import { enableTabs } from "../Settings";
-import { openTabs, selectedFile } from "../State";
+import { selectedFile, tabHistory } from "../State";
 
 export class CodeTab extends Tab {
     public editorRef: editor.IStandaloneCodeEditor | null = null;
@@ -33,7 +32,6 @@ export class CodeTab extends Tab {
     public onClose() {
         super.onClose();
         this.invalidateCachedView();
-        this.removeFromTabHistory();
     }
 
     public setModel(model: editor.ITextModel) {
@@ -79,7 +77,9 @@ export class CodeTab extends Tab {
         editor.restoreViewState(this.viewState);
     }
 
-    public closeOtherTabs(): void {
-        super.closeOtherTabs();
+    public openLastTabFromHistory(): void {
+        super.openLastTabFromHistory();
+        if (tabHistory.value.length > 0) return;
+        selectedFile.next("");
     }
 }

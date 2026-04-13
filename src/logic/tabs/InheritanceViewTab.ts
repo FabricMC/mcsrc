@@ -1,7 +1,7 @@
 import type { TreeDataNode } from "antd";
 import { Tab } from "./Tabs";
 import type { Key } from "react";
-import { selectedFile } from "../State";
+import { selectedFile, tabHistory } from "../State";
 
 export class InheritanceViewTab extends Tab {
     public innerTabs: {
@@ -32,29 +32,33 @@ export class InheritanceViewTab extends Tab {
             }
         };
 
-    constructor(key: string) {
-        super(`hierarchy::${key}`);
+    private async setSelectedInheritanceClassName(key: string | null) {
+        // We need to unfortunately do an async import here because else we'll get
+        // a circular import (minecraftJar)
+        const { selectedInheritanceClassName } = await import("../Inheritance");
+        selectedInheritanceClassName.next(key);
     }
 
     public open(): void {
         super.open();
 
         selectedFile.next("");
-
-        (async () => {
-            // We need to unfortunately do an async import here because else we'll get
-            // a circular import (minecraftJar)
-            const { selectedInheritanceClassName } = await import("../Inheritance");
-            selectedInheritanceClassName.next(this.key.replace("hierarchy::", ""));
-        })();
+        this.setSelectedInheritanceClassName(this.key.replace("hierarchy::", ""));
     }
 
     protected onBlur(): void {
         super.onBlur();
+        this.setSelectedInheritanceClassName(null);
+    }
 
-        (async () => {
-            const { selectedInheritanceClassName } = await import("../Inheritance");
-            selectedInheritanceClassName.next(null);
-        })();
+    public onClose(): void {
+        super.onClose();
+        this.setSelectedInheritanceClassName(null);
+    }
+
+    public openLastTabFromHistory(): void {
+        super.openLastTabFromHistory();
+        if (tabHistory.value.length > 0) return;
+        this.setSelectedInheritanceClassName("");
     }
 }

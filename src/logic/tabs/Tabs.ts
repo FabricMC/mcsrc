@@ -1,4 +1,4 @@
-import { selectedFile, openTabs, tabHistory, openTab } from "../State";
+import { openTabs, tabHistory, openTab } from "../State";
 import { enableTabs } from "../Settings";
 import { CodeTab, InheritanceViewTab } from "./index";
 
@@ -40,6 +40,12 @@ export abstract class Tab {
 
     public onClose() {
         openTabs.next(openTabs.value.filter(t => t.key !== this.key));
+
+        if (openTabs.value.length === 0) {
+            openTab.next(null);
+        }
+
+        this.removeFromTabHistory();
     };
 
     protected onBlur() { };
@@ -59,20 +65,12 @@ export abstract class Tab {
         const lastTabKeyFromHistory = tabHistory.value.length > 0 ?
             tabHistory.value[tabHistory.value.length - 1] : null;
 
-        if (!lastTabKeyFromHistory) {
-            // No tabs left in history
-            selectedFile.next(""); // clear selectedFile
-            return;
-        }
-
         // Get the last tab
         let tab = openTabs.value.find(t => t.key === lastTabKeyFromHistory);
 
         // If no tab can be found in the tab history, we simply default to the first open one
         if (!tab) tab = openTabs.value[0];
-        if (!tab) return;
-
-        tab.open();
+        tab?.open();
     }
 
     public closeOtherTabs() {
@@ -85,9 +83,7 @@ export abstract class Tab {
     }
 }
 
-
 export const getOpenTab = <T extends Tab>(): T | null => {
-    // return openTabs.value.find(o => o.key === selectedFile.value) as T || null;
     return openTab.value as T | null;
 };
 
