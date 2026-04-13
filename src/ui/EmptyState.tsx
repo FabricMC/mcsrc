@@ -67,7 +67,7 @@ export const EmptyState = () => {
                 fontFamily: token.fontFamily
             }}
         >
-            <Space direction="vertical" size="large" align="center" style={{ padding: "2rem", margin: "auto" }}>
+            <Space orientation="vertical" size="large" align="center" style={{ padding: "2rem", margin: "auto" }}>
                 <img
                     src="/assets/mcsrc_favicon.svg"
                     alt="mcsrc logo"
@@ -113,7 +113,7 @@ export const EmptyState = () => {
                             border: "1px solid #30363d",
                             marginBottom: "24px"
                         }}
-                        bodyStyle={{ padding: "1.5rem" }}
+                        styles={{ body: { padding: "1.5rem" } }}
                     >
                         <Title level={4} style={{
                             marginTop: 0,

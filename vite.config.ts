@@ -1,12 +1,10 @@
 import { defineConfig } from 'vitest/config';
-import { comlink } from "vite-plugin-comlink";
 import react from '@vitejs/plugin-react';
 import svgr from 'vite-plugin-svgr';
 
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [
-    comlink(),
     react(),
     svgr(),
     {
@@ -25,7 +23,6 @@ export default defineConfig({
     },
   ],
   worker: {
-    plugins: () => [comlink()],
     format: 'es',
   },
   test: {
@@ -61,9 +58,13 @@ export default defineConfig({
         warn(warning);
       },
       output: {
-        manualChunks: {
-          'inheritance': ['@xyflow/react', 'dagre'],
-          'monaco': ['monaco-editor', '@monaco-editor/react'],
+        manualChunks(id) {
+          if (id.includes('@xyflow/react') || id.includes('dagre')) {
+            return 'inheritance';
+          }
+          if (id.includes('monaco-editor')) {
+            return 'monaco';
+          }
         },
       },
     },

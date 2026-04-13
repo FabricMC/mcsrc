@@ -1,19 +1,9 @@
+import * as Comlink from "comlink";
 import { BehaviorSubject, distinctUntilChanged, map, shareReplay } from "rxjs";
-import { endpointSymbol } from "vite-plugin-comlink/symbol";
-import { minecraftJar, type MinecraftJar } from "../logic/MinecraftApi";
-import type { ClassDataString } from "./JarIndexWorker";
+import { minecraftJar, type MinecraftJar } from "../../logic/MinecraftApi";
+import type { ClassDataString, JarIndexer, ReferenceKey, ReferenceString } from "./types";
 import Dexie, { type EntityTable } from "dexie";
 
-export type Class = string;
-export type Method = `${string}:${string}:${string}`;
-export type Field = `${string}:${string}:${string}`;
-// oxlint-disable-next-line typescript/no-redundant-type-constituents
-export type ReferenceKey = Class | Method;
-
-export type ReferenceString =
-    | `c:${Class}`
-    | `m:${Method}`
-    | `f:${Field}`;
 
 export interface ClassData {
     className: string;
@@ -31,8 +21,6 @@ export function parseClassData(data: ClassDataString): ClassData {
         interfaces: interfacesStr ? interfacesStr.split(",").filter(i => i.length > 0) : []
     };
 }
-
-type JarIndexWorker = typeof import("./JarIndexWorker");
 
 // Percent complete is total >= 0
 export const indexProgress = new BehaviorSubject<number>(-1);
@@ -91,7 +79,7 @@ export class JarIndex {
     destroy(): void {
         if (this._workers) {
             for (const worker of this._workers) {
-                worker[endpointSymbol].terminate();
+                worker.w.terminate();
             }
             delete this._workers;
         }
@@ -114,7 +102,7 @@ export class JarIndex {
             console.log(`Indexing minecraft jar using ${this.workers.length} workers`);
 
             // Initialize all workers in parallel
-            await Promise.all(this.workers.map(worker => worker.setWorkerJar(this.minecraftJar.version, this.minecraftJar.blob)));
+            await Promise.all(this.workers.map(worker => worker.c.setJar(this.minecraftJar.version, this.minecraftJar.blob)));
 
             const jar = this.minecraftJar.jar;
             const classNames = Object.keys(jar.entries)
@@ -133,11 +121,11 @@ export class JarIndex {
                         const batch = taskQueue.splice(0, batchSize);
 
                         if (batch.length === 0) {
-                            const indexed = await worker.getReferenceSize();
+                            const indexed = await worker.c.getReferenceSize();
                             return indexed;
                         }
 
-                        await worker.indexBatch(batch);
+                        await worker.c.indexBatch(batch);
                         completed += batch.length;
 
                         indexProgress.next(Math.round((completed / classNames.length) * 100));
@@ -157,7 +145,7 @@ export class JarIndex {
             this.indexPromise = null;
             throw error;
         } finally {
-            await Promise.all(this.workers.map(worker => worker.setWorkerJar("", null)));
+            await Promise.all(this.workers.map(worker => worker.c.setJar("", null)));
         }
     }
 
@@ -167,7 +155,7 @@ export class JarIndex {
         let results: Promise<ReferenceString[]>[] = [];
 
         for (const worker of this.workers) {
-            results.push(worker.getReference(key));
+            results.push(worker.c.getReference(key));
         }
 
         return Promise.all(results).then(arrays => arrays.flat());
@@ -189,7 +177,7 @@ export class JarIndex {
 
             let results: Promise<ClassDataString[]>[] = [];
             for (const worker of this.workers) {
-                results.push(worker.getClassData());
+                results.push(worker.c.getClassData());
             }
 
             const classDataStrings = await Promise.all(results).then(arrays => arrays.flat());
@@ -207,17 +195,20 @@ export class JarIndex {
     }
 }
 
-let bytecodeWorker: JarIndexWorker | null = null;
+let bytecodeWorker: ReturnType<typeof createWrorker> | null = null;
 
 export async function getBytecode(classData: ArrayBufferLike[]): Promise<string> {
     if (!bytecodeWorker) {
         bytecodeWorker = createWrorker();
     }
-    return bytecodeWorker.getBytecode(classData);
+
+    return bytecodeWorker.c.getBytecode(classData);
 }
 
 function createWrorker() {
-    return new ComlinkWorker<JarIndexWorker>(
-        new URL("./JarIndexWorker", import.meta.url),
-    );
+    const worker = new Worker(new URL("./worker.ts", import.meta.url), { type: "module", name: "jar-indexer" });
+    return {
+        c: Comlink.wrap<JarIndexer>(worker),
+        w: worker,
+    };
 }

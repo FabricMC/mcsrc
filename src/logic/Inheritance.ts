@@ -1,5 +1,5 @@
 import { BehaviorSubject, combineLatest, distinctUntilChanged, map, of, shareReplay, switchMap } from "rxjs";
-import { jarIndex } from "../workers/JarIndex";
+import { jarIndex } from "../workers/jar-index/client";
 import { minecraftJar } from "./MinecraftApi";
 
 export class ClassNode {

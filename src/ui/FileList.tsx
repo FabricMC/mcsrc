@@ -12,7 +12,7 @@ import { minecraftJar, type MinecraftJar } from '../logic/MinecraftApi';
 import { decompileClass } from '../logic/Decompiler';
 import { selectedFile, referencesQuery } from '../logic/State';
 import { compactPackages } from '../logic/Settings';
-import { jarIndex, type ClassData } from '../workers/JarIndex';
+import { jarIndex, type ClassData } from '../workers/jar-index/client';
 import { ClassDataIcon, JavaIcon, PackageIcon } from './intellij-icons';
 
 const classData: Observable<Map<string, ClassData> | null> = jarIndex.pipe(
