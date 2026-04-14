@@ -4,7 +4,7 @@ import SideBar from './SideBar.tsx';
 import { useEffect, useState } from 'react';
 import { useObservable } from '../utils/UseObservable.ts';
 import { isThin } from '../logic/Browser.ts';
-import { diffView, mobileDrawerOpen, openTabs, selectedFile } from '../logic/State';
+import { diffView, mobileDrawerOpen, openTab, openTabs, selectedFile } from '../logic/State';
 import DiffView from './diff/DiffView.tsx';
 import { FilepathHeader } from './FilepathHeader.tsx';
 import { enableTabs } from '../logic/Settings.ts';
@@ -12,6 +12,8 @@ import { MenuFoldOutlined } from '@ant-design/icons';
 import { TabsComponent } from './TabsComponent.tsx';
 import Modals from './Modals.tsx';
 import { EmptyState } from './EmptyState.tsx';
+import { CodeTab, InheritanceViewTab } from '../logic/tabs';
+import { InheritanceView } from './inheritance/InheritanceView.tsx';
 
 const App = () => {
     const isSmall = useObservable(isThin);
@@ -37,9 +39,15 @@ const App = () => {
     );
 };
 
-const CodeOrEmpty = () => {
+const MainView = () => {
     const tabs = useObservable(openTabs);
-    return tabs && tabs.length > 0 ? <Code /> : <EmptyState />;
+    const currentTab = useObservable(openTab);
+
+    if (!tabs || tabs.length == 0) return <EmptyState />;
+
+    if (currentTab instanceof CodeTab) return <Code />;
+    else if (currentTab instanceof InheritanceViewTab) return <InheritanceView tab={currentTab} />;
+    else return <EmptyState />;
 };
 
 const LargeApp = () => {
@@ -56,7 +64,7 @@ const LargeApp = () => {
                     {tabsEnabled && <TabsComponent />}
                     <FilepathHeader />
                     <div style={{ flexGrow: 1 }}>
-                        <CodeOrEmpty />
+                        <MainView />
                     </div>
                 </Flex>
             </Splitter.Panel>
@@ -109,7 +117,7 @@ const MobileApp = () => {
             </Flex>
             <FilepathHeader />
             <div style={{ flexGrow: 1, overflow: "auto" }}>
-                <CodeOrEmpty />
+                <MainView />
             </div>
         </Flex>
     );

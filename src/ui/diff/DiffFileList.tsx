@@ -16,7 +16,7 @@ import { isDecompiling } from "../../logic/Decompiler.ts";
 import { useEffect, useMemo } from 'react';
 import { bytecode, unifiedDiff } from "../../logic/Settings.ts";
 import { selectedFile, diffView } from '../../logic/State.ts';
-import { openCodeTab } from '../../logic/Tabs.ts';
+import { openCodeTab } from '../../logic/tabs';
 
 const statusColors: Record<ChangeState, string> = {
     modified: 'gold',
