@@ -2,7 +2,7 @@ import { Button, Modal, type CheckboxProps, Form, Tooltip, InputNumber, type Inp
 import { SettingOutlined } from '@ant-design/icons';
 import { Checkbox } from 'antd';
 import { useObservable } from "../utils/UseObservable";
-import { BooleanSetting, enableTabs, displayLambdas, focusSearch, KeybindSetting, type KeybindValue, bytecode, showStructure, NumberSetting, preferWasmDecompiler, compactPackages } from "../logic/Settings";
+import { BooleanSetting, enableTabs, displayLambdas, focusSearch, KeybindSetting, type KeybindValue, bytecode, showStructure, NumberSetting, preferWasmDecompiler, compactPackages, fullTextSearchBind } from "../logic/Settings";
 import { capturingKeybind, rawKeydownEvent } from "../logic/Keybinds";
 import { BehaviorSubject } from "rxjs";
 import type React from "react";
@@ -34,9 +34,10 @@ const SettingsModal = () => {
                 <BooleanOption setting={compactPackages} title={"Compact Packages"} tooltip="Collapse packages with one child into one." />
                 <BooleanOption setting={displayLambdas} title={"Lambda Names"} tooltip="Display lambda names as inline comments. Does not support permalinking." disabled={bytecodeValue} />
                 <BooleanOption setting={bytecode} title={"Show Bytecode"} tooltip="Show bytecode instructions alongside decompiled source. Does not support permalinking." disabled={displayLambdasValue} />
-                <BooleanOption setting={preferWasmDecompiler} title={"Prefer WASM Decompiler"} tooltip="WASM decompiler might be faster than JavaScript."/>
+                <BooleanOption setting={preferWasmDecompiler} title={"Prefer WASM Decompiler"} tooltip="WASM decompiler might be faster than JavaScript." />
                 <KeybindOption setting={focusSearch} title={"Focus Search"} captureId="focus_search" />
                 <KeybindOption setting={showStructure} title={"Show Structure"} captureId="show_structure" />
+                <KeybindOption setting={fullTextSearchBind} title={"Full Text Search"} captureId="full_text_search" />
             </Form>
         </Modal>
     );
@@ -72,18 +73,18 @@ export interface NumberOptionProps {
     testid?: string;
 }
 
-export const NumberOption: React.FC<NumberOptionProps> = ({ setting, title, min, max, testid}) => {
+export const NumberOption: React.FC<NumberOptionProps> = ({ setting, title, min, max, testid }) => {
     const value = useObservable(setting.observable);
     const onChange: InputNumberProps<number>["onChange"] = (e) => {
         setting.value = e ?? setting.defaultValue;
-    }
+    };
 
     return (
         <Form.Item label={title}>
-            <InputNumber data-testid={testid} min={min} max={max} value={value} onChange={onChange}/>
+            <InputNumber data-testid={testid} min={min} max={max} value={value} onChange={onChange} />
         </Form.Item>
     );
-}
+};
 
 interface KeybindOptionProps {
     setting: KeybindSetting;
