@@ -1,8 +1,6 @@
 import { Tree, type TreeDataNode } from "antd";
-import { ApiOutlined, CopyrightOutlined, NumberOutlined } from "@ant-design/icons";
 import { useCallback, type Key } from "react";
 import { ClassNode } from "../../logic/Inheritance";
-import { isEnum, isInterface } from "../../utils/Classfile";
 import { InheritanceViewTab, openCodeTab } from "../../logic/tabs";
 import { ClassDataIcon } from "../intellij-icons";
 
@@ -102,7 +100,11 @@ const InheritanceTree = ({ tab, data }: { tab: InheritanceViewTab, data: ClassNo
     return (
         <Tree
             styles={{
-                root: { background: "transparent" },
+                root: {
+                    background: "transparent",
+                    height: "100%",
+                    overflow: "auto"
+                },
                 itemIcon: {
                     position: "relative",
                     display: "flex",

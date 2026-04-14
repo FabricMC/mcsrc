@@ -22,17 +22,13 @@ export const InheritanceView = ({ tab }: { tab: InheritanceViewTab; }) => {
     }];
 
     return (
-        <div style={{
-            width: "100%",
-            height: "100%",
-        }}>
-            <Tabs
-                defaultActiveKey={tab.innerTabs.active}
-                key={tab.innerTabs.active}
-                onChange={(key) => tab.innerTabs.active = key}
-                items={items}
-                centered
-            />
-        </div>
+        <Tabs
+            defaultActiveKey={tab.innerTabs.active}
+            key={tab.innerTabs.active}
+            onChange={(key) => tab.innerTabs.active = key}
+            items={items}
+            centered
+            styles={{ root: { height: "100%" }, content: { height: "100%" } }}
+        />
     );
 };
