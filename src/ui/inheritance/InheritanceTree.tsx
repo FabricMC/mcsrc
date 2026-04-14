@@ -101,7 +101,15 @@ const InheritanceTree = ({ tab, data }: { tab: InheritanceViewTab, data: ClassNo
 
     return (
         <Tree
-            styles={{ root: { background: "transparent" } }}
+            styles={{
+                root: { background: "transparent" },
+                itemIcon: {
+                    position: "relative",
+                    display: "flex",
+                    justifyContent: "center",
+                    alignItems: "center"
+                }
+            }}
             key={data?.name ?? "inheritance-tree"}
             treeData={nodes}
             selectedKeys={data ? [data.name] : []}
