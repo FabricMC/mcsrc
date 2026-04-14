@@ -103,7 +103,8 @@ const InheritanceTree = ({ tab, data }: { tab: InheritanceViewTab, data: ClassNo
                 root: {
                     background: "transparent",
                     height: "100%",
-                    overflow: "auto"
+                    overflow: "auto",
+                    paddingBottom: "3rem"
                 },
                 itemIcon: {
                     position: "relative",
