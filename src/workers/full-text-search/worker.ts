@@ -1,5 +1,5 @@
 import * as Comlink from "comlink";
-import sqlite3InitModule, { type OpfsDatabase } from "@sqlite.org/sqlite-wasm";
+import sqlite3InitModule, { type Database } from "@sqlite.org/sqlite-wasm";
 
 export interface FullTextSearchRegion {
     start: number;
@@ -12,7 +12,7 @@ export interface FullTextSearchResult {
 }
 
 export class FullTextSearchWorker {
-    #db?: OpfsDatabase;
+    #db?: Database;
 
     async init(name: string): Promise<string | undefined> {
         try {
@@ -21,7 +21,7 @@ export class FullTextSearchWorker {
             console.log("Loading SQLite3 Module... Done.");
 
             // TODO: change the db name
-            this.#db = new sqlite3.oo1.OpfsDb(`/fts-test.${name}.sqlite3`);
+            this.#db = new sqlite3.oo1.DB(`/fts.${name}.sqlite3`);
             this.#db.exec("CREATE VIRTUAL TABLE IF NOT EXISTS sources USING fts5(key, source);");
             return undefined;
         } catch (err: any) {

@@ -4,14 +4,11 @@ import { useObservable } from "../utils/UseObservable";
 import { Input, Modal } from "antd";
 import { BehaviorSubject, combineLatest, switchMap } from "rxjs";
 import { fullTextSearch } from "../workers/full-text-search/client";
-import { currentResult } from "../logic/Decompiler";
 
 const query = new BehaviorSubject("");
-const resultsObs = combineLatest([fullTextSearch, query, currentResult]).pipe(
-    switchMap(async ([fts, query, currentResult]) => {
+const resultsObs = combineLatest([fullTextSearch, query]).pipe(
+    switchMap(async ([fts, query]) => {
         if (query.length < 3) return [];
-
-        await fts.index(currentResult.className, currentResult.source);
         const res = await fts.find(query);
         return res;
     }));
