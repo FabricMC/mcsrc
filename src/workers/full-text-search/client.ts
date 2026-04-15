@@ -1,7 +1,7 @@
 import * as Comlink from "comlink";
 import { minecraftJar, type MinecraftJar } from "../../logic/MinecraftApi";
 import { distinctUntilChanged, mergeMap, shareReplay } from "rxjs";
-import type { FullTextSearchResult, FullTextSearchWorker } from "./worker";
+import type { FullTextSearchOptions, FullTextSearchResult, FullTextSearchWorker } from "./worker";
 import { onDecompiledSources } from "../decompile/client";
 
 let currentInstance: FullTextSearch | undefined;
@@ -45,8 +45,8 @@ export class FullTextSearch {
         await this.#_worker?.destroy();
     }
 
-    async find(query: string): Promise<FullTextSearchResult[]> {
+    async find(query: string, options?: FullTextSearchOptions): Promise<FullTextSearchResult[]> {
         const worker = await this.#worker();
-        return await worker.find(query);
+        return await worker.find(query, options);
     }
 }

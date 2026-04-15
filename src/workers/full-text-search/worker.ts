@@ -1,6 +1,14 @@
 import * as Comlink from "comlink";
 import sqlite3InitModule, { type Database } from "@sqlite.org/sqlite-wasm";
 
+/** https://www.sqlite.org/fts5.html#the_snippet_function */
+export interface FullTextSearchOptions {
+    pre?: string;
+    post?: string;
+    ellipsis?: string;
+    maxTokens?: number;
+}
+
 export interface FullTextSearchRegion {
     start: number;
     end: number;
@@ -20,9 +28,8 @@ export class FullTextSearchWorker {
             const sqlite3 = await sqlite3InitModule();
             console.log("Loading SQLite3 Module... Done.");
 
-            // TODO: change the db name
             this.#db = new sqlite3.oo1.DB(`/fts.${name}.sqlite3`);
-            this.#db.exec("CREATE VIRTUAL TABLE IF NOT EXISTS sources USING fts5(key, source);");
+            this.#db.exec("CREATE VIRTUAL TABLE IF NOT EXISTS sources USING fts5(key, source, tokenize='porter');");
             return undefined;
         } catch (err: any) {
             console.error(err);
@@ -47,19 +54,23 @@ export class FullTextSearchWorker {
         });
     }
 
-    find(query: string): FullTextSearchResult[] {
+    find(query: string, options?: FullTextSearchOptions): FullTextSearchResult[] {
         if (!this.#db) {
             console.error("DB not initialized");
             return [];
         }
 
+        console.log("Starting full text search...");
+        const startTime = performance.now();
         const res = this.#db.selectObjects(`
             SELECT
                 key,
-                snippet(sources, -1, '[', ']', '...', 10) AS snippet
+                snippet(sources, -1, ?, ?, ?, ?) AS snippet
             FROM sources
             WHERE source MATCH ?;
-        `, [query]);
+        `, [options?.pre ?? "[", options?.post ?? "]", options?.ellipsis ?? "…", options?.maxTokens ?? 10, query]);
+        const elapsedMs = performance.now() - startTime;
+        console.log(`Finished in ${elapsedMs} ms`);
 
         return res.map((r: any) => ({
             key: r["key"] as string,
