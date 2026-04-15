@@ -60,10 +60,10 @@ const LargeApp = () => {
                 <SideBar />
             </Splitter.Panel>
             <Splitter.Panel size={sizes[1]}>
-                <Flex vertical style={{ height: "100%" }}>
+                <Flex vertical style={{ height: "100%", overflow: "hidden", }}>
                     {tabsEnabled && <TabsComponent />}
                     <FilepathHeader />
-                    <div style={{ flexGrow: 1 }}>
+                    <div style={{ height: "100%" }}>
                         <MainView />
                     </div>
                 </Flex>

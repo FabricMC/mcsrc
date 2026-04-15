@@ -1,9 +1,8 @@
 import { Tree, type TreeDataNode } from "antd";
-import { ApiOutlined, CopyrightOutlined, NumberOutlined } from "@ant-design/icons";
 import { useCallback, type Key } from "react";
 import { ClassNode } from "../../logic/Inheritance";
-import { isEnum, isInterface } from "../../utils/Classfile";
 import { InheritanceViewTab, openCodeTab } from "../../logic/tabs";
+import { ClassDataIcon } from "../intellij-icons";
 
 function getSimpleClassName(fullName: string): string {
     const i = fullName.lastIndexOf('/');
@@ -11,9 +10,8 @@ function getSimpleClassName(fullName: string): string {
 }
 
 function renderIcon(node: ClassNode) {
-    if (isEnum(node.accessFlags)) return <NumberOutlined style={{ color: "#9254de" }} />;
-    if (isInterface(node.accessFlags)) return <ApiOutlined style={{ color: "#73d13d" }} />;
-    return <CopyrightOutlined style={{ color: "#597ef7" }} />;
+    if (node.classData == null) return;
+    return <ClassDataIcon data={node.classData} style={{ fontSize: '16px' }} />;
 }
 
 function renderTitle(node: ClassNode) {
@@ -101,7 +99,20 @@ const InheritanceTree = ({ tab, data }: { tab: InheritanceViewTab, data: ClassNo
 
     return (
         <Tree
-            styles={{ root: { background: "transparent" } }}
+            styles={{
+                root: {
+                    background: "transparent",
+                    height: "100%",
+                    overflow: "auto",
+                    paddingBottom: "3rem"
+                },
+                itemIcon: {
+                    position: "relative",
+                    display: "flex",
+                    justifyContent: "center",
+                    alignItems: "center"
+                }
+            }}
             key={data?.name ?? "inheritance-tree"}
             treeData={nodes}
             selectedKeys={data ? [data.name] : []}

@@ -21,8 +21,8 @@ function buildGraphData(classNode: ClassNode): { nodes: Node[]; edges: Edge[]; }
         visited.add(node.name);
 
         const isSelected = node.name === classNode.name;
-        const nodeIsInterface = isInterface(node.accessFlags);
-        const nodeIsAbstract = isAbstract(node.accessFlags);
+        const nodeIsInterface = node.classData ? isInterface(node.classData.accessFlags) : false;
+        const nodeIsAbstract = node.classData ? isAbstract(node.classData.accessFlags) : false;
         let background = "#fff";
         let color = "#000";
         let borderStyle = "1px solid #1890ff";
@@ -70,8 +70,8 @@ function buildGraphData(classNode: ClassNode): { nodes: Node[]; edges: Edge[]; }
         visited.add(node.name);
 
         const isSelected = node.name === classNode.name;
-        const nodeIsInterface = isInterface(node.accessFlags);
-        const nodeIsAbstract = isAbstract(node.accessFlags);
+        const nodeIsInterface = node.classData ? isInterface(node.classData.accessFlags) : false;
+        const nodeIsAbstract = node.classData ? isAbstract(node.classData.accessFlags) : false;
         let background = "#fff";
         let color = "#000";
         let borderStyle = "1px solid #1890ff";
@@ -202,7 +202,7 @@ const InheritanceGraphInner = ({ tab, data }: { tab: InheritanceViewTab; data: C
         <ReactFlow
             nodes={nodes}
             edges={edges}
-            onNodeClick={(_, { id }) => openCodeTab(id)}
+            onNodeClick={(_, { id }) => openCodeTab(`${id}.class`)}
             onMoveEnd={onMoveEnd}
             defaultViewport={tab.innerTabs.graph.viewport}
             proOptions={{ hideAttribution: true }}

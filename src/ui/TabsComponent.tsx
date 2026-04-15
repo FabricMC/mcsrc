@@ -224,9 +224,9 @@ export const TabsComponent = () => {
                                 {tab.key.replace(".class", "").split("/").pop()}
                             </div>
                         ),
-                        icon: (<span>
-                            {tab instanceof InheritanceViewTab ? <HierarchyIcon /> : ""}
-                        </span>)
+                        icon: (
+                            tab instanceof InheritanceViewTab ? <HierarchyIcon /> : null
+                        )
                     }))}
                     renderTabBar={(tabBarProps, DefaultTabBar) => (
                         <DefaultTabBar {...tabBarProps}>
