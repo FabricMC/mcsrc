@@ -31,12 +31,12 @@ export const FilepathHeader = () => {
                 textOverflow: "ellipsis",
                 overflow: "hidden",
                 direction: "rtl",
-                color: "white"
+                color: token.colorText
             }}>
                 {info.replace(".class", "").split("/").map((path, i, arr) => (
                     <span key={path}>
-                        <span style={{ color: i < arr.length - 1 ? "gray" : "white" }}>{path}</span>
-                        {i < arr.length - 1 && <span style={{ color: "gray" }}>/</span>}
+                        <span style={{ color: i < arr.length - 1 ? token.colorTextTertiary : token.colorText }}>{path}</span>
+                        {i < arr.length - 1 && <span style={{ color: token.colorTextTertiary }}>/</span>}
                     </span>
                 ))}
             </div>
