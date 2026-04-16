@@ -1,7 +1,7 @@
 import { useObservable } from "../utils/UseObservable";
 import { formatReference, goToReference, referenceResults } from "../logic/FindAllReferences";
 import { map, Observable } from "rxjs";
-import { openCodeTab } from "../logic/Tabs";
+import { openCodeTab } from "../logic/tabs";
 import { referencesQuery } from "../logic/State";
 import type { ReferenceString } from "../workers/jar-index/types";
 

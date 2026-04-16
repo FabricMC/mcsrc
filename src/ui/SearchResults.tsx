@@ -1,7 +1,7 @@
 import { List } from "antd";
 import { searchResults } from "../logic/JarFile";
 import { useObservable } from "../utils/UseObservable";
-import { openCodeTab } from "../logic/Tabs";
+import { openCodeTab } from "../logic/tabs";
 
 const SearchResults = () => {
     const results = useObservable(searchResults);

@@ -5,11 +5,10 @@ import { useEffect, useRef, useState } from 'react';
 import { editor, Range } from "monaco-editor";
 import { isThin } from '../logic/Browser';
 import { classesList } from '../logic/JarFile';
-import { CodeTab, getOpenTab } from '../logic/Tabs';
+import { CodeTab, getOpenTab } from '../logic/tabs';
 import { message, Spin } from 'antd';
 import { LoadingOutlined } from '@ant-design/icons';
 import { getTokenLocation } from '../logic/Tokens';
-import { pairwise, startWith } from "rxjs";
 import { getNextJumpToken, nextReferenceNavigation } from '../logic/FindAllReferences';
 import { setupJavaBytecodeLanguage } from '../utils/JavaBytecode';
 import { IS_JAVADOC_EDITOR } from '../site';
@@ -169,7 +168,8 @@ const Code = () => {
     useEffect(() => {
         if (editorRef.current && decompileResult) {
             const editor = editorRef.current;
-            const currentTab = openTabs.value.find(tab => tab.key === selectedFile.value);
+            // const currentTab = openTabs.value.find(tab => tab.key === selectedFile.value);
+            const currentTab = getOpenTab();
             const prevTab = openTabs.value.find(tab => tab.key === tabHistory.value.at(-2));
             if (prevTab) {
                 prevTab.scroll = editor.getScrollTop();
@@ -240,10 +240,7 @@ const Code = () => {
             const openTab = getOpenTab();
             if (!(openTab instanceof CodeTab)) return;
             if (open) {
-                openTab?.cacheView(
-                    editorRef.current?.saveViewState() || null,
-                    editorRef.current?.getModel() || null
-                );
+                openTab.onBlur();
             } else {
                 if (!openTab) return;
                 selectedFile.next(openTab.key);
@@ -270,6 +267,12 @@ const Code = () => {
 
         const tab = getOpenTab();
         if (!tab || !(tab instanceof CodeTab)) return;
+
+        // This fixes the following problem:
+        // new tab opens -> setModel is set from old decompileResult.source
+        // -> view is invalidated -> viewstate is lost
+        // so this is quite important to keep!
+        if (!tab.key.includes(decompileResult.className)) return;
 
         tab.editorRef = editorRef.current;
 

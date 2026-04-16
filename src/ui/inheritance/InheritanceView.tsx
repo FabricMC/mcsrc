@@ -1,0 +1,34 @@
+import { useObservable } from "../../utils/UseObservable";
+import { selectedInheritanceClassNode } from "../../logic/Inheritance";
+import { lazy } from "react";
+import type { InheritanceViewTab } from "../../logic/tabs";
+import { Tabs } from "antd";
+
+const InheritanceTree = lazy(() => import("./InheritanceTree"));
+const InheritanceGraph = lazy(() => import("./InheritanceGraph"));
+
+export const InheritanceView = ({ tab }: { tab: InheritanceViewTab; }) => {
+    const data = useObservable(selectedInheritanceClassNode);
+    if (data == null) return null;
+
+    const items = [{
+        key: "tree",
+        label: "Tree",
+        children: <InheritanceTree tab={tab} data={data} />,
+    }, {
+        key: "graph",
+        label: "Graph",
+        children: <InheritanceGraph tab={tab} data={data} />,
+    }];
+
+    return (
+        <Tabs
+            defaultActiveKey={tab.innerTabs.active}
+            key={tab.innerTabs.active}
+            onChange={(key) => tab.innerTabs.active = key}
+            items={items}
+            centered
+            styles={{ root: { height: "100%" }, content: { height: "100%" } }}
+        />
+    );
+};

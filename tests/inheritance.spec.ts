@@ -22,15 +22,14 @@ test.describe('Inheritance', () => {
         await expect(treeTab).toBeVisible();
         await expect(treeTab).toHaveAttribute('aria-selected', 'true');
 
-        const modal = page.getByRole('dialog');
-        const treeView = modal.locator('.ant-tree');
+        const treeView = page.locator('.ant-tabs .ant-tree');
         await expect(treeView).toBeVisible();
 
         const graphTab = page.getByRole('tab', { name: 'Graph' });
         await graphTab.click();
         await expect(graphTab).toHaveAttribute('aria-selected', 'true');
 
-        const graphView = modal.locator('.react-flow');
+        const graphView = page.locator('.react-flow');
         await expect(graphView).toBeVisible();
     });
 });

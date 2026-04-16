@@ -1,6 +1,5 @@
 import LoginModal from "../javadoc/api/LoginModal";
 import JavadocModal from "../javadoc/JavadocModal";
-import InheritanceModal from "./inheritance/InheritanceModal";
 import ProgressModal from "./ProgressModal";
 import AboutModal from "./AboutModal";
 import SettingsModal from "./SettingsModal";
@@ -16,7 +15,6 @@ const Modals = () => {
             <ProgressModal />
             <JavadocModal />
             <LoginModal />
-            <InheritanceModal />
             <AboutModal />
             <SettingsModal />
             <StructureModal />

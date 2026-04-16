@@ -1,10 +1,10 @@
-import { ReactFlow, type Node, type Edge, Background, useReactFlow, ReactFlowProvider } from "@xyflow/react";
+import { ReactFlow, type Node, type Edge, Background, useReactFlow, ReactFlowProvider, applyNodeChanges } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { ClassNode, selectedInheritanceClassName } from "../../logic/Inheritance";
+import { ClassNode } from "../../logic/Inheritance";
 import { isInterface, isAbstract } from "../../utils/Classfile";
-import { useMemo, useCallback, useEffect } from "react";
+import { useLayoutEffect } from "react";
 import dagre from "dagre";
-import { openCodeTab } from "../../logic/Tabs";
+import { InheritanceViewTab, openCodeTab } from "../../logic/tabs";
 
 function buildGraphData(classNode: ClassNode): { nodes: Node[]; edges: Edge[]; } {
     const nodes: Node[] = [];
@@ -21,8 +21,8 @@ function buildGraphData(classNode: ClassNode): { nodes: Node[]; edges: Edge[]; }
         visited.add(node.name);
 
         const isSelected = node.name === classNode.name;
-        const nodeIsInterface = isInterface(node.accessFlags);
-        const nodeIsAbstract = isAbstract(node.accessFlags);
+        const nodeIsInterface = node.classData ? isInterface(node.classData.accessFlags) : false;
+        const nodeIsAbstract = node.classData ? isAbstract(node.classData.accessFlags) : false;
         let background = "#fff";
         let color = "#000";
         let borderStyle = "1px solid #1890ff";
@@ -70,8 +70,8 @@ function buildGraphData(classNode: ClassNode): { nodes: Node[]; edges: Edge[]; }
         visited.add(node.name);
 
         const isSelected = node.name === classNode.name;
-        const nodeIsInterface = isInterface(node.accessFlags);
-        const nodeIsAbstract = isAbstract(node.accessFlags);
+        const nodeIsInterface = node.classData ? isInterface(node.classData.accessFlags) : false;
+        const nodeIsAbstract = node.classData ? isAbstract(node.classData.accessFlags) : false;
         let background = "#fff";
         let color = "#000";
         let borderStyle = "1px solid #1890ff";
@@ -167,55 +167,60 @@ function buildGraphData(classNode: ClassNode): { nodes: Node[]; edges: Edge[]; }
     return { nodes: layoutedNodes, edges };
 }
 
-const InheritanceGraphInner = ({ data }: { data: ClassNode; }) => {
-    const { nodes, edges } = useMemo(() => {
-        if (!data) return { nodes: [], edges: [] };
-        return buildGraphData(data);
-    }, [data]);
+const InheritanceGraphInner = ({ tab, data }: { tab: InheritanceViewTab; data: ClassNode; }) => {
+    const { getViewport, setViewport, fitView } = useReactFlow();
 
-    const { setCenter, getNode } = useReactFlow();
+    // init once
+    if (!tab.innerTabs.graph.initialized && data) {
+        const { nodes, edges } = buildGraphData(data);
 
-    useEffect(() => {
-        if (!data) return;
+        tab.innerTabs.graph.nodes = nodes;
+        tab.innerTabs.graph.edges = edges;
+        tab.innerTabs.graph.initialized = true;
+    }
 
-        const timer = setTimeout(() => {
-            const selectedNode = getNode(data.name);
-            if (selectedNode) {
-                void setCenter(
-                    selectedNode.position.x + 100,
-                    selectedNode.position.y + 25,
-                    { zoom: 1, duration: 300 }
-                );
-            }
-        }, 0);
-        return () => clearTimeout(timer);
-    }, [data, setCenter, getNode]);
+    const nodes = tab.innerTabs.graph.nodes;
+    const edges = tab.innerTabs.graph.edges;
 
-    const onNodeClick = useCallback((_event: React.MouseEvent, node: Node) => {
-        // Convert internal class name format (e.g., "net/minecraft/ChatFormatting") to file path
-        const filePath = node.id + ".class";
-        openCodeTab(filePath);
-        selectedInheritanceClassName.next(null);
-    }, []);
+    const onMoveEnd = (e: MouseEvent | TouchEvent | null) => {
+        // If the move is not user-initiated, e is null
+        if (e == null) return;
+        tab.innerTabs.graph.viewport = getViewport();
+    };
+
+    useLayoutEffect(() => {
+        const viewport = tab.innerTabs.graph.viewport;
+
+        if (viewport) {
+            setViewport(viewport, { duration: 0 });
+        } else {
+            fitView({ duration: 0 });
+        }
+    }, [tab, setViewport, fitView]);
 
     return (
         <ReactFlow
             nodes={nodes}
             edges={edges}
-            fitView
+            onNodeClick={(_, { id }) => openCodeTab(`${id}.class`)}
+            onMoveEnd={onMoveEnd}
+            defaultViewport={tab.innerTabs.graph.viewport}
             proOptions={{ hideAttribution: true }}
-            onNodeClick={onNodeClick}
         >
             <Background />
         </ReactFlow>
     );
 };
 
-const InheritanceGraph = ({ data }: { data: ClassNode; }) => {
+const InheritanceGraph = ({ tab, data }: { tab: InheritanceViewTab, data: ClassNode; }) => {
     return (
-        <div style={{ width: "100%", height: "80vh" }}>
+        <div
+            style={{
+                height: "calc(100svh - 6rem)"
+            }}
+        >
             <ReactFlowProvider>
-                <InheritanceGraphInner data={data} />
+                <InheritanceGraphInner tab={tab} data={data} />
             </ReactFlowProvider>
         </div>
     );

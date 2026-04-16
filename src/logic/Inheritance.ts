@@ -1,12 +1,12 @@
 import { BehaviorSubject, combineLatest, distinctUntilChanged, map, of, shareReplay, switchMap } from "rxjs";
-import { jarIndex } from "../workers/jar-index/client";
+import { jarIndex, type ClassData } from "../workers/jar-index/client";
 import { minecraftJar } from "./MinecraftApi";
 
 export class ClassNode {
     readonly name: string;
     parents: ClassNode[] = [];
     children: ClassNode[] = [];
-    accessFlags: number = 0;
+    classData: ClassData | null = null;
 
     constructor(name: string) {
         this.name = name;
@@ -79,7 +79,7 @@ export const inheritanceIndex = combineLatest([jarIndex, minecraftJar]).pipe(
             }
 
             const node = index.addClass(classData.className);
-            node.accessFlags = classData.accessFlags;
+            node.classData = classData;
 
             if (classData.superName && classData.superName.length > 0 && classNames.has(classData.superName)) {
                 index.addChildParentLink(classData.className, classData.superName);

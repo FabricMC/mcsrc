@@ -1,6 +1,6 @@
 import type { CancellationToken, IPosition, IRange, languages } from "monaco-editor";
 import { editor, Range, Uri } from "monaco-editor";
-import { openCodeTab } from '../logic/Tabs';
+import { openCodeTab } from '../logic/tabs';
 import { getTokenLocation } from '../logic/Tokens';
 import { selectedFile } from "../logic/State";
 import type { DecompileResult } from "../workers/decompile/types";

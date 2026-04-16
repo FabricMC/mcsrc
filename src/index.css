@@ -118,3 +118,7 @@ html, body, #root {
 .full-text-search-item:hover {
     background-color: rgba(255, 255, 255, 0.1);
 }
+
+.ant-tabs-content {
+    height: 100%;
+}
