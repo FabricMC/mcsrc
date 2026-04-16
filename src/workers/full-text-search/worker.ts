@@ -48,6 +48,11 @@ export class FullTextSearchWorker {
             return;
         }
 
+        source = source
+            .replace(/^\s*package\s+[^\r\n;]+;\s*\r?\n?/m, "")
+            .replace(/^\s*import\s+[^\r\n;]+;\s*\r?\n?/gm, "")
+            .trim();
+
         this.#db.exec({
             sql: "INSERT INTO sources(key, source) VALUES(?, ?)",
             bind: [key, source]
