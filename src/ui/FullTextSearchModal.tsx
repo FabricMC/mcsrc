@@ -2,10 +2,10 @@ import { useEffect, useRef, useState } from "react";
 import { fullTextSearchEvent } from "../logic/Keybinds";
 import { useObservable } from "../utils/UseObservable";
 import { Flex, Input, List, Modal, type InputRef } from "antd";
-import { BehaviorSubject, catchError, combineLatest, distinctUntilChanged, from, map, Observable, of, startWith, switchMap } from "rxjs";
+import { BehaviorSubject, catchError, combineLatest, distinctUntilChanged, from, map, of, startWith, switchMap } from "rxjs";
 import { fullTextSearch } from "../workers/full-text-search/client";
 import type { FullTextSearchResult } from "../workers/full-text-search/worker";
-import { openCodeTab } from "../logic/Tabs";
+import { openCodeTab } from "../logic/tabs";
 
 const SearchState = (r: SearchState) => r;
 type SearchState =
