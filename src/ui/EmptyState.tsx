@@ -62,7 +62,7 @@ export const EmptyState = () => {
                 flexDirection: "column",
                 alignItems: "center",
                 height: "100%",
-                color: "#d9d9d9",
+                color: token.colorText,
                 overflowY: "auto",
                 fontFamily: token.fontFamily
             }}
@@ -80,7 +80,7 @@ export const EmptyState = () => {
                 <Paragraph style={{
                     fontSize: "18px",
                     marginBottom: 0,
-                    color: "#d9d9d9",
+                    color: token.colorTextSecondary,
                     textAlign: "center",
                     fontWeight: "500",
                 }}>
@@ -90,14 +90,14 @@ export const EmptyState = () => {
                 <Paragraph style={{
                     fontSize: "14px",
                     marginBottom: 0,
-                    color: "#8c8c8c",
+                    color: token.colorTextTertiary,
                     textAlign: "center"
                 }}>
                     Select a file from the tree on the left to get started, or{" "}
                     <a
                         onClick={openRandomClass}
                         style={{
-                            color: "#1890ff",
+                            color: token.colorPrimary,
                             cursor: "pointer",
                             textDecoration: "underline"
                         }}
@@ -109,8 +109,8 @@ export const EmptyState = () => {
                 <div style={{ width: "100%", maxWidth: "700px" }}>
                     <Card
                         style={{
-                            background: "#0d1117",
-                            border: "1px solid #30363d",
+                            background: token.colorBgElevated,
+                            border: `1px solid ${token.colorBorderSecondary}`,
                             marginBottom: "24px"
                         }}
                         styles={{ body: { padding: "1.5rem" } }}
@@ -118,20 +118,20 @@ export const EmptyState = () => {
                         <Title level={4} style={{
                             marginTop: 0,
                             marginBottom: "1rem",
-                            color: "#fff"
+                            color: token.colorTextHeading
                         }}>
                             How It Works
                         </Title>
                         <ul style={{
                             margin: 0,
                             paddingLeft: "1.5rem",
-                            color: "#8c8c8c",
+                            color: token.colorTextSecondary,
                             lineHeight: "1.8"
                         }}>
                             <li>The Minecraft jar is downloaded directly from Mojang's servers to your device when you use this tool.</li>
                             <li>Decompilation happens entirely in your browser</li>
                             <li>No Minecraft code or bytecode is redistributed by this website</li>
-                            <li>Powered by the <a href="https://github.com/Vineflower/vineflower" target="_blank" rel="noreferrer" style={{ color: "#1890ff" }}>Vineflower</a> decompiler via the <a href="https://www.npmjs.com/package/@run-slicer/vf" target="_blank" rel="noreferrer" style={{ color: "#1890ff" }}>@run-slicer/vf</a> project</li>
+                            <li>Powered by the <a href="https://github.com/Vineflower/vineflower" target="_blank" rel="noreferrer" style={{ color: token.colorPrimary }}>Vineflower</a> decompiler via the <a href="https://www.npmjs.com/package/@run-slicer/vf" target="_blank" rel="noreferrer" style={{ color: token.colorPrimary }}>@run-slicer/vf</a> project</li>
                         </ul>
                     </Card>
 
@@ -139,7 +139,7 @@ export const EmptyState = () => {
                         <Title level={4} style={{
                             marginTop: 0,
                             marginBottom: "1rem",
-                            color: "#fff"
+                            color: token.colorTextHeading
                         }}>
                             Features
                         </Title>
@@ -159,10 +159,10 @@ export const EmptyState = () => {
                                         padding: "0.5rem",
                                         borderRadius: "4px",
                                         transition: "background 0.2s",
-                                        color: "#d9d9d9"
+                                        color: token.colorText
                                     }}
                                         onMouseEnter={(e) => {
-                                            e.currentTarget.style.background = "#161b22";
+                                            e.currentTarget.style.background = token.colorBgTextHover;
                                         }}
                                         onMouseLeave={(e) => {
                                             e.currentTarget.style.background = "transparent";
@@ -183,11 +183,11 @@ export const EmptyState = () => {
                     target="_blank"
                     rel="noreferrer"
                     style={{
-                        color: "#fff",
+                        color: token.colorText,
                         textDecoration: "none",
                         padding: "0.75rem 1.5rem",
-                        background: "#21262d",
-                        border: "1px solid #30363d",
+                        background: token.colorBgContainer,
+                        border: `1px solid ${token.colorBorder}`,
                         borderRadius: "6px",
                         display: "flex",
                         alignItems: "center",
@@ -196,12 +196,12 @@ export const EmptyState = () => {
                         marginTop: "24px"
                     }}
                     onMouseEnter={(e) => {
-                        e.currentTarget.style.background = "#30363d";
-                        e.currentTarget.style.borderColor = "#8b949e";
+                        e.currentTarget.style.background = token.colorBgTextHover;
+                        e.currentTarget.style.borderColor = token.colorBorderSecondary;
                     }}
                     onMouseLeave={(e) => {
-                        e.currentTarget.style.background = "#21262d";
-                        e.currentTarget.style.borderColor = "#30363d";
+                        e.currentTarget.style.background = token.colorBgContainer;
+                        e.currentTarget.style.borderColor = token.colorBorder;
                     }}
                 >
                     <GithubOutlined style={{ fontSize: "20px" }} />

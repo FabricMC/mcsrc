@@ -3,7 +3,7 @@ import { useObservable } from '../utils/UseObservable';
 import { currentResult, isDecompiling } from '../logic/Decompiler';
 import { useEffect, useRef, useState } from 'react';
 import { editor, Range } from "monaco-editor";
-import { isThin } from '../logic/Browser';
+import { isDarkMode, isThin } from '../logic/Browser';
 import { classesList } from '../logic/JarFile';
 import { CodeTab, getOpenTab } from '../logic/tabs';
 import { message, Spin } from 'antd';
@@ -44,6 +44,7 @@ const Code = () => {
     const classList = useObservable(classesList);
     const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
     const hideMinimap = useObservable(isThin);
+    const darkMode = useObservable(isDarkMode);
     const decompiling = useObservable(isDecompiling);
     const selectedLine = useObservable(selectedLines);
     const nextReference = useObservable(nextReferenceNavigation);
@@ -86,6 +87,11 @@ const Code = () => {
         decompileResultRef.current = decompileResult;
         classListRef.current = classList;
     }, [decompileResult, classList]);
+
+    useEffect(() => {
+        if (!monaco) return;
+        monaco.editor.setTheme(darkMode ? "vs-dark" : "vs");
+    }, [monaco, darkMode]);
 
     useEffect(() => {
         if (!monaco) return;
@@ -361,7 +367,7 @@ const Code = () => {
             <Editor
                 defaultLanguage={"java"}
                 language={decompileResult?.language}
-                theme="vs-dark"
+                theme={darkMode ? "vs-dark" : "vs"}
                 options={{
                     readOnly: true,
                     domReadOnly: true,

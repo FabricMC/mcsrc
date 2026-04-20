@@ -1,4 +1,4 @@
-import { DiffEditor } from '@monaco-editor/react';
+import { DiffEditor, useMonaco } from '@monaco-editor/react';
 import { useObservable } from '../../utils/UseObservable';
 import { getLeftDiff, getRightDiff } from '../../logic/Diff';
 import { updateLineChanges } from '../../logic/LineChanges';
@@ -9,6 +9,7 @@ import { LoadingOutlined } from '@ant-design/icons';
 import { isDecompiling } from "../../logic/Decompiler.ts";
 import { unifiedDiff } from '../../logic/Settings';
 import { selectedFile } from '../../logic/State.ts';
+import { isDarkMode } from '../../logic/Browser';
 
 const DiffCode = () => {
     const leftResult = useObservable(getLeftDiff().result);
@@ -17,6 +18,13 @@ const DiffCode = () => {
     const loading = useObservable(isDecompiling);
     const currentPath = useObservable(selectedFile);
     const isUnified = useObservable(unifiedDiff.observable);
+    const darkMode = useObservable(isDarkMode);
+    const monaco = useMonaco();
+
+    useEffect(() => {
+        if (!monaco) return;
+        monaco.editor.setTheme(darkMode ? "vs-dark" : "vs");
+    }, [monaco, darkMode]);
 
     useEffect(() => {
         if (loading) return;
@@ -64,7 +72,7 @@ const DiffCode = () => {
         >
             <DiffEditor
                 language="java"
-                theme="vs-dark"
+                theme={darkMode ? "vs-dark" : "vs"}
                 original={leftResult?.source}
                 modified={rightResult?.source}
                 keepCurrentModifiedModel={true}
