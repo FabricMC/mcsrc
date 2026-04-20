@@ -1,4 +1,4 @@
-import { distinctUntilChanged, fromEvent, map, merge, startWith, throttleTime } from "rxjs";
+import { distinctUntilChanged, fromEvent, map, merge, Observable, startWith, throttleTime } from "rxjs";
 
 export const isThin = fromEvent(window, 'resize').pipe(
     startWith(null),
@@ -8,9 +8,14 @@ export const isThin = fromEvent(window, 'resize').pipe(
 );
 
 const darkModeQuery = window.matchMedia('(prefers-color-scheme: dark)');
-export const isDarkMode = merge(
-    fromEvent<MediaQueryListEvent>(darkModeQuery, 'change').pipe(map(e => e.matches)),
-).pipe(
-    startWith(darkModeQuery.matches),
+export const isDarkMode = new Observable(subscriber => {
+    const emit = () => subscriber.next(darkModeQuery.matches);
+    emit(); // emit initial value
+
+    darkModeQuery.addEventListener("change", emit);
+    return () => {
+        darkModeQuery.removeEventListener("change", emit);
+    };
+}).pipe(
     distinctUntilChanged()
 );
