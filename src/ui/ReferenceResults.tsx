@@ -4,6 +4,7 @@ import { map, Observable } from "rxjs";
 import { openCodeTab } from "../logic/tabs";
 import { referencesQuery } from "../logic/State";
 import type { ReferenceString } from "../workers/jar-index/types";
+import { theme } from "antd";
 
 function getUsageClass(usage: ReferenceString): string {
     if (usage.startsWith("m:") || usage.startsWith("f:")) {
@@ -45,6 +46,7 @@ interface UsageGroupItemProps {
 
 const UsageGroupItem = ({ group }: UsageGroupItemProps) => {
     const query = useObservable(referencesQuery)!;
+    const { token } = theme.useToken();
 
     return (
         <div style={{ marginBottom: "4px" }}>
@@ -71,7 +73,7 @@ const UsageGroupItem = ({ group }: UsageGroupItemProps) => {
                             cursor: "pointer",
                             fontSize: "12px",
                             transition: "background-color 0.2s",
-                            color: "rgba(255, 255, 255, 0.7)"
+                            color: token.colorTextSecondary
                         }}
                         onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.05)'}
                         onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
