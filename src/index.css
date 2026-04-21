@@ -118,3 +118,5 @@ html, body, #root {
 .ant-tabs-content {
     height: 100%;
 }
+
+.grep-highlight-decoration { background-color: rgba(255, 200, 0, 0.35); border-radius: 2px; }
