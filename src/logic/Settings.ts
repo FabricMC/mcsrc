@@ -65,6 +65,22 @@ export class NumberSetting extends Setting<number> {
     }
 }
 
+export class StringSetting<T extends string = string> extends Setting<T> {
+    constructor(key: string, defaultValue: T, validValues?: readonly T[]) {
+        super(
+            key, 
+            defaultValue, 
+            (s) => {
+                if (validValues && !validValues.includes(s as T)) {
+                    return defaultValue;
+                }
+                return s as T;
+            }, 
+            v => v
+        );
+    }
+}
+
 export class KeybindSetting extends Setting<KeybindValue> {
     constructor(key: string, defaultValue: KeybindValue) {
         super(key, defaultValue, s => s, v => v);
@@ -118,6 +134,9 @@ export class KeybindSetting extends Setting<KeybindValue> {
         return event.key.toLowerCase() === parsed.key.toLowerCase();
     }
 }
+
+export type ThemeMode = 'light' | 'dark' | 'system';
+export const theme = new StringSetting<ThemeMode>('theme', 'system', ['light', 'dark', 'system'] as const);
 
 export const agreedEula = new BooleanSetting('eula', false);
 export const enableTabs = new BooleanSetting('enable_tabs', true);

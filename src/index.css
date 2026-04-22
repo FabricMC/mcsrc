@@ -6,11 +6,22 @@
   --token-comment: #006000;
   --highlight-line: rgba(255, 255, 0, 0.15);
   --highlight-glyph: rgba(255, 255, 0, 0.6);
-  color-scheme: dark light;
+  color-scheme: light;
+}
+
+:root[data-theme="dark"] {
+  --color-bg: #121212;
+  --token-class: #71c6b1;
+  --token-field: #aadafa;
+  --token-method: #dcdcaf;
+  --token-comment: #6a9955;
+  --highlight-line: rgba(255, 255, 0, 0.1);
+  --highlight-glyph: rgba(255, 255, 0, 0.4);
+  color-scheme: dark;
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root[data-theme="system"] {
     --color-bg: #121212;
     --token-class: #71c6b1;
     --token-field: #aadafa;
@@ -18,6 +29,7 @@
     --token-comment: #6a9955;
     --highlight-line: rgba(255, 255, 0, 0.1);
     --highlight-glyph: rgba(255, 255, 0, 0.4);
+    color-scheme: dark;
   }
 }
 

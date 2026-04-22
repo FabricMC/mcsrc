@@ -7,7 +7,7 @@ import { isDarkMode, isThin } from '../logic/Browser.ts';
 import { diffView, mobileDrawerOpen, openTab, openTabs, selectedFile } from '../logic/State';
 import DiffView from './diff/DiffView.tsx';
 import { FilepathHeader } from './FilepathHeader.tsx';
-import { enableTabs } from '../logic/Settings.ts';
+import { enableTabs, theme as themeSetting } from '../logic/Settings.ts';
 import { MenuFoldOutlined } from '@ant-design/icons';
 import { TabsComponent } from './TabsComponent.tsx';
 import Modals from './Modals.tsx';
@@ -19,6 +19,11 @@ const App = () => {
     const darkMode = useObservable(isDarkMode);
     const isSmall = useObservable(isThin);
     const enableDiff = useObservable(diffView);
+    const themeMode = useObservable(themeSetting.observable);
+
+    useEffect(() => {
+        document.documentElement.setAttribute('data-theme', themeMode);
+    }, [themeMode]);
 
     return (
         <ConfigProvider
