@@ -5,8 +5,6 @@ import { getInitialState } from "./Permalink";
 
 const initialState = getInitialState();
 
-/// All of the user controled global state should be defined here:
-
 export const selectedMinecraftVersion = new BehaviorSubject<string | null>(initialState.minecraftVersion);
 
 export const mobileDrawerOpen = new BehaviorSubject(false);
@@ -17,6 +15,7 @@ export const openTabs = new BehaviorSubject<Tab[]>(initialTab ? [initialTab] : [
 export const tabHistory = new BehaviorSubject<string[]>(initialState.file ? [initialState.file] : []);
 export const searchQuery = new BehaviorSubject("");
 export const referencesQuery = new BehaviorSubject("");
+export const grepHighlightQuery = new BehaviorSubject<string>("");
 
 export interface SelectedLines {
     line: number;
@@ -27,7 +26,6 @@ export const selectedLines = new BehaviorSubject<SelectedLines | null>(initialSt
 export const diffView = new BehaviorSubject<boolean>(!!initialState.diff);
 export const diffLeftSelectedMinecraftVersion = new BehaviorSubject<string | null>(initialState.diff?.leftMinecraftVersion ?? null);
 
-// Reset selected lines when file changes (skip initial emission to preserve permalink selection)
 selectedFile.pipe(pairwise()).subscribe(([previousFile, currentFile]) => {
     if (previousFile !== currentFile) {
         selectedLines.next(null);
