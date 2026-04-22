@@ -6,6 +6,7 @@ import SettingsModal from "./SettingsModal";
 import StructureModal from "./StructureModal";
 import { JarDecompilerModal, JarDecompilerProgressModal } from "./JarDecompilerModal";
 import IndexProgressNotification from "./IndexProgressNotification";
+import FullTextSearchModal from "./FullTextSearchModal";
 
 const Modals = () => {
     return (
@@ -19,6 +20,7 @@ const Modals = () => {
             <StructureModal />
             <JarDecompilerModal />
             <JarDecompilerProgressModal />
+            <FullTextSearchModal />
         </>
     );
 };

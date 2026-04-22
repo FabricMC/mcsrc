@@ -61,6 +61,14 @@ export async function deleteCache(): Promise<number> {
     return await worker.clear();
 }
 
+export async function onDecompiledSources(
+    jar: Jar,
+    callback: (className: string, source: string) => Promise<void> | void
+) {
+    const worker = await findWorker();
+    await worker.onDecompiledSources(jar.name, jar.blob, Comlink.proxy(callback));
+}
+
 export type DecompileEntireJarOptions = {
     threads?: number,
     splits?: number,

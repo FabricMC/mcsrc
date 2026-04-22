@@ -20,6 +20,7 @@
     "@katana-project/zip": "^0.7.1",
     "@monaco-editor/react": "^4.7.0",
     "@run-slicer/vf": "^0.5.0-1.11.2",
+    "@sqlite.org/sqlite-wasm": "^3.51.2-build8",
     "@xyflow/react": "^12.10.1",
     "antd": "^6.3.2",
     "comlink": "^4.4.2",

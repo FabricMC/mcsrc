@@ -1,5 +1,5 @@
 import { BehaviorSubject, filter, fromEvent, Observable, tap } from "rxjs";
-import { focusSearch, showStructure, type KeybindSetting } from "./Settings";
+import { focusSearch, fullTextSearchBind, showStructure, type KeybindSetting } from "./Settings";
 
 // Set to true when the user is currently capturing a keybind
 export const capturingKeybind = new BehaviorSubject<string | null>(null);
@@ -20,3 +20,4 @@ function keyBindEvent(setting: KeybindSetting): Observable<KeyboardEvent> {
 
 export const focusSearchEvent = keyBindEvent(focusSearch);
 export const showStructureEvent = keyBindEvent(showStructure);
+export const fullTextSearchEvent = keyBindEvent(fullTextSearchBind);
