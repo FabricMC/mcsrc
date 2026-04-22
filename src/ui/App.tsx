@@ -20,6 +20,10 @@ const App = () => {
     const isSmall = useObservable(isThin);
     const enableDiff = useObservable(diffView);
 
+    useEffect(() => {
+        document.documentElement.setAttribute('data-theme', darkMode ? 'dark' : 'light');
+    }, [darkMode]);
+
     return (
         <ConfigProvider
             theme={{
