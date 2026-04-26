@@ -3,6 +3,10 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "workspaces": [
+    ".",
+    "packages/*"
+  ],
   "scripts": {
     "dev": "vite",
     "dev:javadoc": "vite --mode javadoc",
@@ -20,12 +24,12 @@
     "@katana-project/zip": "^0.7.1",
     "@monaco-editor/react": "^4.7.0",
     "@run-slicer/vf": "^0.5.0-1.11.2",
-    "@sqlite.org/sqlite-wasm": "github:deirn/sqlite-wasm#mcsrc-dist",
     "@xyflow/react": "^12.10.1",
     "antd": "^6.3.2",
     "comlink": "^4.4.2",
     "dagre": "^0.8.5",
     "dexie": "^4.3.0",
+    "mcsrc-sqlite": "workspace:*",
     "monaco-editor": "^0.55.1",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",

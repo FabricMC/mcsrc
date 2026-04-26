@@ -1,5 +1,5 @@
 import * as Comlink from "comlink";
-import sqlite3InitModule, { type Database } from "@sqlite.org/sqlite-wasm";
+import sqlite3InitModule, { type Database } from "mcsrc-sqlite";
 
 /** https://www.sqlite.org/fts5.html#the_snippet_function */
 export interface FullTextSearchOptions {
