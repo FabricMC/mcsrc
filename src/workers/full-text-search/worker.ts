@@ -75,7 +75,8 @@ export class FullTextSearchWorker {
                 key,
                 mcsrc_offsets(sources, ?, ?, ?, ?) AS offsets
             FROM sources
-            WHERE source MATCH ?;
+            WHERE source MATCH ?
+            ORDER BY rank;
         `, [options?.pre ?? "[", options?.post ?? "]", options?.ellipsis ?? "…", options?.maxTokens ?? 10, query]);
 
         const out = res.map((r: any) => ({
@@ -84,7 +85,7 @@ export class FullTextSearchWorker {
         }));
 
         const elapsedMs = performance.now() - startTime;
-        console.log(`Finished in ${elapsedMs} ms`);
+        console.log(`Finished in ${elapsedMs.toFixed(3)} ms`);
         return out;
     }
 

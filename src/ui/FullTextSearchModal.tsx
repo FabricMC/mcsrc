@@ -1,7 +1,7 @@
-import { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { fullTextSearchEvent } from "../logic/Keybinds";
 import { useObservable } from "../utils/UseObservable";
-import { Flex, Input, List, Modal, type InputRef } from "antd";
+import { Button, Flex, Input, List, Modal, type InputRef } from "antd";
 import { BehaviorSubject, catchError, combineLatest, distinctUntilChanged, from, map, of, startWith, switchMap } from "rxjs";
 import { fullTextSearch } from "../workers/full-text-search/client";
 import type { FullTextSearchResult } from "../workers/full-text-search/worker";
@@ -22,11 +22,53 @@ const search$ = combineLatest([fullTextSearch, query]).pipe(
             error: "Query must be at least 3 characters"
         }));
 
-        return from(fts.find(query, { maxTokens: 8 })).pipe(
+        return from(fts.find(query, { maxTokens: 11 })).pipe(
             map(results => SearchState({ state: "ok", results })),
             startWith(SearchState({ state: "loading" })),
             catchError(error => of(SearchState({ state: "error", error: String(error) }))));
     }));
+
+type FullTextSearchResultElementProps = {
+    result: FullTextSearchResult;
+};
+
+const FullTextSearchResultElement: React.FC<FullTextSearchResultElementProps> = ({ result }) => {
+    const [expand, setExpand] = useState(false);
+
+    const sliced = expand ? result.regions : result.regions.slice(0, 5);
+    const canToggleExpand = expand || sliced.length < result.regions.length;
+
+    return (
+        <List.Item.Meta
+            title={result.key}
+            description={(
+                <>
+                    {canToggleExpand && (
+                        <Button
+                            type="link"
+                            onClick={(e) => { e.stopPropagation(); setExpand(!expand); }}
+                        >
+                            {expand ? "Hide" : "Show all"}
+                        </Button>
+                    )}
+                    {sliced.map((r, i) => (
+                        <div
+                            key={i}
+                            style={{
+                                fontFamily: "monospace",
+                                whiteSpace: "nowrap",
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                            }}
+                        >
+                            {r.snippet}
+                        </div>
+                    ))}
+                </>
+            )}
+        />
+    );
+};
 
 const FullTextSearchModal = () => {
     const showEvent = useObservable(fullTextSearchEvent);
@@ -61,22 +103,7 @@ const FullTextSearchModal = () => {
                         onClick={() => openResult(result)}
                         className="full-text-search-item"
                     >
-                        <List.Item.Meta
-                            title={result.key}
-                            description={result.regions.map((r, i) => (
-                                <div
-                                    key={i}
-                                    style={{
-                                        fontFamily: "monospace",
-                                        whiteSpace: "nowrap",
-                                        overflow: "hidden",
-                                        textOverflow: "ellipsis",
-                                    }}
-                                >
-                                    {r.snippet}
-                                </div>
-                            ))}
-                        />
+                        <FullTextSearchResultElement result={result} />
                     </List.Item>
                 )}
             />

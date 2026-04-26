@@ -33,10 +33,14 @@ export class FullTextSearch {
         this.#_worker = Comlink.wrap<FullTextSearchWorker>(worker);
         await this.#_worker.init(this.#jar.jar.name);
 
+        console.log("Indexing decompiled sources...");
+        const startTime = performance.now();
         await onDecompiledSources(this.#jar.jar, async (className, source) => {
-            console.log("fts", className);
+            // console.log("fts", className);
             this.#_worker!.index(className, source);
         });
+        const elapsedMs = performance.now() - startTime;
+        console.log(`Finished in ${elapsedMs.toFixed(3)} ms`);
 
         return this.#_worker;
     };
