@@ -1,5 +1,27 @@
+:root {
+  --color-bg: #ffffff;
+  --token-class: #0e6b82;
+  --token-field: #005ba1;
+  --token-method: #5f4500;
+  --token-comment: #006000;
+  --highlight-line: rgba(255, 255, 0, 0.15);
+  --highlight-glyph: rgba(255, 255, 0, 0.6);
+  color-scheme: light;
+}
+
+:root[data-theme="dark"] {
+  --color-bg: #121212;
+  --token-class: #71c6b1;
+  --token-field: #aadafa;
+  --token-method: #dcdcaf;
+  --token-comment: #6a9955;
+  --highlight-line: rgba(255, 255, 0, 0.1);
+  --highlight-glyph: rgba(255, 255, 0, 0.4);
+  color-scheme: dark;
+}
+
 body {
-  background-color: #121212;
+  background-color: var(--color-bg);
 }
 
 /* Prevent scrolling the body */
@@ -15,69 +37,50 @@ html, body, #root {
 }
 
 .class-token-decoration {
-  color: #71c6b1 !important;
+  color: var(--token-class) !important;
 }
 
-.field-token-decoration {
-  color: #aadafa !important;
+.field-token-decoration,
+.parameter-token-decoration,
+.local-token-decoration {
+  color: var(--token-field) !important;
 }
 
 .method-token-decoration {
-  color: #dcdcaf !important;
-}
-
-.parameter-token-decoration {
-  color: #aadafa !important;
-}
-
-.local-token-decoration {
-  color: #aadafa !important;
+  color: var(--token-method) !important;
 }
 
 .class-token-decoration-pointer {
-  color: #71c6b1 !important;
+  color: var(--token-class) !important;
   cursor: pointer;
 }
 
-/* Control comment marker color, eg "/*" */
-.mtk7 {
-  color: #6a9955 !important;
-  font-style: italic;
-}
-
-/* Control comment color, eg what is inside "/*" */
-.mtk7.method-token-decoration {
-  color: #6a9955 !important;
-  font-style: italic;
-}
-
-.field-token-decoration-pointer {
-  color: #aadafa !important;
+.field-token-decoration-pointer,
+.parameter-token-decoration-pointer,
+.local-token-decoration-pointer {
+  color: var(--token-field) !important;
   cursor: pointer;
 }
 
 .method-token-decoration-pointer {
-  color: #dcdcaf !important;
+  color: var(--token-method) !important;
   cursor: pointer;
 }
 
-.parameter-token-decoration-pointer {
-  color: #aadafa !important;
-  cursor: pointer;
-}
-
-.local-token-decoration-pointer {
-  color: #aadafa !important;
-  cursor: pointer;
+/* Control comment marker and content color, eg "/*" */
+.mtk7,
+.mtk7.method-token-decoration {
+  color: var(--token-comment) !important;
+  font-style: italic;
 }
 
 /* Highlighted line for line linking */
 .highlighted-line {
-  background-color: rgba(255, 255, 100, 0.05) !important;
+  background-color: var(--highlight-line) !important;
 }
 
 .highlighted-line-glyph {
-  background-color: rgba(255, 255, 100, 0.3) !important;
+  background-color: var(--highlight-glyph) !important;
   width: 4px !important;
 }
 

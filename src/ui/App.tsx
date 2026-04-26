@@ -3,7 +3,7 @@ import Code from "./Code.tsx";
 import SideBar from './SideBar.tsx';
 import { useEffect, useState } from 'react';
 import { useObservable } from '../utils/UseObservable.ts';
-import { isThin } from '../logic/Browser.ts';
+import { isDarkMode, isThin } from '../logic/Browser.ts';
 import { diffView, mobileDrawerOpen, openTab, openTabs, selectedFile } from '../logic/State';
 import DiffView from './diff/DiffView.tsx';
 import { FilepathHeader } from './FilepathHeader.tsx';
@@ -16,13 +16,18 @@ import { CodeTab, InheritanceViewTab } from '../logic/tabs';
 import { InheritanceView } from './inheritance/InheritanceView.tsx';
 
 const App = () => {
+    const darkMode = useObservable(isDarkMode);
     const isSmall = useObservable(isThin);
     const enableDiff = useObservable(diffView);
+
+    useEffect(() => {
+        document.documentElement.setAttribute('data-theme', darkMode ? 'dark' : 'light');
+    }, [darkMode]);
 
     return (
         <ConfigProvider
             theme={{
-                algorithm: theme.darkAlgorithm,
+                algorithm: darkMode ? theme.darkAlgorithm : theme.defaultAlgorithm,
                 components: {
                     Card: {
                         bodyPadding: 4,

@@ -3,18 +3,32 @@ import type React from 'react';
 import type { SVGProps } from 'react';
 import type { ClassData } from '../../workers/jar-index/client';
 import type { CustomIconComponentProps } from '@ant-design/icons/lib/components/Icon';
+import { useObservable } from '../../utils/UseObservable';
+import { isDarkMode } from '../../logic/Browser';
 
-import AnnotationSvg from './annotation_dark.svg?react';
-import ClassAbstractSvg from './classAbstract_dark.svg?react';
-import ClassSvg from './class_dark.svg?react';
-import EnumSvg from './enum_dark.svg?react';
-import ExceptionSvg from './exception_dark.svg?react';
-import FinalMarkSvg from './finalMark_dark.svg?react';
-import InterfaceSvg from './interface_dark.svg?react';
-import JavaSvg from './java_dark.svg?react';
-import RecordSvg from './record_dark.svg?react';
-import PackageSvg from './package_dark.svg?react';
-import HierarchySvg from './hierarchy_dark.svg?react';
+import AnnotationDarkSvg from './annotation_dark.svg?react';
+import ClassAbstractDarkSvg from './classAbstract_dark.svg?react';
+import ClassDarkSvg from './class_dark.svg?react';
+import EnumDarkSvg from './enum_dark.svg?react';
+import ExceptionDarkSvg from './exception_dark.svg?react';
+import FinalMarkDarkSvg from './finalMark_dark.svg?react';
+import InterfaceDarkSvg from './interface_dark.svg?react';
+import JavaDarkSvg from './java_dark.svg?react';
+import RecordDarkSvg from './record_dark.svg?react';
+import PackageDarkSvg from './package_dark.svg?react';
+import HierarchyDarkSvg from './hierarchy_dark.svg?react';
+
+import AnnotationSvg from './annotation.svg?react';
+import ClassAbstractSvg from './classAbstract.svg?react';
+import ClassSvg from './class.svg?react';
+import EnumSvg from './enum.svg?react';
+import ExceptionSvg from './exception.svg?react';
+import FinalMarkSvg from './finalMark.svg?react';
+import InterfaceSvg from './interface.svg?react';
+import JavaSvg from './java.svg?react';
+import RecordSvg from './record.svg?react';
+import PackageSvg from './package.svg?react';
+import HierarchySvg from './hierarchy.svg?react';
 
 type SVGFC = React.FC<SVGProps<SVGSVGElement>>;
 const stack = (...svgs: SVGFC[]): SVGFC => (props) => (
@@ -32,24 +46,29 @@ const stack = (...svgs: SVGFC[]): SVGFC => (props) => (
     </div>
 );
 
+const ClassFinalDarkSvg = stack(ClassDarkSvg, FinalMarkDarkSvg);
 const ClassFinalSvg = stack(ClassSvg, FinalMarkSvg);
 
 type IconProps = Partial<CustomIconComponentProps>;
 type IconFC = React.FC<IconProps>;
 
-const icon = (fc: SVGFC): IconFC => (props) => <Icon component={fc} {...props} />;
-export const AnnotationIcon = icon(AnnotationSvg);
-export const ClassAbstractIcon = icon(ClassAbstractSvg);
-export const ClassIcon = icon(ClassSvg);
-export const ClassFinalIcon = icon(ClassFinalSvg);
-export const EnumIcon = icon(EnumSvg);
-export const ExceptionIcon = icon(ExceptionSvg);
-export const FinalMarkIcon = icon(FinalMarkSvg);
-export const InterfaceIcon = icon(InterfaceSvg);
-export const JavaIcon = icon(JavaSvg);
-export const RecordIcon = icon(RecordSvg);
-export const PackageIcon = icon(PackageSvg);
-export const HierarchyIcon = icon(HierarchySvg);
+const icon = (lightFc: SVGFC, darkFc: SVGFC): IconFC => (props) => {
+    const dark = useObservable(isDarkMode);
+    return <Icon component={dark ? darkFc : lightFc} {...props} />;
+};
+
+export const AnnotationIcon = icon(AnnotationSvg, AnnotationDarkSvg);
+export const ClassAbstractIcon = icon(ClassAbstractSvg, ClassAbstractDarkSvg);
+export const ClassIcon = icon(ClassSvg, ClassDarkSvg);
+export const ClassFinalIcon = icon(ClassFinalSvg, ClassFinalDarkSvg);
+export const EnumIcon = icon(EnumSvg, EnumDarkSvg);
+export const ExceptionIcon = icon(ExceptionSvg, ExceptionDarkSvg);
+export const FinalMarkIcon = icon(FinalMarkSvg, FinalMarkDarkSvg);
+export const InterfaceIcon = icon(InterfaceSvg, InterfaceDarkSvg);
+export const JavaIcon = icon(JavaSvg, JavaDarkSvg);
+export const RecordIcon = icon(RecordSvg, RecordDarkSvg);
+export const PackageIcon = icon(PackageSvg, PackageDarkSvg);
+export const HierarchyIcon = icon(HierarchySvg, HierarchyDarkSvg);
 
 // https://asm.ow2.io/javadoc/org/objectweb/asm/Opcodes.html
 // https://asm.ow2.io/javadoc/constant-values.html
