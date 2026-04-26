@@ -63,16 +63,19 @@ const FullTextSearchModal = () => {
                     >
                         <List.Item.Meta
                             title={result.key}
-                            description={(
-                                <div style={{
-                                    fontFamily: "monospace",
-                                    whiteSpace: "nowrap",
-                                    overflow: "hidden",
-                                    textOverflow: "ellipsis",
-                                }}>
-                                    {result.snippet}
+                            description={result.regions.map((r, i) => (
+                                <div
+                                    key={i}
+                                    style={{
+                                        fontFamily: "monospace",
+                                        whiteSpace: "nowrap",
+                                        overflow: "hidden",
+                                        textOverflow: "ellipsis",
+                                    }}
+                                >
+                                    {r.snippet}
                                 </div>
-                            )}
+                            ))}
                         />
                     </List.Item>
                 )}

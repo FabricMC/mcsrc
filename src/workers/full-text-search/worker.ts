@@ -12,15 +12,18 @@ export interface FullTextSearchOptions {
 export interface FullTextSearchRegion {
     start: number;
     end: number;
+    snippet: string;
 }
 
 export interface FullTextSearchResult {
     key: string;
-    snippet: string;
+    regions: FullTextSearchRegion[]
 }
 
 export class FullTextSearchWorker {
     #db?: Database;
+    #enc = new TextEncoder();
+    #dec = new TextDecoder();
 
     async init(name: string): Promise<string | undefined> {
         try {
@@ -29,7 +32,7 @@ export class FullTextSearchWorker {
             console.log("Loading SQLite3 Module... Done.");
 
             this.#db = new sqlite3.oo1.DB(`/fts.${name}.sqlite3`);
-            this.#db.exec("CREATE VIRTUAL TABLE IF NOT EXISTS sources USING fts5(key, source, tokenize='porter');");
+            this.#db.exec("CREATE VIRTUAL TABLE IF NOT EXISTS sources USING fts5(key, source, tokenize='porter mcsrc_tokenizer');");
             return undefined;
         } catch (err: any) {
             console.error(err);
@@ -70,34 +73,42 @@ export class FullTextSearchWorker {
         const res = this.#db.selectObjects(`
             SELECT
                 key,
-                snippet(sources, -1, ?, ?, ?, ?) AS snippet
+                mcsrc_offsets(sources, ?, ?, ?, ?) AS offsets
             FROM sources
             WHERE source MATCH ?;
         `, [options?.pre ?? "[", options?.post ?? "]", options?.ellipsis ?? "…", options?.maxTokens ?? 10, query]);
+
+        const out = res.map((r: any) => ({
+            key: r["key"] as string,
+            regions: this.#parseOffsets(r["offsets"] as string),
+        }));
+
         const elapsedMs = performance.now() - startTime;
         console.log(`Finished in ${elapsedMs} ms`);
-
-        return res.map((r: any) => ({
-            key: r["key"] as string,
-            snippet: r["snippet"] as string
-        }));
+        return out;
     }
 
-    // TODO: figure out how to get offsets in FTS5
-    // require creating SQLite extension.
     #parseOffsets(s: string): FullTextSearchRegion[] {
         if (!s) return [];
 
-        const parts = s.trim().split(/\s+/).map(Number);
+        const bytes = this.#enc.encode(s);
         const regions: FullTextSearchRegion[] = [];
+        let pos = 0;
 
-        // [col] [startToken] [endToken] [termIndex] ...
-        for (let i = 0; i + 3 < parts.length; i += 4) {
-            const startToken = parts[i + 1];
-            const endToken = parts[i + 2];
-            if (Number.isFinite(startToken) && Number.isFinite(endToken)) {
-                regions.push({ start: startToken, end: endToken });
-            }
+        while (pos < bytes.length) {
+            const newline = bytes.indexOf(10, pos); // '\n'
+            const header = this.#dec.decode(bytes.slice(pos, newline));
+            const [_col, _phrase, byteOffset, byteSize, snippetByteLen] = header.trim().split(/\s+/).map(Number);
+            pos = newline + 1;
+
+            const snippetBytes = bytes.slice(pos, pos + snippetByteLen);
+            const snippet = this.#dec.decode(snippetBytes);
+            regions.push({
+                start: byteOffset,
+                end: byteOffset + byteSize,
+                snippet
+            });
+            pos += snippetByteLen;
         }
 
         return regions;
