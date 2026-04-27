@@ -102,6 +102,7 @@ const InheritanceTree = ({ tab, data }: { tab: InheritanceViewTab, data: ClassNo
         if (!scrollRef.current) return;
         if (tab.innerTabs.active !== "tree") return;
         scrollRef.current.scrollTop = tab.innerTabs.tree.scrollTop;
+        // oxlint-disable-next-line eslint-plugin-react-hooks/exhaustive-deps
     }, []);
 
     return (
