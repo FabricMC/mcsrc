@@ -4,7 +4,6 @@ import { CodeTab, InheritanceViewTab } from "./index";
 
 export abstract class Tab {
     public key: string;
-    public scroll: number = 0;
 
     public constructor(key: string) {
         this.key = key;

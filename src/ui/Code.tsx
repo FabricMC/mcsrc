@@ -174,13 +174,6 @@ const Code = () => {
     useEffect(() => {
         if (editorRef.current && decompileResult) {
             const editor = editorRef.current;
-            // const currentTab = openTabs.value.find(tab => tab.key === selectedFile.value);
-            const currentTab = getOpenTab();
-            const prevTab = openTabs.value.find(tab => tab.key === tabHistory.value.at(-2));
-            if (prevTab) {
-                prevTab.scroll = editor.getScrollTop();
-            }
-
             lineHighlightRef.current?.clear();
 
             const executeScroll = () => {
@@ -199,10 +192,6 @@ const Code = () => {
                             glyphMarginClassName: 'highlighted-line-glyph'
                         }
                     }]);
-                } else if (currentTab && currentTab.scroll > 0) {
-                    editor.setScrollTop(currentTab.scroll);
-                } else {
-                    editor.setScrollTop(0);
                 }
             };
 
