@@ -7,6 +7,7 @@ export class InheritanceViewTab extends Tab {
     public innerTabs: {
         active: string,
         tree: {
+            scrollTop: number,
             initialized: boolean,
             nodes: TreeDataNode[],
             expanded: Key[];
@@ -20,6 +21,7 @@ export class InheritanceViewTab extends Tab {
     } = {
             active: "tree",
             tree: {
+                scrollTop: 0,
                 initialized: false,
                 nodes: [],
                 expanded: []

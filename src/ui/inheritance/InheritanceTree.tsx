@@ -1,5 +1,5 @@
 import { Tree, type TreeDataNode } from "antd";
-import { useCallback, type Key } from "react";
+import { useCallback, useEffect, useRef, type Key } from "react";
 import { ClassNode } from "../../logic/Inheritance";
 import { InheritanceViewTab, openCodeTab } from "../../logic/tabs";
 import { ClassDataIcon } from "../intellij-icons";
@@ -97,31 +97,45 @@ const InheritanceTree = ({ tab, data }: { tab: InheritanceViewTab, data: ClassNo
         openCodeTab(`${selected}.class`);
     }, []);
 
+    const scrollRef = useRef<HTMLDivElement>(null);
+    useEffect(() => {
+        if (!scrollRef.current) return;
+        if (tab.innerTabs.active !== "tree") return;
+        scrollRef.current.scrollTop = tab.innerTabs.tree.scrollTop;
+    }, []);
+
     return (
-        <Tree
-            styles={{
-                root: {
-                    background: "transparent",
-                    height: "100%",
-                    overflow: "auto",
-                    paddingBottom: "3rem"
-                },
-                itemIcon: {
-                    position: "relative",
-                    display: "flex",
-                    justifyContent: "center",
-                    alignItems: "center"
-                }
+        <div
+            ref={scrollRef}
+            style={{ height: "100%", overflow: "auto" }}
+            onScroll={(e) => {
+                if (tab.innerTabs.active !== "tree") return;
+                tab.innerTabs.tree.scrollTop = e.currentTarget.scrollTop;
             }}
-            key={data?.name ?? "inheritance-tree"}
-            treeData={nodes}
-            selectedKeys={data ? [data.name] : []}
-            defaultExpandedKeys={expanded}
-            onExpand={(expanded) => tab.innerTabs.tree.expanded = expanded}
-            showLine
-            showIcon
-            onSelect={onSelect}
-        />
+        >
+            <Tree
+                styles={{
+                    root: {
+                        background: "transparent",
+                        marginBottom: "3rem"
+                    },
+                    itemIcon: {
+                        position: "relative",
+                        display: "flex",
+                        justifyContent: "center",
+                        alignItems: "center"
+                    }
+                }}
+                key={data?.name ?? "inheritance-tree"}
+                treeData={nodes}
+                selectedKeys={data ? [data.name] : []}
+                defaultExpandedKeys={expanded}
+                onExpand={(expanded) => tab.innerTabs.tree.expanded = expanded}
+                showLine
+                showIcon
+                onSelect={onSelect}
+            />
+        </div>
     );
 };
 
