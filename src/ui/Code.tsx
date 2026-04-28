@@ -33,7 +33,7 @@ import {
     pendingTokenJump
 } from './CodeExtensions';
 import { bytecode } from '../logic/Settings';
-import { selectedFile, diffView, openTabs, selectedLines, tabHistory, referencesQuery, mobileDrawerOpen } from '../logic/State';
+import { selectedFile, diffView, openTabs, selectedLines, tabHistory, referencesQuery, mobileDrawerOpen, grepHighlightQuery } from '../logic/State';
 
 const IS_ANDROID_CHROME = /Android/.test(navigator.userAgent) && /Chrome/.test(navigator.userAgent);
 
@@ -52,6 +52,8 @@ const Code = () => {
 
     const decorationsCollectionRef = useRef<editor.IEditorDecorationsCollection | null>(null);
     const lineHighlightRef = useRef<editor.IEditorDecorationsCollection | null>(null);
+    const grepHighlightRef = useRef<editor.IEditorDecorationsCollection | null>(null);
+    const grepHighlight = useObservable(grepHighlightQuery);
     const decompileResultRef = useRef(decompileResult);
     const classListRef = useRef(classList);
 
@@ -307,6 +309,17 @@ const Code = () => {
             });
         }
     }, [decompileResult, tokenJump]);
+
+    useEffect(() => {
+        grepHighlightRef.current?.clear();
+        if (!editorRef.current || !decompileResult || !grepHighlight) return;
+        const model = editorRef.current.getModel();
+        if (!model) return;
+        const matches = model.findMatches(grepHighlight, true, false, false, null, false);
+        grepHighlightRef.current = editorRef.current.createDecorationsCollection(
+            matches.map(m => ({ range: m.range, options: { inlineClassName: 'grep-highlight-decoration' } }))
+        );
+    }, [decompileResult, grepHighlight]);
 
     // Handle gutter clicks for line linking
     useEffect(() => {
