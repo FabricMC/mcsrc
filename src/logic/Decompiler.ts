@@ -6,7 +6,7 @@ import {
 import { minecraftJar, type MinecraftJar } from "./MinecraftApi";
 import { selectedFile } from "./State";
 import { bytecode, displayLambdas } from "./Settings";
-import type { Options } from "./vf";
+import type { Options } from "./vineflower/vineflower";
 import type { DecompileResult } from "../workers/decompile/types";
 import * as worker from "../workers/decompile/client";
 import type { Jar } from "../utils/Jar";

@@ -1,5 +1,5 @@
 import * as Comlink from "comlink";
-import type * as vf from "../../logic/vf";
+import type * as vf from "../../logic/vineflower/vineflower";
 import { DecompileJar, type DecompileResult } from "./types";
 import type { Jar } from "../../utils/Jar";
 import type { DecompileWorker } from "./worker";

@@ -1,8 +1,6 @@
-import wasmPath from "@run-slicer/vf/vf.wasm?url";
-import { load } from "@run-slicer/vf/vf.wasm-runtime.js";
-import type * as vf from "@run-slicer/vf";
-
-export type * from "@run-slicer/vf";
+import wasmPath from "vf-1.11.2/vf.wasm?url";
+import { load } from "vf-1.11.2/vf.wasm-runtime.js";
+import type * as vf from "vf-1.11.2";
 
 let runtime: typeof vf | null = null;
 let runtimePreferWasm = true;
@@ -10,7 +8,7 @@ let runtimePreferWasm = true;
 export async function loadRuntime(preferWasm: boolean) {
     if (!runtime || runtimePreferWasm !== preferWasm) {
         runtimePreferWasm = preferWasm;
-        console.log(`Loading VineFlower ${preferWasm ? "WASM" : "JavaScript"} runtime`);
+        console.log(`Loading VineFlower 1.11.2 ${preferWasm ? "WASM" : "JavaScript"} runtime`);
 
         let loadJs = !preferWasm;
         if (preferWasm) {
@@ -25,12 +23,12 @@ export async function loadRuntime(preferWasm: boolean) {
         }
 
         if (loadJs) {
-            runtime = await import("@run-slicer/vf/vf.runtime.js");
+            runtime = await import("vf-1.11.2/vf.runtime.js");
         }
     }
 }
 
-export const decompile: typeof vf.decompile = async (name, options) => {
+export const decompile: typeof vf.decompile = async (name: string | string[], options?: vf.Config) => {
     if (!runtime) throw "No runtime loaded";
     return await runtime.decompile(name, options);
 };
