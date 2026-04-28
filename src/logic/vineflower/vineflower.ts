@@ -1,10 +1,13 @@
-const DEFAULT_VERSION = "1.11.2";
-export type Version = "1.11.2";
+const DEFAULT_VERSION = "1.12.0";
+export type Version = "1.11.2" | "1.12.0";
 
 export async function loadRuntime(preferWasm: boolean, version: Version = DEFAULT_VERSION) {
     if (version === "1.11.2") {
-        const vf1112 = await import("./vf-1.11.2");
-        return await vf1112.loadRuntime(preferWasm);
+        const vf = await import("./vf-1.11.2");
+        return await vf.loadRuntime(preferWasm);
+    } else if (version === "1.12.0") {
+        const vf = await import("./vf-1.12.0");
+        return await vf.loadRuntime(preferWasm);
     }
 
     throw new Error(`Unsupported Vineflower version: ${version}`);
@@ -12,8 +15,11 @@ export async function loadRuntime(preferWasm: boolean, version: Version = DEFAUL
 
 export async function decompile(name: string | string[], options?: Config, version: Version = DEFAULT_VERSION) {
     if (version === "1.11.2") {
-        const vf1112 = await import("./vf-1.11.2");
-        return await vf1112.decompile(name, options);
+        const vf = await import("./vf-1.11.2");
+        return await vf.decompile(name, options);
+    } else if (version === "1.12.0") {
+        const vf = await import("./vf-1.12.0");
+        return await vf.decompile(name, options);
     }
 
     throw new Error(`Unsupported Vineflower version: ${version}`);
