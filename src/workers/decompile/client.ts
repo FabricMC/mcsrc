@@ -3,6 +3,7 @@ import type * as vf from "../../logic/vineflower/vineflower";
 import { DecompileJar, type DecompileResult } from "./types";
 import type { Jar } from "../../utils/Jar";
 import type { DecompileWorker } from "./worker";
+import { DEFAULT_VERSION, type Version } from "../../logic/vineflower/versions";
 
 function createWorker() {
     const worker = new Worker(new URL("./worker.ts", import.meta.url), { type: "module", name: "decompiler" });
@@ -13,6 +14,7 @@ type WorkerInstance = ReturnType<typeof createWorker>;
 const MAX_THREADS = navigator.hardwareConcurrency || 4;
 let workers: WorkerInstance[] = [];
 let preferWasmRuntime = true;
+let version: Version = DEFAULT_VERSION;
 
 async function ensureWorkers(count: number) {
     count = Math.min(count, MAX_THREADS);
@@ -22,7 +24,7 @@ async function ensureWorkers(count: number) {
         { length: count - workers.length },
         () => createWorker());
 
-    await Promise.all(newWorkers.map(w => w.loadVFRuntime(preferWasmRuntime)));
+    await Promise.all(newWorkers.map(w => w.loadVFRuntime(preferWasmRuntime, version)));
     workers.push(...newWorkers);
 }
 
@@ -44,6 +46,13 @@ async function findWorker(): Promise<WorkerInstance> {
 
 export async function setRuntime(preferWasm: boolean) {
     preferWasmRuntime = preferWasm;
+    await Promise.all(workers.map(w => w.scheduleClose()));
+    workers = [];
+}
+
+async function setVersion(newVersion: Version) {
+    if (version === newVersion) return;
+    version = newVersion;
     await Promise.all(workers.map(w => w.scheduleClose()));
     workers = [];
 }
@@ -72,7 +81,7 @@ export type DecompileEntireJarTask = {
     stop: () => void;
 };
 
-export function decompileEntireJar(jar: Jar, options?: DecompileEntireJarOptions): DecompileEntireJarTask {
+export function decompileEntireJar(jar: Jar, version: Version, options?: DecompileEntireJarOptions): DecompileEntireJarTask {
     const sab = new SharedArrayBuffer(Uint32Array.BYTES_PER_ELEMENT);
     const state = new Uint32Array(sab);
     state[0] = 0;
@@ -92,6 +101,7 @@ export function decompileEntireJar(jar: Jar, options?: DecompileEntireJarOptions
                     options.logger!(classNames[i], ++current, classNames.length);
                 }) : undefined;
 
+                await setVersion(version);
                 await ensureWorkers(optThreads);
                 const result = await Promise.all((workers
                     .slice(0, optThreads))
@@ -109,7 +119,7 @@ export function decompileEntireJar(jar: Jar, options?: DecompileEntireJarOptions
     };
 }
 
-export async function decompileClass(className: string, jar: Jar): Promise<DecompileResult> {
+export async function decompileClass(className: string, jar: Jar, version: Version): Promise<DecompileResult> {
     className = className.replace(".class", "");
     const entry = jar.entries[`${className}.class`];
 
@@ -121,6 +131,7 @@ export async function decompileClass(className: string, jar: Jar): Promise<Decom
         language: "java",
     };
 
+    await setVersion(version);
     const worker = await findWorker();
     return await worker.decompile(className, jar.name, jar.blob);
 }

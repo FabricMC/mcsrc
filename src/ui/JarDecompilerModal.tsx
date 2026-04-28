@@ -6,6 +6,7 @@ import { BooleanOption, NumberOption } from "./SettingsModal";
 import { decompilerSplits, decompilerThreads, MAX_THREADS, preferWasmDecompiler } from "../logic/Settings";
 import { decompileEntireJar, deleteCache, type DecompileEntireJarTask } from "../workers/decompile/client";
 import { minecraftJar } from "../logic/MinecraftApi";
+import { DEFAULT_VERSION } from "../logic/vineflower/versions";
 
 const modalOpen = new BehaviorSubject(false);
 
@@ -26,7 +27,7 @@ export const JarDecompilerModal = () => {
         modalOpen.next(false);
         if (!jar) return;
 
-        const task = decompileEntireJar(jar.jar, {
+        const task = decompileEntireJar(jar.jar, DEFAULT_VERSION, {
             threads: decompilerThreads.value,
             splits: decompilerSplits.value,
             logger(progress, current, total) {

@@ -5,10 +5,12 @@ import type { Token } from "../../logic/Tokens";
 import { type DecompileResult, type DecompileOption, type DecompileData, DecompileJar } from "./types";
 import { openJar } from "../../utils/Jar";
 import { JarIndexer } from "../jar-index/types";
+import { DEFAULT_VERSION, type Version } from "../../logic/vineflower/versions";
 
 export class DecompileWorker {
     #lastPromise: Promise<unknown> | undefined = undefined;
     #promiseCount = 0;
+    #version: Version;
     promiseCount = () => this.#promiseCount;
 
     async schedule<T>(fn: () => Promise<T>): Promise<T> {
@@ -30,7 +32,8 @@ export class DecompileWorker {
         results3: Table<DecompileResult, [string, number, string]>,
     };
 
-    constructor() {
+    constructor(version: Version = DEFAULT_VERSION) {
+        this.#version = version;
         this.db.version(4).stores({
             options: "key",
             results3: "[className+checksum+language]",
@@ -74,8 +77,10 @@ export class DecompileWorker {
         await this.db.options.bulkAdd(Object.entries(options).map(([k, v]) => ({ key: k, value: v })));
     });
 
-    loadVFRuntime = (preferWasm: boolean) => this.schedule(() =>
-        vf.loadRuntime(preferWasm));
+    loadVFRuntime = (preferWasm: boolean, version: Version) => this.schedule(() => {
+        this.#version = version;
+        return vf.loadRuntime(preferWasm, this.#version);
+    });
 
     clear = (): Promise<number> => this.schedule(async () => {
         const count = await this.db.results3.count();
@@ -180,7 +185,7 @@ export class DecompileWorker {
         let currentTokens: Token[] | undefined;
         let currentClassName: string | undefined;
 
-        const sources = await vf.decompile(classNames, {
+        const sources = await vf.decompile(this.#version, classNames, {
             source: async (name) => {
                 const data = await classData[name]?.data;
 
