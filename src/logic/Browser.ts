@@ -1,4 +1,5 @@
-import { distinctUntilChanged, fromEvent, map, merge, Observable, startWith, throttleTime } from "rxjs";
+import { combineLatest, distinctUntilChanged, fromEvent, map, merge, Observable, startWith, switchMap, throttleTime } from "rxjs";
+import { theme } from "./Settings";
 
 export const isThin = fromEvent(window, 'resize').pipe(
     startWith(null),
@@ -8,14 +9,23 @@ export const isThin = fromEvent(window, 'resize').pipe(
 );
 
 const darkModeQuery = window.matchMedia('(prefers-color-scheme: dark)');
-export const isDarkMode = new Observable(subscriber => {
+const systemDarkMode = new Observable<boolean>(subscriber => {
     const emit = () => subscriber.next(darkModeQuery.matches);
-    emit(); // emit initial value
+    emit();
 
     darkModeQuery.addEventListener("change", emit);
     return () => {
         darkModeQuery.removeEventListener("change", emit);
     };
 }).pipe(
+    distinctUntilChanged()
+);
+
+export const isDarkMode = combineLatest([theme.observable, systemDarkMode]).pipe(
+    map(([themeMode, systemDark]) => {
+        if (themeMode === 'dark') return true;
+        if (themeMode === 'light') return false;
+        return systemDark;
+    }),
     distinctUntilChanged()
 );

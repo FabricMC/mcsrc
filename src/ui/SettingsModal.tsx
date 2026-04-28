@@ -1,8 +1,8 @@
-import { Button, Modal, type CheckboxProps, Form, Tooltip, InputNumber, type InputNumberProps } from "antd";
-import { SettingOutlined } from '@ant-design/icons';
+import { Button, Modal, type CheckboxProps, Form, Tooltip, InputNumber, type InputNumberProps, Space } from "antd";
+import { SettingOutlined, SunOutlined, MoonOutlined, DesktopOutlined } from '@ant-design/icons';
 import { Checkbox } from 'antd';
 import { useObservable } from "../utils/UseObservable";
-import { BooleanSetting, enableTabs, displayLambdas, focusSearch, KeybindSetting, type KeybindValue, bytecode, showStructure, NumberSetting, preferWasmDecompiler, compactPackages } from "../logic/Settings";
+import { BooleanSetting, enableTabs, displayLambdas, focusSearch, KeybindSetting, type KeybindValue, bytecode, showStructure, NumberSetting, preferWasmDecompiler, compactPackages, theme } from "../logic/Settings";
 import { capturingKeybind, rawKeydownEvent } from "../logic/Keybinds";
 import { BehaviorSubject } from "rxjs";
 import type React from "react";
@@ -30,6 +30,7 @@ const SettingsModal = () => {
             footer={null}
         >
             <Form layout="horizontal" labelCol={{ span: 9 }} wrapperCol={{ span: 16 }}>
+                <ThemeOption />
                 <BooleanOption setting={enableTabs} title={"Enable Tabs"} />
                 <BooleanOption setting={compactPackages} title={"Compact Packages"} tooltip="Collapse packages with one child into one." />
                 <BooleanOption setting={displayLambdas} title={"Lambda Names"} tooltip="Display lambda names as inline comments. Does not support permalinking." disabled={bytecodeValue} />
@@ -60,6 +61,38 @@ export const BooleanOption: React.FC<BooleanOptionProps> = ({ setting, title, to
     return (
         <Form.Item label={title}>
             {tooltip ? <Tooltip title={tooltip}>{checkbox}</Tooltip> : checkbox}
+        </Form.Item>
+    );
+};
+
+export const ThemeOption: React.FC = () => {
+    const value = useObservable(theme.observable);
+
+    return (
+        <Form.Item label="Theme">
+            <Space.Compact>
+                <Tooltip title="Light">
+                    <Button
+                        icon={<SunOutlined />}
+                        type={value === 'light' ? 'primary' : 'default'}
+                        onClick={() => theme.value = 'light'}
+                    />
+                </Tooltip>
+                <Tooltip title="System">
+                    <Button
+                        icon={<DesktopOutlined />}
+                        type={value === 'system' ? 'primary' : 'default'}
+                        onClick={() => theme.value = 'system'}
+                    />
+                </Tooltip>
+                <Tooltip title="Dark">
+                    <Button
+                        icon={<MoonOutlined />}
+                        type={value === 'dark' ? 'primary' : 'default'}
+                        onClick={() => theme.value = 'dark'}
+                    />
+                </Tooltip>
+            </Space.Compact>
         </Form.Item>
     );
 };
