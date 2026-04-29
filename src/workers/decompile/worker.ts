@@ -29,15 +29,16 @@ export class DecompileWorker {
 
     db = new Dexie("decompiler") as Dexie & {
         options: EntityTable<DecompileOption, "key">,
-        results3: Table<DecompileResult, [string, number, string]>,
+        results4: Table<DecompileResult, [string, number, string, Version]>,
     };
 
     constructor(version: Version = DEFAULT_VERSION) {
         this.#version = version;
-        this.db.version(4).stores({
+        this.db.version(5).stores({
             options: "key",
-            results3: "[className+checksum+language]",
+            results4: "[className+checksum+language+version]",
             // clear old data
+            results3: null,
             results2: null,
             results: null,
         });
@@ -70,7 +71,7 @@ export class DecompileWorker {
         }
 
         if (changed || notVisited.size > 0) {
-            await this.db.results3.clear();
+            await this.db.results4.clear();
         }
 
         await this.db.options.clear();
@@ -83,8 +84,8 @@ export class DecompileWorker {
     });
 
     clear = (): Promise<number> => this.schedule(async () => {
-        const count = await this.db.results3.count();
-        await this.db.results3.clear();
+        const count = await this.db.results4.count();
+        await this.db.results4.clear();
         return count;
     });
 
@@ -123,9 +124,9 @@ export class DecompileWorker {
                 const checksum = jar.proxy[className]?.checksum;
                 if (!checksum) continue;
 
-                const dbCount = await this.db.results3
-                    .where("[className+checksum+language]")
-                    .equals([className, checksum, "java"])
+                const dbCount = await this.db.results4
+                    .where("[className+checksum+language+version]")
+                    .equals([className, checksum, "java", this.#version])
                     .count();
 
                 if (dbCount >= 1) {
@@ -157,7 +158,7 @@ export class DecompileWorker {
         try {
             const jar = new DecompileJar(await openJar(jarName, jarBlob));
             const checksum = jar.proxy[className]?.checksum;
-            const dbResult = await this.db.results3.get([className, checksum, "java"]);
+            const dbResult = await this.db.results4.get([className, checksum, "java", this.#version]);
             if (dbResult) return dbResult;
 
             const result = await this.#decompile(jar.classes, [className], jar.proxy);
@@ -169,7 +170,8 @@ export class DecompileWorker {
                 checksum: 0,
                 source: `// Error during decompilation: ${(e as Error).message}`,
                 tokens: [],
-                language: "java"
+                language: "java",
+                version: this.#version
             };
         }
     });
@@ -269,27 +271,27 @@ export class DecompileWorker {
             }
 
             tokens.sort((a, b) => a.start - b.start);
-            res.push({ className, checksum, source, tokens, language: "java" });
+            res.push({ className, checksum, source: sourceStr, tokens, language: "java", version: this.#version });
         }
 
-        await this.db.results3.bulkPut(res);
+        await this.db.results4.bulkPut(res);
         return res;
     }
 
     #indexer = new JarIndexer();
     getClassBytecode = (className: string, checksum: number, classData: ArrayBufferLike[]): Promise<DecompileResult> => this.schedule(async () => {
-        let result = await this.db.results3.get([className, checksum, "bytecode"]);
+        let result = await this.db.results4.get([className, checksum, "bytecode", this.#version]);
         if (result) return result;
 
         try {
             const bytecode = await this.#indexer.getBytecode(classData);
-            result = { className, checksum, source: bytecode, tokens: [], language: "bytecode" };
+            result = { className, checksum, source: bytecode, tokens: [], language: "bytecode", version: this.#version };
         } catch (e) {
             console.error(`Error during bytecode retrieval of class '${className}':`, e);
-            result = { className, checksum, source: `// Error during bytecode retrieval: ${(e as Error).message}`, tokens: [], language: "bytecode" };
+            result = { className, checksum, source: `// Error during bytecode retrieval: ${(e as Error).message}`, tokens: [], language: "bytecode", version: this.#version };
         }
 
-        await this.db.results3.put(result);
+        await this.db.results4.put(result);
         return result;
     });
 }

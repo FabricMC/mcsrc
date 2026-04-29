@@ -129,6 +129,7 @@ export async function decompileClass(className: string, jar: Jar, version: Versi
         source: `// Class not found: ${className}`,
         tokens: [],
         language: "java",
+        version,
     };
 
     await setVersion(version);
@@ -146,6 +147,7 @@ export async function getClassBytecode(className: string, jar: Jar): Promise<Dec
         source: `// Class not found: ${className}`,
         tokens: [],
         language: "bytecode",
+        version,
     };
 
     const classData: ArrayBufferLike[] = [];
