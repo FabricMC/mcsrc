@@ -249,11 +249,12 @@ export class DecompileWorker {
         const res: DecompileResult[] = [];
         for (const [className, source] of Object.entries(sources)) {
             const checksum = classData[className]?.checksum ?? 0;
-            const tokens = allTokens[source] ?? [];
+            const sourceStr = source as string;
+            const tokens = allTokens[sourceStr] ?? [];
 
             const importRegex = /^\s*import\s+(?!static\b)([^\s;]+)\s*;/gm;
-            let match = null;
-            while ((match = importRegex.exec(source)) !== null) {
+            let match: RegExpExecArray | null = null;
+            while ((match = importRegex.exec(sourceStr)) !== null) {
                 const importPath = match[1].replaceAll('.', '/');
                 if (importPath.endsWith('*')) {
                     continue;
