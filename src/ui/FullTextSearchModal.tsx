@@ -13,10 +13,39 @@ type SearchState =
     | { state: "ok"; results: FullTextSearchResult[]; }
     | { state: "error"; error: string; };
 
+function parseRegexQuery(input: string): { pattern: string; flags: string } | null {
+    const m = input.match(/^\/(.+?)(?:\/([gimsuy]*))?$/);
+    if (!m) return null;
+    try {
+        new RegExp(m[1], m[2] ?? "");
+        return { pattern: m[1], flags: m[2] ?? "" };
+    } catch {
+        return null;
+    }
+}
+
 const query = new BehaviorSubject("");
 const search$ = combineLatest([fullTextSearch, query]).pipe(
     distinctUntilChanged(),
     switchMap(([fts, query]) => {
+        if (query.startsWith("/")) {
+            if (query.length < 2) return of(SearchState({
+                state: "error",
+                error: "Enter a regex pattern: /pattern/flags"
+            }));
+
+            const regex = parseRegexQuery(query);
+            if (!regex) return of(SearchState({
+                state: "error",
+                error: "Invalid regex"
+            }));
+
+            return from(fts.findByRegex(regex.pattern, regex.flags, { maxTokens: 11 })).pipe(
+                map(results => SearchState({ state: "ok", results })),
+                startWith(SearchState({ state: "loading" })),
+                catchError(error => of(SearchState({ state: "error", error: String(error) }))));
+        }
+
         if (query.length < 3) return of(SearchState({
             state: "error",
             error: "Query must be at least 3 characters"
@@ -122,7 +151,7 @@ const FullTextSearchModal = () => {
             <Flex vertical gap="medium">
                 <Input.Search
                     ref={inputRef}
-                    placeholder="Search for occurence"
+                    placeholder="Search… or /regex/flags for regex"
                     onSearch={q => query.next(q.trim())}
                 />
                 <div style={{

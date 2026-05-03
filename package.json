@@ -3,10 +3,6 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "workspaces": [
-    ".",
-    "packages/*"
-  ],
   "scripts": {
     "dev": "vite",
     "dev:javadoc": "vite --mode javadoc",
@@ -29,7 +25,6 @@
     "comlink": "^4.4.2",
     "dagre": "^0.8.5",
     "dexie": "^4.3.0",
-    "mcsrc-sqlite": "workspace:*",
     "monaco-editor": "^0.55.1",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",

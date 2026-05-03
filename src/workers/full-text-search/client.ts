@@ -1,13 +1,15 @@
 import * as Comlink from "comlink";
 import { minecraftJar, type MinecraftJar } from "../../logic/MinecraftApi";
-import { distinctUntilChanged, mergeMap, shareReplay } from "rxjs";
+import { BehaviorSubject, combineLatest, distinctUntilChanged, mergeMap, shareReplay } from "rxjs";
 import type { FullTextSearchOptions, FullTextSearchResult, FullTextSearchWorker } from "./worker";
 import { onDecompiledSources } from "../decompile/client";
 
 let currentInstance: FullTextSearch | undefined;
-export const fullTextSearch = minecraftJar.pipe(
+const invalidator = new BehaviorSubject(0);
+
+export const fullTextSearch = combineLatest([minecraftJar, invalidator]).pipe(
     distinctUntilChanged(),
-    mergeMap(async jar => {
+    mergeMap(async ([jar, _]) => {
         if (currentInstance) {
             await currentInstance.destroy();
         }
@@ -18,6 +20,10 @@ export const fullTextSearch = minecraftJar.pipe(
     }),
     shareReplay({ bufferSize: 1, refCount: false })
 );
+
+export function invalidateFullTextSearch() {
+    invalidator.next(invalidator.value + 1);
+}
 
 export class FullTextSearch {
     readonly #jar: MinecraftJar;
@@ -52,5 +58,10 @@ export class FullTextSearch {
     async find(query: string, options?: FullTextSearchOptions): Promise<FullTextSearchResult[]> {
         const worker = await this.#worker();
         return await worker.find(query, options);
+    }
+
+    async findByRegex(pattern: string, flags: string, options?: FullTextSearchOptions): Promise<FullTextSearchResult[]> {
+        const worker = await this.#worker();
+        return await worker.findByRegex(pattern, flags, options);
     }
 }
