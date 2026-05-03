@@ -83,6 +83,28 @@ export class DecompileWorker {
         return count;
     });
 
+    onDecompiledSources = (
+        jarName: string,
+        jarBlob: Blob,
+        callback: (className: string, source: string) => Promise<void> | void
+    ) => this.schedule(async () => {
+        const jar = new DecompileJar(await openJar(jarName, jarBlob));
+        const classNames = jar.classes.filter(n => !n.includes("$"));
+
+        const promises: Promise<void>[] = [];
+        for (const className of classNames) {
+            const data = jar.proxy[className];
+            if (!data) continue;
+
+            promises.push((async () => {
+                const result = await this.db.results3.get([className, data.checksum, "java"]);
+                if (result) await callback(result.className, result.source);
+            })());
+        }
+
+        await Promise.all(promises);
+    });
+
     decompileMany = (
         jarName: string,
         jarBlob: Blob,

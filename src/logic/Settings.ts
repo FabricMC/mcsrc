@@ -146,6 +146,7 @@ export const bytecode = new BooleanSetting('bytecode', false);
 export const unifiedDiff = new BooleanSetting('unified_diff', false);
 export const focusSearch = new KeybindSetting('focus_search', 'Ctrl+ ');
 export const showStructure = new KeybindSetting('show_structure', 'Ctrl+F12');
+export const fullTextSearchBind = new KeybindSetting('full_text_search', 'Ctrl+Shift+f');
 
 export const preferWasmDecompiler = new BooleanSetting('prefer_wasm_decompiler', true);
 preferWasmDecompiler.observable
