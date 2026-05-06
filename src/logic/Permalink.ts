@@ -52,7 +52,7 @@ export const parsePathToState = (path: string): State | null => {
         const rightMinecraftVersion = decodeURIComponent(segments[3]);
         const filePath = segments.slice(4).join('/');
         return {
-            version,
+            version: DEFAULT_STATE.version, // The diff format didnt change from /1/ to /2/, so we can just blindly upgrade all diff permalinks to the new decompiler.
             minecraftVersion: rightMinecraftVersion,
             file: filePath ? filePath + (filePath.endsWith('.class') ? '' : '.class') : undefined,
             selectedLines: null,

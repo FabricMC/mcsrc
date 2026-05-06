@@ -99,8 +99,7 @@ test.describe('Permalinks and Line Highlighting', () => {
 
         await expect(diffEditor).toContainText('net.minecraft.client.renderer');
 
-        await expect(page.getByText('Note: Using legacy decompiler (Vineflower 1.11.2)')).toBeVisible();
-        expect(consoleLogs.some(log => log.includes('Loading VineFlower 1.11.2'))).toBe(true);
+        expect(consoleLogs.some(log => log.includes('Loading VineFlower 1.12.0'))).toBe(true);
     });
 
     test('Diff permalink restores left and right versions and opens diff view (/2/ format)', async ({ page }) => {
