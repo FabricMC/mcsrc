@@ -1,6 +1,7 @@
 import { combineLatest } from "rxjs";
 import { resetPermalinkAffectingSettings, supportsPermalinking } from "./Settings";
-import { diffLeftSelectedMinecraftVersion, diffView, selectedFile, selectedLines, selectedMinecraftVersion } from "./State";
+import { diffLeftSelectedMinecraftVersion, diffView, vineflowerVersion, selectedFile, selectedLines, selectedMinecraftVersion } from "./State";
+import { vineflowerVersionToPermalinkVersion } from "./vineflower/versions";
 
 export interface State {
     version: number; // Allows us to change the permalink structure in the future
@@ -16,7 +17,7 @@ export interface State {
 }
 
 const DEFAULT_STATE: State = {
-    version: 0,
+    version: 2,
     minecraftVersion: "",
     file: undefined,
     selectedLines: null
@@ -51,7 +52,7 @@ export const parsePathToState = (path: string): State | null => {
         const rightMinecraftVersion = decodeURIComponent(segments[3]);
         const filePath = segments.slice(4).join('/');
         return {
-            version,
+            version: DEFAULT_STATE.version, // The diff format didnt change from /1/ to /2/, so we can just blindly upgrade all diff permalinks to the new decompiler.
             minecraftVersion: rightMinecraftVersion,
             file: filePath ? filePath + (filePath.endsWith('.class') ? '' : '.class') : undefined,
             selectedLines: null,
@@ -117,14 +118,16 @@ if (typeof window !== "undefined") {
             selectedFile,
             selectedLines,
             supportsPermalinking,
-            diffView
+            diffView,
+            vineflowerVersion
         ]).subscribe(([
             minecraftVersion,
             diffLeftMinecraftVersion,
             file,
             selectedLines,
             supported,
-            diffView
+            diffView,
+            vineflowerVersion
         ]) => {
             if (!file && !diffView) {
                 document.title = "mcsrc.dev";
@@ -146,7 +149,7 @@ if (typeof window !== "undefined") {
                 return;
             }
 
-            let url = '/1/';
+            let url = `/${vineflowerVersionToPermalinkVersion(vineflowerVersion)}/`;
 
             if (diffView) {
                 url += `diff/${diffLeftMinecraftVersion}/${minecraftVersion}`;

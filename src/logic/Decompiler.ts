@@ -4,9 +4,9 @@ import {
     combineLatest, distinctUntilChanged, from, map, Observable, of, shareReplay, switchMap, tap, throttleTime
 } from "rxjs";
 import { minecraftJar, type MinecraftJar } from "./MinecraftApi";
-import { selectedFile } from "./State";
+import { selectedFile, vineflowerVersion } from "./State";
 import { bytecode, displayLambdas } from "./Settings";
-import type { Options } from "./vf";
+import type { Options } from "./vineflower/vineflower";
 import type { DecompileResult } from "../workers/decompile/types";
 import * as worker from "../workers/decompile/client";
 import type { Jar } from "../utils/Jar";
@@ -71,7 +71,7 @@ export async function getClassBytecode(className: string, jar: Jar) {
 export async function decompileClass(className: string, jar: Jar) {
     try {
         decompilerCounter.next(decompilerCounter.value + 1);
-        return await worker.decompileClass(className, jar);
+        return await worker.decompileClass(className, jar, vineflowerVersion.value);
     } finally {
         decompilerCounter.next(decompilerCounter.value - 1);
     }

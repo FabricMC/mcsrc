@@ -1,14 +1,16 @@
-import * as vf from "../../logic/vf";
+import * as vf from "../../logic/vineflower/vineflower";
 import * as Comlink from "comlink";
 import Dexie, { type EntityTable, type Table } from "dexie";
 import type { Token } from "../../logic/Tokens";
 import { type DecompileResult, type DecompileOption, type DecompileData, DecompileJar } from "./types";
 import { openJar } from "../../utils/Jar";
 import { JarIndexer } from "../jar-index/types";
+import { DEFAULT_VERSION, type Version } from "../../logic/vineflower/versions";
 
 export class DecompileWorker {
     #lastPromise: Promise<unknown> | undefined = undefined;
     #promiseCount = 0;
+    #version: Version;
     promiseCount = () => this.#promiseCount;
 
     async schedule<T>(fn: () => Promise<T>): Promise<T> {
@@ -27,14 +29,16 @@ export class DecompileWorker {
 
     db = new Dexie("decompiler") as Dexie & {
         options: EntityTable<DecompileOption, "key">,
-        results3: Table<DecompileResult, [string, number, string]>,
+        results4: Table<DecompileResult, [string, number, string, Version]>,
     };
 
-    constructor() {
-        this.db.version(4).stores({
+    constructor(version: Version = DEFAULT_VERSION) {
+        this.#version = version;
+        this.db.version(5).stores({
             options: "key",
-            results3: "[className+checksum+language]",
+            results4: "[className+checksum+language+version]",
             // clear old data
+            results3: null,
             results2: null,
             results: null,
         });
@@ -67,19 +71,21 @@ export class DecompileWorker {
         }
 
         if (changed || notVisited.size > 0) {
-            await this.db.results3.clear();
+            await this.db.results4.clear();
         }
 
         await this.db.options.clear();
         await this.db.options.bulkAdd(Object.entries(options).map(([k, v]) => ({ key: k, value: v })));
     });
 
-    loadVFRuntime = (preferWasm: boolean) => this.schedule(() =>
-        vf.loadRuntime(preferWasm));
+    loadVFRuntime = (preferWasm: boolean, version: Version) => this.schedule(() => {
+        this.#version = version;
+        return vf.loadRuntime(preferWasm, this.#version);
+    });
 
     clear = (): Promise<number> => this.schedule(async () => {
-        const count = await this.db.results3.count();
-        await this.db.results3.clear();
+        const count = await this.db.results4.count();
+        await this.db.results4.clear();
         return count;
     });
 
@@ -118,9 +124,9 @@ export class DecompileWorker {
                 const checksum = jar.proxy[className]?.checksum;
                 if (!checksum) continue;
 
-                const dbCount = await this.db.results3
-                    .where("[className+checksum+language]")
-                    .equals([className, checksum, "java"])
+                const dbCount = await this.db.results4
+                    .where("[className+checksum+language+version]")
+                    .equals([className, checksum, "java", this.#version])
                     .count();
 
                 if (dbCount >= 1) {
@@ -152,7 +158,7 @@ export class DecompileWorker {
         try {
             const jar = new DecompileJar(await openJar(jarName, jarBlob));
             const checksum = jar.proxy[className]?.checksum;
-            const dbResult = await this.db.results3.get([className, checksum, "java"]);
+            const dbResult = await this.db.results4.get([className, checksum, "java", this.#version]);
             if (dbResult) return dbResult;
 
             const result = await this.#decompile(jar.classes, [className], jar.proxy);
@@ -164,7 +170,8 @@ export class DecompileWorker {
                 checksum: 0,
                 source: `// Error during decompilation: ${(e as Error).message}`,
                 tokens: [],
-                language: "java"
+                language: "java",
+                version: this.#version
             };
         }
     });
@@ -180,7 +187,7 @@ export class DecompileWorker {
         let currentTokens: Token[] | undefined;
         let currentClassName: string | undefined;
 
-        const sources = await vf.decompile(classNames, {
+        const sources = await vf.decompile(this.#version, classNames, {
             source: async (name) => {
                 const data = await classData[name]?.data;
 
@@ -242,11 +249,12 @@ export class DecompileWorker {
         const res: DecompileResult[] = [];
         for (const [className, source] of Object.entries(sources)) {
             const checksum = classData[className]?.checksum ?? 0;
-            const tokens = allTokens[source] ?? [];
+            const sourceStr = source as string;
+            const tokens = allTokens[sourceStr] ?? [];
 
             const importRegex = /^\s*import\s+(?!static\b)([^\s;]+)\s*;/gm;
-            let match = null;
-            while ((match = importRegex.exec(source)) !== null) {
+            let match: RegExpExecArray | null = null;
+            while ((match = importRegex.exec(sourceStr)) !== null) {
                 const importPath = match[1].replaceAll('.', '/');
                 if (importPath.endsWith('*')) {
                     continue;
@@ -264,27 +272,27 @@ export class DecompileWorker {
             }
 
             tokens.sort((a, b) => a.start - b.start);
-            res.push({ className, checksum, source, tokens, language: "java" });
+            res.push({ className, checksum, source: sourceStr, tokens, language: "java", version: this.#version });
         }
 
-        await this.db.results3.bulkPut(res);
+        await this.db.results4.bulkPut(res);
         return res;
     }
 
     #indexer = new JarIndexer();
     getClassBytecode = (className: string, checksum: number, classData: ArrayBufferLike[]): Promise<DecompileResult> => this.schedule(async () => {
-        let result = await this.db.results3.get([className, checksum, "bytecode"]);
+        let result = await this.db.results4.get([className, checksum, "bytecode", this.#version]);
         if (result) return result;
 
         try {
             const bytecode = await this.#indexer.getBytecode(classData);
-            result = { className, checksum, source: bytecode, tokens: [], language: "bytecode" };
+            result = { className, checksum, source: bytecode, tokens: [], language: "bytecode", version: this.#version };
         } catch (e) {
             console.error(`Error during bytecode retrieval of class '${className}':`, e);
-            result = { className, checksum, source: `// Error during bytecode retrieval: ${(e as Error).message}`, tokens: [], language: "bytecode" };
+            result = { className, checksum, source: `// Error during bytecode retrieval: ${(e as Error).message}`, tokens: [], language: "bytecode", version: this.#version };
         }
 
-        await this.db.results3.put(result);
+        await this.db.results4.put(result);
         return result;
     });
 }
