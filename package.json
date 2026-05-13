@@ -20,7 +20,7 @@
     "@katana-project/zip": "^0.7.1",
     "@monaco-editor/react": "^4.7.0",
     "vf-1.11.2": "npm:@run-slicer/vf@^0.5.0-1.11.2",
-    "vf-1.12.0": "npm:@run-slicer/vf@^0.6.1-1.12.0",
+    "vf-1.12.0": "npm:@run-slicer/vf@^0.6.2-1.12.0",
     "@xyflow/react": "^12.10.1",
     "antd": "^6.3.2",
     "comlink": "^4.4.2",
