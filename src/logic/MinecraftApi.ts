@@ -33,6 +33,7 @@ export interface MinecraftJar {
     version: string;
     jar: Jar;
     blob: Blob;
+    mappingsBlob: Blob | null;
 }
 
 export const minecraftVersions = agreedEula.observable.pipe(
@@ -88,14 +89,35 @@ async function getJson<T>(url: string): Promise<T> {
     return response.json();
 }
 
+const RELEASE_PATTERN = /^1\.\d+(\.\d+)?$/;
+const SNAPSHOT_PATTERN = /^\d{2}w\d{2}[a-z]$/;
+
 async function fetchVersions(): Promise<VersionsList> {
     const mojang = await getJson<VersionsList>(VERSIONS_URL);
     const filteredMojangVersions = mojang.versions.filter(v => {
+        // Any version released after 2026 is deobfuscated
         if (new Date(v.releaseTime).getFullYear() >= 2026) return true;
-        const match = v.id.match(/^(\d+)\.(\d+)/);
-        if (!match) return false;
-        const major = parseInt(match[1], 10);
-        return major >= 26;
+
+        // Release 1.14.4 and newer have official deobfuscation mappings
+        if (v.type === "release" && RELEASE_PATTERN.test(v.id)) {
+            const m = v.id.match(/^1\.(\d+)(?:\.(\d+))?$/);
+            if (m) {
+                const minor = parseInt(m[1], 10);
+                const patch = m[2] ? parseInt(m[2], 10) : 0;
+                if (minor > 14 || (minor === 14 && patch >= 4)) return true;
+            }
+        }
+        // Snapshot 19w36a and newer have official deobfuscation mappings
+        if (v.type === "snapshot" && SNAPSHOT_PATTERN.test(v.id)) {
+            const m = v.id.match(/^(\d{2})w(\d{2})[a-z]$/);
+            if (m) {
+                const year = parseInt(m[1], 10) + 2000;
+                const week = parseInt(m[2], 10);
+                if (year > 2019 || (year === 2019 && week >= 36)) return true;
+            }
+        }
+
+        return false;
     });
     const versions = filteredMojangVersions
         .concat(EXPERIMENTAL_VERSIONS.versions)
@@ -174,14 +196,18 @@ async function downloadMinecraftJar(version: VersionListEntry, progress: Behavio
     console.log(`Downloading Minecraft jar for version: ${version.id}`);
     const versionManifest = await fetchVersionManifest(version);
     const clientUrl = versionManifest.downloads.client.url;
+    const clientMappingsUrl = versionManifest.downloads.client_mappings?.url;
 
-    const blob = await cachedFetch(clientUrl, (percent) => {
-        progress.next(percent);
-    });
+    let [mappingsBlob, blob] = await Promise.all([
+        clientMappingsUrl ? cachedFetch(clientMappingsUrl) : Promise.resolve(null),
+        cachedFetch(clientUrl, (percent) => {
+            progress.next(percent);
+        })
+    ]);
 
-    const jar = await openJar(version.id, blob);
+    const jar = await openJar(version.id, blob, mappingsBlob);
     progress.next(undefined);
-    return { version: version.id, jar, blob };
+    return { version: version.id, jar, blob, mappingsBlob };
 }
 
 // Hardcode as these are never going to change.

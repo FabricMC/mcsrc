@@ -1,16 +1,29 @@
 import { read, type Entry, type Reader, type Zip, readBlob } from "@katana-project/zip";
+import { createRemappedJarView } from "../workers/remap/jar";
+
+export interface JarEntry {
+    bytes(): Promise<Uint8Array>;
+    name: string;
+    crc32: number;
+    uncompressedSize: number;
+};
 
 export interface Jar {
     name: string;
     blob: Blob;
-    entries: { [key: string]: Entry; };
+    mappingsBlob: Blob | null;
+    entries: { [key: string]: JarEntry; };
 }
 
-export async function openJar(name: string, blob: Blob): Promise<Jar> {
+export async function openJar(name: string, blob: Blob, mappingsBlob: Blob | null): Promise<Jar> {
     const zip = await readBlob(blob, {
         naive: true
     });
-    return new JarImpl(name, blob, zip);
+    if (mappingsBlob) {
+        return createRemappedJarView(name, blob, mappingsBlob, zip);
+    } else {
+        return new JarImpl(name, blob, zip);
+    }
 }
 
 // TODO: fix
@@ -26,12 +39,14 @@ class JarImpl implements Jar {
     private zip: Zip;
     public name: string;
     public blob: Blob;
+    public mappingsBlob: null;
     public entries: { [key: string]: Entry; } = {};
 
     constructor(name: string, blob: Blob, zip: Zip) {
         this.name = name;
         this.blob = blob;
         this.zip = zip;
+        this.mappingsBlob = null;
         zip.entries.forEach(entry => {
             this.entries[entry.name] = entry;
         });
