@@ -26,6 +26,13 @@ test.describe('Permalinks and Line Highlighting', () => {
         await expect(highlightedLines.first()).toBeVisible();
     });
 
+    test('Version-only permalink selects the requested version', async ({ page }) => {
+        await page.goto('/1/26.1-mock-2');
+
+        const versionSelect = page.locator('.ant-select').first();
+        await expect(versionSelect).toContainText('26.1-mock-2');
+    });
+
     test('Shift-clicking line number creates line range', async ({ page }) => {
         await page.goto('/');
         await page.getByText('ChatFormatting', { exact: true }).click();

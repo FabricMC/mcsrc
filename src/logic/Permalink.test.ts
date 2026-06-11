@@ -26,7 +26,6 @@ describe('Permalink', () => {
 
             it('should return null when path has insufficient segments', () => {
                 expect(parsePathToState('1')).toEqual(null);
-                expect(parsePathToState('1/1.21')).toEqual(null);
             });
 
             it('should return default state when path is malformed', () => {
@@ -41,6 +40,15 @@ describe('Permalink', () => {
                 expect(state.version).toBe(1);
                 expect(state.minecraftVersion).toBe('1.21');
                 expect(state.file).toBe('net/minecraft/ChatFormatting.class');
+                expect(state.selectedLines).toBe(null);
+            });
+
+            it('should parse version-only permalink', () => {
+                const state = parsePathToState('1/26.2-rc-1')!;
+
+                expect(state.version).toBe(1);
+                expect(state.minecraftVersion).toBe('26.2-rc-1');
+                expect(state.file).toBeUndefined();
                 expect(state.selectedLines).toBe(null);
             });
 

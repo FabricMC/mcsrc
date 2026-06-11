@@ -59,10 +59,6 @@ export const parsePathToState = (path: string): State | null => {
         };
     }
 
-    if (segments.length < 3) {
-        return null;
-    }
-
     let minecraftVersion = decodeURIComponent(segments[1]);
     const filePath = segments.slice(2).join('/');
 
@@ -74,7 +70,7 @@ export const parsePathToState = (path: string): State | null => {
     return {
         version,
         minecraftVersion,
-        file: filePath + (filePath.endsWith('.class') ? '' : '.class'),
+        file: filePath ? filePath + (filePath.endsWith('.class') ? '' : '.class') : undefined,
         selectedLines: lineNumber ? { line: lineNumber, lineEnd: lineEnd || undefined } : null
     };
 };
