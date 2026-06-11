@@ -63,7 +63,7 @@ export class JarIndex {
     private _workers: ReturnType<typeof createWrorker>[] | undefined;
     private get workers() {
         if (this._workers) return this._workers;
-        const threads = navigator.hardwareConcurrency || 4;
+        const threads = Math.max(1, (navigator.hardwareConcurrency || 4) - 1);
         this._workers = Array.from({ length: threads }, () => createWrorker());
         console.log(`Created JarIndex with ${threads} workers`);
         return this._workers;
