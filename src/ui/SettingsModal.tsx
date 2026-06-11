@@ -2,7 +2,7 @@ import { Button, Modal, type CheckboxProps, Form, Tooltip, InputNumber, type Inp
 import { SettingOutlined, SunOutlined, MoonOutlined, DesktopOutlined } from '@ant-design/icons';
 import { Checkbox } from 'antd';
 import { useObservable } from "../utils/UseObservable";
-import { BooleanSetting, enableTabs, displayLambdas, focusSearch, KeybindSetting, type KeybindValue, bytecode, showStructure, NumberSetting, preferWasmDecompiler, compactPackages, theme } from "../logic/Settings";
+import { BooleanSetting, enableTabs, displayLambdas, focusSearch, KeybindSetting, type KeybindValue, bytecode, showStructure, NumberSetting, preferWasmDecompiler, compactPackages, theme, autoJarIndex } from "../logic/Settings";
 import { capturingKeybind, rawKeydownEvent } from "../logic/Keybinds";
 import { BehaviorSubject } from "rxjs";
 import type React from "react";
@@ -33,6 +33,7 @@ const SettingsModal = () => {
                 <ThemeOption />
                 <BooleanOption setting={enableTabs} title={"Enable Tabs"} />
                 <BooleanOption setting={compactPackages} title={"Compact Packages"} tooltip="Collapse packages with one child into one." />
+                <BooleanOption setting={autoJarIndex} title={"Auto Jar Index"} tooltip="Automatically index class metadata for file icons." />
                 <BooleanOption setting={displayLambdas} title={"Lambda Names"} tooltip="Display lambda names as inline comments. Does not support permalinking." disabled={bytecodeValue} />
                 <BooleanOption setting={bytecode} title={"Show Bytecode"} tooltip="Show bytecode instructions alongside decompiled source. Does not support permalinking." disabled={displayLambdasValue} />
                 <BooleanOption setting={preferWasmDecompiler} title={"Prefer WASM Decompiler"} tooltip="WASM decompiler might be faster than JavaScript."/>

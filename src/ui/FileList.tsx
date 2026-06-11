@@ -2,7 +2,7 @@
 import { Tree, Dropdown, message } from 'antd';
 import type { TreeDataNode, TreeProps, MenuProps } from 'antd';
 import { CaretDownFilled } from '@ant-design/icons';
-import { combineLatest, from, map, Observable, shareReplay, switchMap, startWith } from 'rxjs';
+import { combineLatest, from, map, Observable, of, shareReplay, switchMap, startWith } from 'rxjs';
 import { classesList } from '../logic/JarFile';
 import { useObservable } from '../utils/UseObservable';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -11,12 +11,15 @@ import { openCodeTab } from '../logic/tabs';
 import { minecraftJar, type MinecraftJar } from '../logic/MinecraftApi';
 import { decompileClass } from '../logic/Decompiler';
 import { selectedFile, referencesQuery } from '../logic/State';
-import { compactPackages } from '../logic/Settings';
+import { autoJarIndex, compactPackages } from '../logic/Settings';
 import { jarIndex, type ClassData } from '../workers/jar-index/client';
 import { ClassDataIcon, JavaIcon, PackageIcon } from './intellij-icons';
 
-const classData: Observable<Map<string, ClassData> | null> = jarIndex.pipe(
-    switchMap(jarIndex => from(jarIndex.getClassData()).pipe(
+const classData: Observable<Map<string, ClassData> | null> = combineLatest([
+    jarIndex,
+    autoJarIndex.observable
+]).pipe(
+    switchMap(([jarIndex, enabled]) => enabled ? from(jarIndex.getClassData()).pipe(
         map(classes => {
             const map = new Map<string, ClassData>();
             for (const data of classes) {
@@ -25,7 +28,7 @@ const classData: Observable<Map<string, ClassData> | null> = jarIndex.pipe(
             return map;
         }),
         startWith(null)
-    )),
+    ) : of(null)),
     shareReplay(1)
 );
 
