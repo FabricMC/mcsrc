@@ -5,11 +5,8 @@ import { calculatedLineChanges } from "./LineChanges";
 import { diffLeftSelectedMinecraftVersion, selectedMinecraftVersion } from "./State";
 import type { DecompileResult } from "../workers/decompile/types";
 
-export const hideUnchangedSizes = new BehaviorSubject<boolean>(false);
-
 export interface EntryInfo {
     classCrcs: Map<string, number>;
-    totalUncompressedSize: number;
 }
 
 export interface DiffSide {
@@ -78,11 +75,10 @@ export function getDiffChanges(): Observable<Map<string, ChangeInfo>> {
         diffChanges = combineLatest([
             getLeftDiff().entries,
             getRightDiff().entries,
-            hideUnchangedSizes,
             calculatedLineChanges
         ]).pipe(
-            map(([leftEntries, rightEntries, skipUnchangedSize, lineChanges]) => {
-                const changes = getChangedEntries(leftEntries, rightEntries, skipUnchangedSize);
+            map(([leftEntries, rightEntries, lineChanges]) => {
+                const changes = getChangedEntries(leftEntries, rightEntries);
                 lineChanges.forEach((counts, file) => {
                     const info = changes.get(file);
                     if (info) {
@@ -135,11 +131,9 @@ async function getEntriesWithCRC(jar: MinecraftJar): Promise<Map<string, EntryIn
         const existing = entries.get(baseClassName);
         if (existing) {
             existing.classCrcs.set(className, file.crc32);
-            existing.totalUncompressedSize += file.uncompressedSize;
         } else {
             entries.set(baseClassName, {
                 classCrcs: new Map([[className, file.crc32]]),
-                totalUncompressedSize: file.uncompressedSize
             });
         }
     }
@@ -149,8 +143,7 @@ async function getEntriesWithCRC(jar: MinecraftJar): Promise<Map<string, EntryIn
 
 function getChangedEntries(
     leftEntries: Map<string, EntryInfo>,
-    rightEntries: Map<string, EntryInfo>,
-    skipUnchangedSize: boolean = false
+    rightEntries: Map<string, EntryInfo>
 ): Map<string, ChangeInfo> {
     const changes = new Map<string, ChangeInfo>();
 
@@ -177,10 +170,6 @@ function getChangedEntries(
                 Array.from(leftClasses.entries()).some(([className, leftCrc]) => rightClasses.get(className) !== leftCrc);
 
             if (!hasChanges) {
-                continue;
-            }
-
-            if (skipUnchangedSize && leftInfo.totalUncompressedSize === rightInfo.totalUncompressedSize) {
                 continue;
             }
 

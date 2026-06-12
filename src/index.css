@@ -117,3 +117,261 @@ html, body, #root {
 .ant-tabs-content {
     height: 100%;
 }
+
+.diff-shell {
+  height: 100%;
+  min-height: 0;
+}
+
+.diff-sidebar-panel,
+.diff-editor-panel {
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.diff-sidebar {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  background: var(--color-bg);
+}
+
+.diff-sidebar-header {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+}
+
+.diff-title {
+  color: var(--ant-color-text, inherit);
+  font-size: 16px;
+  font-weight: 650;
+  line-height: 1.2;
+}
+
+.diff-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 2px;
+  color: var(--ant-color-text-secondary, #666);
+  font-size: 12px;
+  line-height: 1.3;
+}
+
+.diff-summary-added {
+  color: var(--ant-color-success, #2f8f46);
+  font-weight: 650;
+}
+
+.diff-summary-deleted {
+  color: var(--ant-color-error, #c23333);
+  font-weight: 650;
+}
+
+.diff-version-card {
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.diff-version-card::-webkit-scrollbar,
+.diff-mobile-version-strip::-webkit-scrollbar {
+  display: none;
+}
+
+.diff-action-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.diff-action-grid .ant-btn {
+  justify-content: flex-start;
+  min-width: 0;
+  padding-inline: 10px;
+  overflow: hidden;
+}
+
+.diff-action-grid .ant-btn > span:not(.anticon) {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.diff-sidebar-divider {
+  border-top: 1px solid var(--ant-color-split, rgba(5, 5, 5, 0.06));
+  margin: 0;
+}
+
+.diff-file-list-shell {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.diff-file-search {
+  padding: 0 12px 10px;
+}
+
+.diff-file-list {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 4px 6px;
+}
+
+.diff-file-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+  width: 100%;
+  min-height: 40px;
+  margin: 0;
+  padding: 5px 8px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.diff-file-row:hover:not(:disabled) {
+  background: var(--ant-color-fill-tertiary, rgba(0, 0, 0, 0.04));
+}
+
+.diff-file-row:focus-visible {
+  outline: 2px solid var(--ant-color-primary, #1677ff);
+  outline-offset: 1px;
+}
+
+.diff-file-row:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.diff-file-row-selected {
+  border-color: var(--ant-color-primary-border, #91caff);
+  background: var(--ant-color-primary-bg, #e6f4ff);
+}
+
+.diff-file-row-main {
+  min-width: 0;
+}
+
+.diff-file-name,
+.diff-file-path {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.diff-file-name {
+  font-size: 13px;
+  font-weight: 620;
+  line-height: 1.25;
+}
+
+.diff-file-path {
+  margin-top: 1px;
+  color: var(--ant-color-text-tertiary, #8c8c8c);
+  font-family: var(--ant-font-family-code, ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace);
+  font-size: 11px;
+  line-height: 1.25;
+}
+
+.diff-file-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.diff-status-tag {
+  margin-right: 0;
+  text-transform: capitalize;
+}
+
+.diff-line-counts {
+  display: flex;
+  gap: 6px;
+  font-size: 12px;
+  line-height: 1;
+}
+
+.diff-no-line-count {
+  color: var(--ant-color-text-tertiary, #8c8c8c);
+  font-size: 11px;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.diff-empty {
+  flex: 1;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+.diff-main-pane {
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--color-bg);
+}
+
+.diff-code-frame {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.diff-code-frame .monaco-editor,
+.diff-code-frame .monaco-diff-editor {
+  height: 100% !important;
+}
+
+.diff-mobile-shell {
+  height: 100%;
+  min-height: 0;
+  background: var(--color-bg);
+}
+
+.diff-mobile-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 52px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--ant-color-border-secondary, rgba(5, 5, 5, 0.06));
+}
+
+.diff-mobile-version-strip {
+  flex: 1;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+@media (max-width: 799px) {
+  .diff-main-pane {
+    flex: 1;
+  }
+
+  .diff-action-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .diff-file-row {
+    min-height: 44px;
+  }
+}

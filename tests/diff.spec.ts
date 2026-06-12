@@ -18,9 +18,6 @@ test.describe('Diff View', () => {
         const diffEditor = page.locator('.monaco-diff-editor');
         await expect(diffEditor).toBeVisible();
 
-        const fileListTable = page.locator('.ant-table-tbody');
-        await expect(fileListTable.locator('tr').first()).toBeVisible();
-
         const leftVersionSelect = page.locator('.ant-select').nth(0);
         await leftVersionSelect.click();
 
@@ -38,15 +35,18 @@ test.describe('Diff View', () => {
         const rightOption = page.locator('.ant-select-dropdown:visible .ant-select-item-option').filter({ hasText: '26.1-mock-2' }).first();
         await rightOption.click();
 
+        const fileList = page.locator('.diff-file-list');
+        await expect(fileList.locator('.diff-file-row').first()).toBeVisible();
+
         const searchInput = page.locator('input[placeholder="Search"]');
         await searchInput.fill('LevelRenderer');
 
-        const firstFileRow = fileListTable.locator('tr').first();
+        const firstFileRow = fileList.locator('.diff-file-row').first();
         await expect(firstFileRow).toBeVisible();
         await firstFileRow.click();
 
         await page.waitForTimeout(500);
-        await expect(firstFileRow).toHaveClass(/ant-table-row-selected/);
+        await expect(firstFileRow).toHaveClass(/diff-file-row-selected/);
 
         const decompilingMessage = page.getByText('Decompiling...');
         await expect(decompilingMessage).toBeHidden();
