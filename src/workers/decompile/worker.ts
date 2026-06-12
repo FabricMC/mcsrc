@@ -86,13 +86,14 @@ export class DecompileWorker {
     decompileMany = (
         jarName: string,
         jarBlob: Blob,
+        mappingsBlob: Blob | null,
         classNames: string[],
         sab: SharedArrayBuffer,
         splits: number,
         logger?: (index: number) => Promise<void> | void,
     ): Promise<number> => this.schedule(async () => {
         const state = new Uint32Array(sab);
-        const jar = new DecompileJar(await openJar(jarName, jarBlob));
+        const jar = new DecompileJar(await openJar(jarName, jarBlob, mappingsBlob));
 
         let logPromises: Promise<void>[] = [];
         let nameLogger;
@@ -148,9 +149,10 @@ export class DecompileWorker {
         className: string,
         jarName: string,
         jarBlob: Blob,
+        mappingsBlob: Blob | null
     ): Promise<DecompileResult> => this.schedule(async () => {
         try {
-            const jar = new DecompileJar(await openJar(jarName, jarBlob));
+            const jar = new DecompileJar(await openJar(jarName, jarBlob, mappingsBlob));
             const checksum = jar.proxy[className]?.checksum;
             const dbResult = await this.db.results3.get([className, checksum, "java"]);
             if (dbResult) return dbResult;

@@ -95,7 +95,7 @@ export function decompileEntireJar(jar: Jar, options?: DecompileEntireJarOptions
                 await ensureWorkers(optThreads);
                 const result = await Promise.all((workers
                     .slice(0, optThreads))
-                    .map(w => w.decompileMany(jar.name, jar.blob, classNames, sab, optSplits, optLogger)));
+                    .map(w => w.decompileMany(jar.name, jar.blob, jar.mappingsBlob, classNames, sab, optSplits, optLogger)));
                 const total = result.reduce((acc, n) => acc + n, 0);
                 return total;
             } finally {
@@ -122,7 +122,7 @@ export async function decompileClass(className: string, jar: Jar): Promise<Decom
     };
 
     const worker = await findWorker();
-    return await worker.decompile(className, jar.name, jar.blob);
+    return await worker.decompile(className, jar.name, jar.blob, jar.mappingsBlob);
 }
 
 export async function getClassBytecode(className: string, jar: Jar): Promise<DecompileResult> {

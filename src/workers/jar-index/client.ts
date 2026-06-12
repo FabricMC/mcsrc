@@ -102,7 +102,7 @@ export class JarIndex {
             console.log(`Indexing minecraft jar using ${this.workers.length} workers`);
 
             // Initialize all workers in parallel
-            await Promise.all(this.workers.map(worker => worker.c.setJar(this.minecraftJar.version, this.minecraftJar.blob)));
+            await Promise.all(this.workers.map(worker => worker.c.setJar(this.minecraftJar.version, this.minecraftJar.blob, this.minecraftJar.mappingsBlob)));
 
             const jar = this.minecraftJar.jar;
             const classNames = Object.keys(jar.entries)
@@ -145,7 +145,7 @@ export class JarIndex {
             this.indexPromise = null;
             throw error;
         } finally {
-            await Promise.all(this.workers.map(worker => worker.c.setJar("", null)));
+            await Promise.all(this.workers.map(worker => worker.c.setJar("", null, null)));
         }
     }
 

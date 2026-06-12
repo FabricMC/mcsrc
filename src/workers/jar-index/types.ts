@@ -33,13 +33,30 @@ export class JarIndexer {
         return this.#indexerFunc;
     };
 
-    setJar = async (name: string, blob: Blob | null) => {
+    setJar = async (name: string, blob: Blob | null, mappingsBlob: Blob | null) => {
         if (!blob) {
             this.#jar = null;
             return;
         }
 
-        this.#jar = await openJar(name, blob);
+        this.#jar = await openJar(name, blob, mappingsBlob);
+    };
+
+    getObfToDeobf = async () => {
+        const indexer = await this.getIndexer();
+        return indexer.getObfToDeobf();
+    };
+
+    loadMappings = async (mappingsBlob: Blob) => {
+        const indexer = await this.getIndexer();
+        const mappingsBuffer = await mappingsBlob.arrayBuffer();
+        indexer.loadMappings(mappingsBuffer);
+    };
+
+    remapEntry = async (classBlob: Blob) => {
+        const indexer = await this.getIndexer();
+        const classBuffer = await classBlob.arrayBuffer();
+        return new Blob([indexer.remapEntry(classBuffer)]);
     };
 
     indexBatch = async (classNames: string[]): Promise<void> => {
@@ -50,8 +67,8 @@ export class JarIndexer {
         const currentJar = this.#jar; // Capture for closure
         const arrayBufferPromises = classNames.map(async className => {
             const entry = currentJar.entries[className];
-            const data = await entry.blob();
-            return data.arrayBuffer();
+            const data = await entry.bytes();
+            return data.buffer;
         });
 
         const indexer = await this.getIndexer();
@@ -84,6 +101,9 @@ export class JarIndexer {
 
 interface Indexer {
     index(data: ArrayBufferLike): void;
+    loadMappings(data: ArrayBufferLike): void;
+    remapEntry(classData: ArrayBufferLike): Int8Array<ArrayBuffer>;
+    getObfToDeobf(): Map<string, string>;
     getReference(key: ReferenceKey): [ReferenceString];
     getReferenceSize(): number;
     getBytecode(classData: ArrayBufferLike[]): string;

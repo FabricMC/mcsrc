@@ -9,8 +9,11 @@ repositories {
 
 dependencies {
     api libs.asm
+    api libs.asm.commons
     api libs.asm.util
     api libs.teavm.core
+    api libs.mapping.io
+    api libs.mapping.io.extras
     testImplementation libs.teavm.jso
 }
 
