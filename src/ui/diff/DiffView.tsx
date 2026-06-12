@@ -1,22 +1,32 @@
 import {
     AlignLeftOutlined,
     CodeOutlined,
+    DownOutlined,
     FileTextOutlined,
     MenuFoldOutlined,
     SplitCellsOutlined,
+    UpOutlined,
 } from "@ant-design/icons";
 import { Button, Drawer, Flex, Splitter, Tooltip } from "antd";
 import { useEffect, useMemo, useState } from "react";
 import { isThin } from "../../logic/Browser";
 import {
+    getDiffChanges,
     getDiffSummary,
     type DiffSummary,
 } from "../../logic/Diff";
+import { isDecompiling } from "../../logic/Decompiler";
 import { bytecode, unifiedDiff } from "../../logic/Settings";
 import { diffView, selectedFile } from "../../logic/State";
+import { openCodeTab } from "../../logic/tabs";
 import { useObservable } from "../../utils/UseObservable";
 import { FilepathHeader } from "../FilepathHeader";
 import DiffCode from "./DiffCode";
+import {
+    jumpWithinCurrentFile,
+    pendingDiffJump,
+    type DiffDirection
+} from "./DiffNavigation";
 import DiffViewFileList from "./DiffViewFileList";
 import DiffVersionSelection from "./DiffVersionSelection";
 
@@ -128,9 +138,50 @@ const DiffSummaryLine = ({ summary }: { summary?: DiffSummary }) => {
 const DiffActions = () => {
     const isUnifiedDiff = useObservable(unifiedDiff.observable);
     const isBytecode = useObservable(bytecode.observable);
+    const currentFile = useObservable(selectedFile);
+    const loading = useObservable(isDecompiling);
+    const changes = useObservable(useMemo(() => getDiffChanges(), []));
+    const changedFiles = useMemo(() => changes ? [...changes.keys()] : [], [changes]);
+
+    const jumpDiff = (direction: DiffDirection) => {
+        if (jumpWithinCurrentFile(direction)) return;
+
+        if (changedFiles.length === 0) return;
+
+        const currentIndex = currentFile ? changedFiles.indexOf(currentFile) : -1;
+        const targetIndex = currentIndex === -1
+            ? direction === 1 ? 0 : changedFiles.length - 1
+            : currentIndex + direction;
+        const targetFile = changedFiles[targetIndex];
+
+        if (!targetFile) return;
+
+        pendingDiffJump.next(direction);
+        openCodeTab(targetFile);
+    };
 
     return (
         <div className="diff-action-grid">
+            <Tooltip title="Previous diff">
+                <Button
+                    icon={<UpOutlined />}
+                    aria-label="Previous diff"
+                    disabled={loading || changedFiles.length === 0}
+                    onClick={() => jumpDiff(-1)}
+                >
+                    Previous
+                </Button>
+            </Tooltip>
+            <Tooltip title="Next diff">
+                <Button
+                    icon={<DownOutlined />}
+                    aria-label="Next diff"
+                    disabled={loading || changedFiles.length === 0}
+                    onClick={() => jumpDiff(1)}
+                >
+                    Next
+                </Button>
+            </Tooltip>
             <Tooltip title={isUnifiedDiff ? "Switch to side-by-side diff" : "Switch to unified diff"}>
                 <Button
                     icon={isUnifiedDiff ? <SplitCellsOutlined /> : <AlignLeftOutlined />}

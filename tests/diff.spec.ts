@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 import { setupTest } from './test-utils';
 
 test.describe('Diff View', () => {
@@ -54,4 +54,47 @@ test.describe('Diff View', () => {
         const editor = page.locator('.monaco-diff-editor');
         await expect(editor).toContainText('net.minecraft.client.renderer');
     });
+
+    test('navigates between diff sections and changed files', async ({ page }) => {
+        await page.setViewportSize({ width: 1280, height: 420 });
+        await page.goto('/1/diff/26.1-mock-1/26.1-mock-2/net/minecraft/client/renderer/LevelRenderer');
+
+        const diffEditor = page.locator('.monaco-diff-editor');
+        await expect(diffEditor).toBeVisible();
+        await expect(page.getByText('Decompiling...')).toBeHidden();
+        await expect(diffEditor).toContainText('hello world 2');
+
+        const nextButton = page.getByRole('button', { name: 'Next diff', exact: true });
+        const previousButton = page.getByRole('button', { name: 'Previous diff', exact: true });
+        await expect(nextButton).toBeEnabled();
+        await expect(previousButton).toBeEnabled();
+
+        const initialLine = await getModifiedTopLine(page);
+        await nextButton.click();
+        await nextButton.click();
+        await expect.poll(() => getModifiedTopLine(page)).toBeGreaterThan(initialLine);
+        const secondDiffLine = await getModifiedTopLine(page);
+
+        await previousButton.click();
+        await expect.poll(() => getModifiedTopLine(page)).toBeLessThan(secondDiffLine);
+
+        await previousButton.click();
+        await expect(page.locator('.diff-file-row-selected .diff-file-name')).toHaveText('Dummy');
+        await expect(diffEditor).toContainText('class Dummy');
+    });
 });
+
+async function getModifiedTopLine(page: Page) {
+    return page.evaluate(() => {
+        const diffEditor = document.querySelector('.monaco-diff-editor');
+        const monacoEditors = diffEditor?.querySelectorAll('.monaco-editor') || [];
+        const modifiedEditor = diffEditor?.querySelector('.modified-in-monaco-diff-editor')
+            || monacoEditors[1]
+            || monacoEditors[0];
+        const lineNumbers = Array.from(modifiedEditor?.querySelectorAll('.line-numbers') || [])
+            .map(element => Number(element.textContent?.trim()))
+            .filter(Number.isFinite);
+
+        return lineNumbers.length > 0 ? Math.min(...lineNumbers) : 0;
+    });
+}
