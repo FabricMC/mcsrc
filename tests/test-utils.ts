@@ -77,7 +77,12 @@ async function setupNetworkMocking(page: Page) {
 
 export async function setupTest(page: Page) {
     await setupNetworkMocking(page);
-    await page.addInitScript(() => {
+    const isWebKit = page.context().browser()?.browserType().name() === 'webkit';
+    await page.addInitScript((preferWasm) => {
         localStorage.setItem('setting_eula', 'true');
-    });
+        if (!preferWasm) {
+            // Use JS runtime to avoid WASM compatibility issues in WebKit
+            localStorage.setItem('setting_prefer_wasm_decompiler', 'false');
+        }
+    }, !isWebKit);
 }
