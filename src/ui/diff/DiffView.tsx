@@ -7,7 +7,7 @@ import {
     SplitCellsOutlined,
     UpOutlined,
 } from "@ant-design/icons";
-import { Button, Drawer, Flex, Splitter, Tooltip } from "antd";
+import { Button, Drawer, Flex, Splitter, Tooltip, Typography } from "antd";
 import { useEffect, useMemo, useState } from "react";
 import { isThin } from "../../logic/Browser";
 import {
@@ -29,6 +29,8 @@ import {
 } from "./DiffNavigation";
 import DiffViewFileList from "./DiffViewFileList";
 import DiffVersionSelection from "./DiffVersionSelection";
+
+const { Text, Title } = Typography;
 
 const DiffView = () => {
     const isSmall = useObservable(isThin);
@@ -67,18 +69,18 @@ const MobileDiffView = () => {
     }, [currentFile]);
 
     return (
-        <Flex vertical className="diff-mobile-shell">
-            <div className="diff-mobile-bar">
+        <Flex vertical style={{ height: "100%", minHeight: 0 }}>
+            <Flex align="center" gap={8} style={{ padding: 8 }} wrap={false}>
                 <Button
                     type="primary"
                     icon={<MenuFoldOutlined />}
                     onClick={() => setDrawerOpen(true)}
                     aria-label="Open changed files"
                 />
-                <div className="diff-mobile-version-strip">
+                <div style={{ flex: 1, minWidth: 0, overflowX: "auto" }}>
                     <DiffVersionSelection />
                 </div>
-            </div>
+            </Flex>
             <Drawer
                 onClose={() => setDrawerOpen(false)}
                 open={drawerOpen}
@@ -98,20 +100,20 @@ const DiffSidebar = () => {
     const summary = useObservable<DiffSummary>(useMemo(() => getDiffSummary(), []));
 
     return (
-        <aside className="diff-sidebar">
-            <div className="diff-sidebar-header">
+        <aside style={{ display: "flex", flexDirection: "column", height: "100%", minHeight: 0 }}>
+            <Flex vertical gap={10} style={{ padding: 12 }}>
                 <Flex justify="space-between" align="center" gap={8}>
                     <div>
-                        <div className="diff-title">Compare</div>
+                        <Title level={5} style={{ margin: 0 }}>Compare</Title>
                         <DiffSummaryLine summary={summary} />
                     </div>
                     <Button onClick={() => diffView.next(false)}>Exit</Button>
                 </Flex>
-                <div className="diff-version-card">
+                <div style={{ overflowX: "auto" }}>
                     <DiffVersionSelection />
                 </div>
                 <DiffActions />
-            </div>
+            </Flex>
             <DiffViewFileList />
         </aside>
     );
@@ -119,23 +121,24 @@ const DiffSidebar = () => {
 
 const DiffSummaryLine = ({ summary }: { summary?: DiffSummary }) => {
     if (!summary) {
-        return <div className="diff-summary">Loading changes...</div>;
+        return <Text type="secondary">Loading changes...</Text>;
     }
 
     if (summary.added === 0 && summary.deleted === 0 && summary.modified === 0) {
-        return <div className="diff-summary">No changed files</div>;
+        return <Text type="secondary">No changed files</Text>;
     }
 
     return (
-        <div className="diff-summary">
-            <span className="diff-summary-added">+{summary.added}</span>
-            <span className="diff-summary-deleted">-{summary.deleted}</span>
-            <span>{summary.modified} modified</span>
-        </div>
+        <Flex gap={8} wrap>
+            <Text type="success" strong>+{summary.added}</Text>
+            <Text type="danger" strong>-{summary.deleted}</Text>
+            <Text type="secondary">{summary.modified} modified</Text>
+        </Flex>
     );
 };
 
 const DiffActions = () => {
+    const isSmall = useObservable(isThin);
     const isUnifiedDiff = useObservable(unifiedDiff.observable);
     const isBytecode = useObservable(bytecode.observable);
     const currentFile = useObservable(selectedFile);
@@ -161,13 +164,14 @@ const DiffActions = () => {
     };
 
     return (
-        <div className="diff-action-grid">
+        <Flex gap={8} wrap vertical={isSmall}>
             <Tooltip title="Previous diff">
                 <Button
                     icon={<UpOutlined />}
                     aria-label="Previous diff"
                     disabled={loading || changedFiles.length === 0}
                     onClick={() => jumpDiff(-1)}
+                    block={isSmall}
                 >
                     Previous
                 </Button>
@@ -178,6 +182,7 @@ const DiffActions = () => {
                     aria-label="Next diff"
                     disabled={loading || changedFiles.length === 0}
                     onClick={() => jumpDiff(1)}
+                    block={isSmall}
                 >
                     Next
                 </Button>
@@ -186,6 +191,7 @@ const DiffActions = () => {
                 <Button
                     icon={isUnifiedDiff ? <SplitCellsOutlined /> : <AlignLeftOutlined />}
                     onClick={() => unifiedDiff.value = !unifiedDiff.value}
+                    block={isSmall}
                 >
                     {isUnifiedDiff ? "Side-by-side" : "Unified"}
                 </Button>
@@ -194,17 +200,18 @@ const DiffActions = () => {
                 <Button
                     icon={isBytecode ? <FileTextOutlined /> : <CodeOutlined />}
                     onClick={() => bytecode.value = !bytecode.value}
+                    block={isSmall}
                 >
                     {isBytecode ? "Source" : "Bytecode"}
                 </Button>
             </Tooltip>
-        </div>
+        </Flex>
     );
 };
 
 const DiffMainPane = () => {
     return (
-        <Flex vertical className="diff-main-pane">
+        <Flex vertical style={{ flex: 1, height: "100%", minHeight: 0 }}>
             <FilepathHeader />
             <div className="diff-code-frame">
                 <DiffCode />

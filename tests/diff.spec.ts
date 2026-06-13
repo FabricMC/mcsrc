@@ -56,7 +56,7 @@ test.describe('Diff View', () => {
     });
 
     test('navigates between diff sections and changed files', async ({ page }) => {
-        await page.setViewportSize({ width: 1280, height: 420 });
+        await page.setViewportSize({ width: 1280, height: 300 });
         await page.goto('/1/diff/26.1-mock-1/26.1-mock-2/net/minecraft/client/renderer/LevelRenderer');
 
         const diffEditor = page.locator('.monaco-diff-editor');

@@ -1,4 +1,5 @@
-import { Empty, Input, Tag, theme } from "antd";
+import { type CSSProperties, memo } from "react";
+import { Divider, Empty, Flex, Input } from "antd";
 import type { SearchProps } from "antd/es/input";
 import { BehaviorSubject, combineLatest, map } from "rxjs";
 import {
@@ -50,8 +51,8 @@ const DiffViewFileList = () => {
     };
 
     return (
-        <div className="diff-file-list-shell">
-            <div className="diff-file-search">
+        <Flex vertical flex={1} style={{ minHeight: 0 }}>
+            <div style={{ padding: "0 12px 10px" }}>
                 <Input.Search
                     allowClear
                     placeholder="Search"
@@ -59,9 +60,9 @@ const DiffViewFileList = () => {
                     onChange={onChange}
                 />
             </div>
-            <div className="diff-sidebar-divider" />
+            <Divider style={{ margin: 0 }} />
             <DiffChangedFiles />
-        </div>
+        </Flex>
     );
 };
 
@@ -72,14 +73,19 @@ const DiffChangedFiles = () => {
 
     if (dataSource.length === 0) {
         return (
-            <div className="diff-empty">
+            <Flex flex={1} align="center" justify="center">
                 <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="No changed files" />
-            </div>
+            </Flex>
         );
     }
 
     return (
-        <div className="diff-file-list" role="list" aria-label="Changed files">
+        <div
+            aria-label="Changed files"
+            className="diff-file-list"
+            role="list"
+            style={{ flex: 1, minHeight: 0, overflow: "auto", borderInlineEnd: 0 }}
+        >
             {dataSource.map((entry) => (
                 <DiffFileRow
                     key={entry.key}
@@ -98,8 +104,7 @@ interface DiffFileRowProps {
     disabled: boolean;
 }
 
-const DiffFileRow = ({ entry, selected, disabled }: DiffFileRowProps) => {
-    const { token } = theme.useToken();
+const DiffFileRow = memo(({ entry, selected, disabled }: DiffFileRowProps) => {
     const file = entry.file.replace(".class", "");
     const segments = file.split("/");
     const name = segments.at(-1) || file;
@@ -114,36 +119,123 @@ const DiffFileRow = ({ entry, selected, disabled }: DiffFileRowProps) => {
                 if (selected || disabled) return;
                 openCodeTab(entry.file);
             }}
+            style={{
+                ...fileRowStyle,
+                background: selected ? "var(--ant-color-primary-bg)" : "transparent",
+                borderColor: selected ? "var(--ant-color-primary-border)" : "transparent",
+                cursor: disabled ? "not-allowed" : "pointer",
+                opacity: disabled ? 0.7 : undefined
+            }}
         >
-            <div className="diff-file-row-main">
-                <span className="diff-file-name" style={{ color: token.colorText }}>{name}</span>
-                {path && <span className="diff-file-path">{path}</span>}
-            </div>
-            <div className="diff-file-meta">
-                <Tag color={statusColors[entry.statusInfo.state] || "default"} className="diff-status-tag">
+            <span style={fileTextStyle}>
+                <span className="diff-file-name" style={fileNameStyle}>{name}</span>
+                {path && <span style={filePathStyle}>{path}</span>}
+            </span>
+            <span style={fileMetaStyle}>
+                <span style={{
+                    ...statusStyle,
+                    color: statusColors[entry.statusInfo.state] || "var(--ant-color-text-secondary)"
+                }}>
                     {entry.statusInfo.state}
-                </Tag>
+                </span>
                 <DiffLineCounts info={entry.statusInfo} />
-            </div>
+            </span>
         </button>
     );
-};
+});
 
 const DiffLineCounts = ({ info }: { info: ChangeInfo }) => {
     if (info.state === "modified" && info.additions === 0 && info.deletions === 0) {
-        return <span className="diff-no-line-count">No line changes</span>;
+        return <span style={noLineChangesStyle}>No line changes</span>;
     }
 
     return (
-        <span className="diff-line-counts">
+        <span style={lineCountsStyle}>
             {info.additions !== undefined && info.additions > 0 && (
-                <span className="diff-summary-added">+{info.additions}</span>
+                <span style={addedStyle}>+{info.additions}</span>
             )}
             {info.deletions !== undefined && info.deletions > 0 && (
-                <span className="diff-summary-deleted">-{info.deletions}</span>
+                <span style={deletedStyle}>-{info.deletions}</span>
             )}
         </span>
     );
+};
+
+const fileRowStyle: CSSProperties = {
+    display: "grid",
+    gridTemplateColumns: "minmax(0, 1fr) auto",
+    gap: 8,
+    alignItems: "center",
+    width: "100%",
+    minHeight: 38,
+    padding: "4px 8px",
+    border: "1px solid transparent",
+    borderRadius: 6,
+    color: "inherit",
+    font: "inherit",
+    textAlign: "left"
+};
+
+const fileTextStyle: CSSProperties = {
+    minWidth: 0
+};
+
+const ellipsisStyle: CSSProperties = {
+    display: "block",
+    minWidth: 0,
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap"
+};
+
+const fileNameStyle: CSSProperties = {
+    ...ellipsisStyle,
+    fontSize: 13,
+    lineHeight: 1.25
+};
+
+const filePathStyle: CSSProperties = {
+    ...ellipsisStyle,
+    color: "var(--ant-color-text-tertiary)",
+    fontFamily: "var(--ant-font-family-code)",
+    fontSize: 11,
+    lineHeight: 1.25
+};
+
+const fileMetaStyle: CSSProperties = {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "flex-end",
+    gap: 2
+};
+
+const statusStyle: CSSProperties = {
+    fontSize: 11,
+    lineHeight: 1,
+    textTransform: "capitalize"
+};
+
+const lineCountsStyle: CSSProperties = {
+    display: "flex",
+    gap: 6,
+    fontSize: 12,
+    fontWeight: 650,
+    lineHeight: 1
+};
+
+const addedStyle: CSSProperties = {
+    color: "var(--ant-color-success)"
+};
+
+const deletedStyle: CSSProperties = {
+    color: "var(--ant-color-error)"
+};
+
+const noLineChangesStyle: CSSProperties = {
+    color: "var(--ant-color-text-tertiary)",
+    fontSize: 11,
+    lineHeight: 1,
+    whiteSpace: "nowrap"
 };
 
 export default DiffViewFileList;
