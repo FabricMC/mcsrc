@@ -8,7 +8,7 @@ import {
     UpOutlined,
 } from "@ant-design/icons";
 import { Button, Drawer, Flex, Splitter, Tooltip, Typography } from "antd";
-import { useEffect, useMemo, useState } from "react";
+import { type CSSProperties, useEffect, useMemo, useState } from "react";
 import { isThin } from "../../logic/Browser";
 import {
     getDiffChanges,
@@ -138,13 +138,16 @@ const DiffSummaryLine = ({ summary }: { summary?: DiffSummary }) => {
 };
 
 const DiffActions = () => {
-    const isSmall = useObservable(isThin);
     const isUnifiedDiff = useObservable(unifiedDiff.observable);
     const isBytecode = useObservable(bytecode.observable);
     const currentFile = useObservable(selectedFile);
     const loading = useObservable(isDecompiling);
     const changes = useObservable(useMemo(() => getDiffChanges(), []));
     const changedFiles = useMemo(() => changes ? [...changes.keys()] : [], [changes]);
+    const currentChange = currentFile ? changes?.get(currentFile) : undefined;
+    const hasNoLineChanges = currentChange?.state === "modified"
+        && currentChange.additions === 0
+        && currentChange.deletions === 0;
 
     const jumpDiff = (direction: DiffDirection) => {
         if (jumpWithinCurrentFile(direction)) return;
@@ -164,17 +167,14 @@ const DiffActions = () => {
     };
 
     return (
-        <Flex gap={8} wrap vertical={isSmall}>
+        <Flex gap={6} justify="center" wrap={false}>
             <Tooltip title="Previous diff">
                 <Button
                     icon={<UpOutlined />}
                     aria-label="Previous diff"
                     disabled={loading || changedFiles.length === 0}
                     onClick={() => jumpDiff(-1)}
-                    block={isSmall}
-                >
-                    Previous
-                </Button>
+                />
             </Tooltip>
             <Tooltip title="Next diff">
                 <Button
@@ -182,32 +182,46 @@ const DiffActions = () => {
                     aria-label="Next diff"
                     disabled={loading || changedFiles.length === 0}
                     onClick={() => jumpDiff(1)}
-                    block={isSmall}
-                >
-                    Next
-                </Button>
+                />
             </Tooltip>
             <Tooltip title={isUnifiedDiff ? "Switch to side-by-side diff" : "Switch to unified diff"}>
                 <Button
+                    type={isUnifiedDiff ? "primary" : "default"}
                     icon={isUnifiedDiff ? <SplitCellsOutlined /> : <AlignLeftOutlined />}
                     onClick={() => unifiedDiff.value = !unifiedDiff.value}
-                    block={isSmall}
-                >
-                    {isUnifiedDiff ? "Side-by-side" : "Unified"}
-                </Button>
+                    aria-label={isUnifiedDiff ? "Switch to side-by-side diff" : "Switch to unified diff"}
+                    aria-pressed={isUnifiedDiff}
+                />
             </Tooltip>
-            <Tooltip title={isBytecode ? "Show decompiled code" : "Show bytecode"}>
+            <Tooltip title={getBytecodeTooltip(isBytecode, hasNoLineChanges)}>
                 <Button
+                    type={isBytecode ? "primary" : "default"}
                     icon={isBytecode ? <FileTextOutlined /> : <CodeOutlined />}
                     onClick={() => bytecode.value = !bytecode.value}
-                    block={isSmall}
-                >
-                    {isBytecode ? "Source" : "Bytecode"}
-                </Button>
+                    aria-label={isBytecode ? "Show decompiled code" : "Show bytecode"}
+                    aria-pressed={isBytecode}
+                    style={hasNoLineChanges ? noLineChangesBytecodeStyle : undefined}
+                />
             </Tooltip>
         </Flex>
     );
 };
+
+const noLineChangesBytecodeStyle: CSSProperties = {
+    borderColor: "var(--ant-color-success)",
+    boxShadow: "0 0 0 2px var(--ant-color-success-bg)",
+    color: "var(--ant-color-success)"
+};
+
+function getBytecodeTooltip(isBytecode: boolean, hasNoLineChanges: boolean) {
+    if (hasNoLineChanges) {
+        return isBytecode
+            ? "Show decompiled code. This file changed only in bytecode."
+            : "Show bytecode. This file changed only in bytecode.";
+    }
+
+    return isBytecode ? "Show decompiled code" : "Show bytecode";
+}
 
 const DiffMainPane = () => {
     return (
