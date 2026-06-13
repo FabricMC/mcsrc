@@ -73,11 +73,15 @@ const DiffChangedFiles = () => {
     const dataSource = useObservable(entries) || [];
     const currentFile = useObservable(selectedFile);
     const loading = useObservable(isDecompiling);
+    const query = useObservable(searchQuery);
 
     if (dataSource.length === 0) {
         return (
             <Flex flex={1} align="center" justify="center">
-                <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="No changed files" />
+                <Empty
+                    image={Empty.PRESENTED_IMAGE_SIMPLE}
+                    description={query?.trim() ? "No matching files" : "No changed files"}
+                />
             </Flex>
         );
     }
