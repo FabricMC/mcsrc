@@ -12,6 +12,7 @@ import { performSearch } from "../../logic/Search";
 import { selectedFile } from "../../logic/State";
 import { openCodeTab } from "../../logic/tabs";
 import { useObservable } from "../../utils/UseObservable";
+import { pendingDiffJump } from "./DiffNavigation";
 
 const statusColors: Record<ChangeState, string> = {
     modified: "gold",
@@ -119,6 +120,7 @@ const DiffFileRow = memo(({ entry, selected, disabled }: DiffFileRowProps) => {
             disabled={disabled}
             onClick={() => {
                 if (selected || disabled) return;
+                pendingDiffJump.next(1);
                 openCodeTab(entry.file);
             }}
             style={{
