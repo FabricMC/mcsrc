@@ -8,6 +8,7 @@ import {
     type ChangeState,
 } from "../../logic/Diff";
 import { isDecompiling } from "../../logic/Decompiler";
+import { performSearch } from "../../logic/Search";
 import { selectedFile } from "../../logic/State";
 import { openCodeTab } from "../../logic/tabs";
 import { useObservable } from "../../utils/UseObservable";
@@ -28,18 +29,19 @@ interface DiffEntry {
 
 const entries = combineLatest([getDiffChanges(), searchQuery]).pipe(
     map(([changesMap, query]) => {
-        const lowerQuery = query.toLowerCase();
+        const files = query ? performSearch(query, [...changesMap.keys()]) : [...changesMap.keys()];
         const nextEntries: DiffEntry[] = [];
 
-        changesMap.forEach((info, file) => {
-            if (!query || file.toLowerCase().includes(lowerQuery)) {
-                nextEntries.push({
-                    key: file,
-                    file,
-                    statusInfo: info,
-                });
-            }
-        });
+        for (const file of files) {
+            const info = changesMap.get(file);
+            if (!info) continue;
+
+            nextEntries.push({
+                key: file,
+                file,
+                statusInfo: info,
+            });
+        }
 
         return nextEntries;
     })
