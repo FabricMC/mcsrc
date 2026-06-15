@@ -8,7 +8,7 @@ import {
     UpOutlined,
 } from "@ant-design/icons";
 import { Button, Drawer, Flex, Splitter, Tooltip, Typography } from "antd";
-import { type CSSProperties, useEffect, useMemo, useState } from "react";
+import { type CSSProperties, useEffect, useMemo } from "react";
 import { isThin } from "../../logic/Browser";
 import {
     getDiffChanges,
@@ -17,7 +17,7 @@ import {
 } from "../../logic/Diff";
 import { isDecompiling } from "../../logic/Decompiler";
 import { bytecode, unifiedDiff } from "../../logic/Settings";
-import { diffView, selectedFile } from "../../logic/State";
+import { diffView, mobileDrawerOpen, selectedFile } from "../../logic/State";
 import { openCodeTab } from "../../logic/tabs";
 import { useObservable } from "../../utils/UseObservable";
 import { FilepathHeader } from "../FilepathHeader";
@@ -61,37 +61,54 @@ const DesktopDiffView = () => {
 };
 
 const MobileDiffView = () => {
-    const [drawerOpen, setDrawerOpen] = useState(false);
+    const drawerOpen = useObservable(mobileDrawerOpen);
     const currentFile = useObservable(selectedFile);
 
     useEffect(() => {
-        setDrawerOpen(false);
+        mobileDrawerOpen.next(false);
     }, [currentFile]);
 
     return (
         <Flex vertical style={{ height: "100%", minHeight: 0 }}>
-            <Flex align="center" gap={8} style={{ padding: 8 }} wrap={false}>
-                <Button
-                    type="primary"
-                    icon={<MenuFoldOutlined />}
-                    onClick={() => setDrawerOpen(true)}
-                    aria-label="Open changed files"
-                />
-                <div style={{ flex: 1, minWidth: 0, overflowX: "auto" }}>
-                    <DiffVersionSelection />
-                </div>
-            </Flex>
             <Drawer
-                onClose={() => setDrawerOpen(false)}
+                onClose={() => mobileDrawerOpen.next(false)}
                 open={drawerOpen}
                 placement="left"
-                closeIcon={false}
-                size="min(92vw, 380px)"
                 styles={{ body: { padding: 0 } }}
+                closeIcon={false}
             >
                 <DiffSidebar />
             </Drawer>
-            <DiffMainPane />
+            <MobileDiffHeader />
+            <DiffMainPane showHeader={false} />
+        </Flex>
+    );
+};
+
+const MobileDiffHeader = () => {
+    return (
+        <Flex align="center" gap={8} style={{ padding: 8 }} wrap={false}>
+            <Flex flex={1} justify="flex-start">
+                <Tooltip title="Open changed files">
+                    <Button
+                        type="primary"
+                        icon={<MenuFoldOutlined />}
+                        onClick={() => mobileDrawerOpen.next(true)}
+                        aria-label="Open changed files"
+                    />
+                </Tooltip>
+            </Flex>
+            <Flex gap={6} justify="center" wrap={false}>
+                <DiffNavigationButtons />
+            </Flex>
+            <Flex flex={1} justify="flex-end">
+                <Button
+                    onClick={() => diffView.next(false)}
+                    aria-label="Exit diff view"
+                >
+                    Exit
+                </Button>
+            </Flex>
         </Flex>
     );
 };
@@ -138,16 +155,19 @@ const DiffSummaryLine = ({ summary }: { summary?: DiffSummary }) => {
 };
 
 const DiffActions = () => {
-    const isUnifiedDiff = useObservable(unifiedDiff.observable);
-    const isBytecode = useObservable(bytecode.observable);
+    return (
+        <Flex gap={6} justify="center" wrap={false}>
+            <DiffNavigationButtons />
+            <DiffViewModeButtons />
+        </Flex>
+    );
+};
+
+const DiffNavigationButtons = () => {
     const currentFile = useObservable(selectedFile);
     const loading = useObservable(isDecompiling);
     const changes = useObservable(useMemo(() => getDiffChanges(), []));
     const changedFiles = useMemo(() => changes ? [...changes.keys()] : [], [changes]);
-    const currentChange = currentFile ? changes?.get(currentFile) : undefined;
-    const hasNoLineChanges = currentChange?.state === "modified"
-        && currentChange.additions === 0
-        && currentChange.deletions === 0;
 
     const jumpDiff = (direction: DiffDirection) => {
         if (jumpWithinCurrentFile(direction)) return;
@@ -167,7 +187,7 @@ const DiffActions = () => {
     };
 
     return (
-        <Flex gap={6} justify="center" wrap={false}>
+        <>
             <Tooltip title="Previous diff">
                 <Button
                     icon={<UpOutlined />}
@@ -184,6 +204,22 @@ const DiffActions = () => {
                     onClick={() => jumpDiff(1)}
                 />
             </Tooltip>
+        </>
+    );
+};
+
+const DiffViewModeButtons = () => {
+    const isUnifiedDiff = useObservable(unifiedDiff.observable);
+    const isBytecode = useObservable(bytecode.observable);
+    const currentFile = useObservable(selectedFile);
+    const changes = useObservable(useMemo(() => getDiffChanges(), []));
+    const currentChange = currentFile ? changes?.get(currentFile) : undefined;
+    const hasNoLineChanges = currentChange?.state === "modified"
+        && currentChange.additions === 0
+        && currentChange.deletions === 0;
+
+    return (
+        <>
             <Tooltip title={isUnifiedDiff ? "Switch to side-by-side diff" : "Switch to unified diff"}>
                 <Button
                     type={isUnifiedDiff ? "primary" : "default"}
@@ -203,7 +239,7 @@ const DiffActions = () => {
                     style={hasNoLineChanges ? noLineChangesBytecodeStyle : undefined}
                 />
             </Tooltip>
-        </Flex>
+        </>
     );
 };
 
@@ -223,10 +259,10 @@ function getBytecodeTooltip(isBytecode: boolean, hasNoLineChanges: boolean) {
     return isBytecode ? "Show decompiled code" : "Show bytecode";
 }
 
-const DiffMainPane = () => {
+const DiffMainPane = ({ showHeader = true }: { showHeader?: boolean }) => {
     return (
         <Flex vertical style={{ flex: 1, height: "100%", minHeight: 0 }}>
-            <FilepathHeader />
+            {showHeader && <FilepathHeader />}
             <div className="diff-code-frame">
                 <DiffCode />
             </div>
