@@ -83,7 +83,7 @@ const MobileDiffView = () => {
                 styles={{ body: { padding: 0 } }}
                 closeIcon={false}
             >
-                <DiffSidebar />
+                <DiffSidebar closeAction="back" />
             </Drawer>
             <MobileDiffHeader />
             <DiffMainPane showHeader={false} />
@@ -109,6 +109,7 @@ const MobileDiffHeader = () => {
             </Flex>
             <Flex flex={1} justify="flex-end">
                 <Button
+                    danger
                     onClick={() => diffView.next(false)}
                     aria-label="Exit diff view"
                 >
@@ -119,8 +120,12 @@ const MobileDiffHeader = () => {
     );
 };
 
-const DiffSidebar = () => {
+const DiffSidebar = ({ closeAction = "exit" }: { closeAction?: "back" | "exit" }) => {
     const summary = useObservable<DiffSummary>(useMemo(() => getDiffSummary(), []));
+    const closeLabel = closeAction === "back" ? "Close" : "Exit";
+    const onClose = closeAction === "back"
+        ? () => mobileDrawerOpen.next(false)
+        : () => diffView.next(false);
 
     return (
         <aside style={{ display: "flex", flexDirection: "column", height: "100%", minHeight: 0 }}>
@@ -130,7 +135,7 @@ const DiffSidebar = () => {
                         <Title level={5} style={{ margin: 0 }}>Compare</Title>
                         <DiffSummaryLine summary={summary} />
                     </div>
-                    <Button onClick={() => diffView.next(false)}>Exit</Button>
+                    <Button danger={closeAction === "exit"} onClick={onClose}>{closeLabel}</Button>
                 </Flex>
                 <div style={{ display: "flex", justifyContent: "center", overflowX: "auto" }}>
                     <DiffVersionSelection />
