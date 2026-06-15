@@ -126,7 +126,7 @@ const DiffSidebar = () => {
                     </div>
                     <Button onClick={() => diffView.next(false)}>Exit</Button>
                 </Flex>
-                <div style={{ overflowX: "auto" }}>
+                <div style={{ display: "flex", justifyContent: "center", overflowX: "auto" }}>
                     <DiffVersionSelection />
                 </div>
                 <DiffActions />
