@@ -7,8 +7,9 @@ import {
     SplitCellsOutlined,
     UpOutlined,
 } from "@ant-design/icons";
-import { Button, Drawer, Flex, Splitter, Tooltip, Typography } from "antd";
+import { Button, Drawer, Empty, Flex, Splitter, Tooltip, Typography } from "antd";
 import { type CSSProperties, useEffect, useMemo } from "react";
+import { skip } from "rxjs";
 import { isThin } from "../../logic/Browser";
 import {
     getDiffChanges,
@@ -62,11 +63,16 @@ const DesktopDiffView = () => {
 
 const MobileDiffView = () => {
     const drawerOpen = useObservable(mobileDrawerOpen);
-    const currentFile = useObservable(selectedFile);
 
     useEffect(() => {
-        mobileDrawerOpen.next(false);
-    }, [currentFile]);
+        mobileDrawerOpen.next(true);
+
+        const subscription = selectedFile.pipe(skip(1)).subscribe(() => {
+            mobileDrawerOpen.next(false);
+        });
+
+        return () => subscription.unsubscribe();
+    }, []);
 
     return (
         <Flex vertical style={{ height: "100%", minHeight: 0 }}>
@@ -260,14 +266,25 @@ function getBytecodeTooltip(isBytecode: boolean, hasNoLineChanges: boolean) {
 }
 
 const DiffMainPane = ({ showHeader = true }: { showHeader?: boolean }) => {
+    const currentFile = useObservable(selectedFile);
+
     return (
         <Flex vertical style={{ flex: 1, height: "100%", minHeight: 0 }}>
             {showHeader && <FilepathHeader />}
             <div className="diff-code-frame">
-                <DiffCode />
+                {currentFile ? <DiffCode /> : <DiffPlaceholder />}
             </div>
         </Flex>
     );
 };
+
+const DiffPlaceholder = () => (
+    <Flex align="center" justify="center" style={{ height: "100%" }}>
+        <Empty
+            image={Empty.PRESENTED_IMAGE_SIMPLE}
+            description="Select a file"
+        />
+    </Flex>
+);
 
 export default DiffView;
