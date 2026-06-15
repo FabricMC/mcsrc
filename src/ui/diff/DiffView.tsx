@@ -36,7 +36,7 @@ const DesktopDiffView = () => {
     return (
         <Splitter className="diff-shell">
             <Splitter.Panel
-                defaultSize={320}
+                defaultSize={340}
                 min={260}
                 max={420}
                 className="diff-sidebar-panel"
