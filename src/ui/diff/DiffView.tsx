@@ -1,37 +1,26 @@
-import {
-    AlignLeftOutlined,
-    CodeOutlined,
-    DownOutlined,
-    FileTextOutlined,
-    MenuFoldOutlined,
-    SplitCellsOutlined,
-    UpOutlined,
-} from "@ant-design/icons";
+import { MenuFoldOutlined } from "@ant-design/icons";
 import { Button, Drawer, Empty, Flex, Splitter, Tooltip, Typography } from "antd";
-import { type CSSProperties, useEffect, useMemo } from "react";
+import { useEffect } from "react";
 import { skip } from "rxjs";
 import { isThin } from "../../logic/Browser";
 import {
-    getDiffChanges,
     getDiffSummary,
     type DiffSummary,
 } from "../../logic/Diff";
-import { isDecompiling } from "../../logic/Decompiler";
-import { bytecode, unifiedDiff } from "../../logic/Settings";
 import { diffView, mobileDrawerOpen, selectedFile } from "../../logic/State";
-import { openCodeTab } from "../../logic/tabs";
 import { useObservable } from "../../utils/UseObservable";
 import { FilepathHeader } from "../FilepathHeader";
 import DiffCode from "./DiffCode";
-import {
-    jumpWithinCurrentFile,
-    pendingDiffJump,
-    type DiffDirection
-} from "./DiffNavigation";
+import { DiffNavigationButtons, DiffViewModeButtons } from "./DiffViewActions";
 import DiffViewFileList from "./DiffViewFileList";
 import DiffVersionSelection from "./DiffVersionSelection";
 
 const { Text, Title } = Typography;
+const diffSummary = getDiffSummary();
+
+const closeMobileDrawer = () => mobileDrawerOpen.next(false);
+const openMobileDrawer = () => mobileDrawerOpen.next(true);
+const exitDiffView = () => diffView.next(false);
 
 const DiffView = () => {
     const isSmall = useObservable(isThin);
@@ -65,10 +54,10 @@ const MobileDiffView = () => {
     const drawerOpen = useObservable(mobileDrawerOpen);
 
     useEffect(() => {
-        mobileDrawerOpen.next(true);
+        openMobileDrawer();
 
         const subscription = selectedFile.pipe(skip(1)).subscribe(() => {
-            mobileDrawerOpen.next(false);
+            closeMobileDrawer();
         });
 
         return () => subscription.unsubscribe();
@@ -77,13 +66,13 @@ const MobileDiffView = () => {
     return (
         <Flex vertical style={{ height: "100%", minHeight: 0 }}>
             <Drawer
-                onClose={() => mobileDrawerOpen.next(false)}
+                onClose={closeMobileDrawer}
                 open={drawerOpen}
                 placement="left"
                 styles={{ body: { padding: 0 } }}
                 closeIcon={false}
             >
-                <DiffSidebar closeAction="back" />
+                <DiffSidebar closeAction="close" />
             </Drawer>
             <MobileDiffHeader />
             <DiffMainPane showHeader={false} />
@@ -99,7 +88,7 @@ const MobileDiffHeader = () => {
                     <Button
                         type="primary"
                         icon={<MenuFoldOutlined />}
-                        onClick={() => mobileDrawerOpen.next(true)}
+                        onClick={openMobileDrawer}
                         aria-label="Open changed files"
                     />
                 </Tooltip>
@@ -110,7 +99,7 @@ const MobileDiffHeader = () => {
             <Flex flex={1} justify="flex-end">
                 <Button
                     danger
-                    onClick={() => diffView.next(false)}
+                    onClick={exitDiffView}
                     aria-label="Exit diff view"
                 >
                     Exit
@@ -120,12 +109,10 @@ const MobileDiffHeader = () => {
     );
 };
 
-const DiffSidebar = ({ closeAction = "exit" }: { closeAction?: "back" | "exit" }) => {
-    const summary = useObservable<DiffSummary>(useMemo(() => getDiffSummary(), []));
-    const closeLabel = closeAction === "back" ? "Close" : "Exit";
-    const onClose = closeAction === "back"
-        ? () => mobileDrawerOpen.next(false)
-        : () => diffView.next(false);
+type SidebarCloseAction = "close" | "exit";
+
+const DiffSidebar = ({ closeAction = "exit" }: { closeAction?: SidebarCloseAction }) => {
+    const summary = useObservable<DiffSummary>(diffSummary);
 
     return (
         <aside style={{ display: "flex", flexDirection: "column", height: "100%", minHeight: 0 }}>
@@ -135,7 +122,7 @@ const DiffSidebar = ({ closeAction = "exit" }: { closeAction?: "back" | "exit" }
                         <Title level={5} style={{ margin: 0 }}>Compare</Title>
                         <DiffSummaryLine summary={summary} />
                     </div>
-                    <Button danger={closeAction === "exit"} onClick={onClose}>{closeLabel}</Button>
+                    <DiffSidebarCloseButton action={closeAction} />
                 </Flex>
                 <div style={{ display: "flex", justifyContent: "center", overflowX: "auto" }}>
                     <DiffVersionSelection />
@@ -144,6 +131,19 @@ const DiffSidebar = ({ closeAction = "exit" }: { closeAction?: "back" | "exit" }
             </Flex>
             <DiffViewFileList />
         </aside>
+    );
+};
+
+const DiffSidebarCloseButton = ({ action }: { action: SidebarCloseAction }) => {
+    const isExitAction = action === "exit";
+
+    return (
+        <Button
+            danger={isExitAction}
+            onClick={isExitAction ? exitDiffView : closeMobileDrawer}
+        >
+            {isExitAction ? "Exit" : "Close"}
+        </Button>
     );
 };
 
@@ -173,102 +173,6 @@ const DiffActions = () => {
         </Flex>
     );
 };
-
-const DiffNavigationButtons = () => {
-    const currentFile = useObservable(selectedFile);
-    const loading = useObservable(isDecompiling);
-    const changes = useObservable(useMemo(() => getDiffChanges(), []));
-    const changedFiles = useMemo(() => changes ? [...changes.keys()] : [], [changes]);
-
-    const jumpDiff = (direction: DiffDirection) => {
-        if (jumpWithinCurrentFile(direction)) return;
-
-        if (changedFiles.length === 0) return;
-
-        const currentIndex = currentFile ? changedFiles.indexOf(currentFile) : -1;
-        const targetIndex = currentIndex === -1
-            ? direction === 1 ? 0 : changedFiles.length - 1
-            : currentIndex + direction;
-        const targetFile = changedFiles[targetIndex];
-
-        if (!targetFile) return;
-
-        pendingDiffJump.next(direction);
-        openCodeTab(targetFile);
-    };
-
-    return (
-        <>
-            <Tooltip title="Previous diff">
-                <Button
-                    icon={<UpOutlined />}
-                    aria-label="Previous diff"
-                    disabled={loading || changedFiles.length === 0}
-                    onClick={() => jumpDiff(-1)}
-                />
-            </Tooltip>
-            <Tooltip title="Next diff">
-                <Button
-                    icon={<DownOutlined />}
-                    aria-label="Next diff"
-                    disabled={loading || changedFiles.length === 0}
-                    onClick={() => jumpDiff(1)}
-                />
-            </Tooltip>
-        </>
-    );
-};
-
-const DiffViewModeButtons = () => {
-    const isUnifiedDiff = useObservable(unifiedDiff.observable);
-    const isBytecode = useObservable(bytecode.observable);
-    const currentFile = useObservable(selectedFile);
-    const changes = useObservable(useMemo(() => getDiffChanges(), []));
-    const currentChange = currentFile ? changes?.get(currentFile) : undefined;
-    const hasNoLineChanges = currentChange?.state === "modified"
-        && currentChange.additions === 0
-        && currentChange.deletions === 0;
-
-    return (
-        <>
-            <Tooltip title={isUnifiedDiff ? "Switch to side-by-side diff" : "Switch to unified diff"}>
-                <Button
-                    type={isUnifiedDiff ? "primary" : "default"}
-                    icon={isUnifiedDiff ? <SplitCellsOutlined /> : <AlignLeftOutlined />}
-                    onClick={() => unifiedDiff.value = !unifiedDiff.value}
-                    aria-label={isUnifiedDiff ? "Switch to side-by-side diff" : "Switch to unified diff"}
-                    aria-pressed={isUnifiedDiff}
-                />
-            </Tooltip>
-            <Tooltip title={getBytecodeTooltip(isBytecode, hasNoLineChanges)}>
-                <Button
-                    type={isBytecode ? "primary" : "default"}
-                    icon={isBytecode ? <FileTextOutlined /> : <CodeOutlined />}
-                    onClick={() => bytecode.value = !bytecode.value}
-                    aria-label={isBytecode ? "Show decompiled code" : "Show bytecode"}
-                    aria-pressed={isBytecode}
-                    style={hasNoLineChanges ? noLineChangesBytecodeStyle : undefined}
-                />
-            </Tooltip>
-        </>
-    );
-};
-
-const noLineChangesBytecodeStyle: CSSProperties = {
-    borderColor: "var(--ant-color-success)",
-    boxShadow: "0 0 0 2px var(--ant-color-success-bg)",
-    color: "var(--ant-color-success)"
-};
-
-function getBytecodeTooltip(isBytecode: boolean, hasNoLineChanges: boolean) {
-    if (hasNoLineChanges) {
-        return isBytecode
-            ? "Show decompiled code. This file changed only in bytecode."
-            : "Show bytecode. This file changed only in bytecode.";
-    }
-
-    return isBytecode ? "Show decompiled code" : "Show bytecode";
-}
 
 const DiffMainPane = ({ showHeader = true }: { showHeader?: boolean }) => {
     const currentFile = useObservable(selectedFile);
