@@ -17,6 +17,8 @@ import {
     type DiffDirection
 } from './DiffNavigation';
 
+const IS_ANDROID_CHROME = /Android/.test(navigator.userAgent) && /Chrome/.test(navigator.userAgent);
+
 const DiffCode = () => {
     const leftResult = useObservable(getLeftDiff().result);
     const rightResult = useObservable(getRightDiff().result);
@@ -99,6 +101,7 @@ const DiffCode = () => {
                     domReadOnly: true,
                     renderSideBySide: !isUnified,
                     scrollBeyondLastLine: false,
+                    editContext: IS_ANDROID_CHROME ? false : undefined,
                     //tabSize: 3,
                 }} />
         </Spin>
