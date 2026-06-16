@@ -143,17 +143,14 @@ public class Indexer {
             fields.add(field.str());
         }
 
-        @JSProperty
         public String getClassName() {
             return className;
         }
 
-        @JSProperty
         public String[] getMethods() {
             return methods.toArray(new String[0]);
         }
 
-        @JSProperty
         public String[] getFields() {
             return fields.toArray(new String[0]);
         }
