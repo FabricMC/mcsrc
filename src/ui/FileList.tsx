@@ -14,6 +14,7 @@ import { selectedFile, referencesQuery } from '../logic/State';
 import { autoJarIndex, compactPackages } from '../logic/Settings';
 import { jarIndex, type ClassData } from '../workers/jar-index/client';
 import { ClassDataIcon, JavaIcon, PackageIcon } from './intellij-icons';
+import { classNameFromClassFilePath, dottedClassNameFromClassName, isClassFilePath, toClassName, withoutClassExtension, type ClassFilePath } from '../utils/Names';
 
 const classData: Observable<Map<string, ClassData> | null> = combineLatest([
     jarIndex,
@@ -44,7 +45,7 @@ const fileTree: Observable<TreeDataNode[]> = combineLatest([
         for (const classPath of classNames) {
             if (classPath.includes('$')) continue;
 
-            const className = classPath.replace('.class', '');
+            const className = classNameFromClassFilePath(classPath);
             const i = className.lastIndexOf('/');
             const dirPath = className.slice(0, i);
 
@@ -123,10 +124,10 @@ function getPathKeys(filePath: string): Key[] {
     return result;
 }
 
-const handleCopyContent = async (path: string, jar: MinecraftJar) => {
+const handleCopyContent = async (path: ClassFilePath, jar: MinecraftJar) => {
     try {
         message.loading({ content: 'Decompiling...', key: 'copy-content' });
-        const result = await decompileClass(path, jar.jar);
+        const result = await decompileClass(classNameFromClassFilePath(path), jar.jar);
         await navigator.clipboard.writeText(result.source);
         message.success({ content: 'Content copied to clipboard', key: 'copy-content' });
     } catch (e) {
@@ -144,16 +145,16 @@ interface ContextMenuInfo {
 
 const getMenuItems = (
     contextMenu: ContextMenuInfo | null,
-    handleCopyItem: (path: string) => void,
+    handleCopyItem: (path: ClassFilePath) => void,
     jar: MinecraftJar | undefined
 ): MenuProps['items'] => {
     if (!contextMenu) return [];
 
     const path = contextMenu.key;
-    const isFile = path.endsWith('.class');
-    const packagePath = path.replace(/\//g, '.').replace('.class', '');
+    const isFile = isClassFilePath(path);
+    const packagePath = isFile ? dottedClassNameFromClassName(classNameFromClassFilePath(path)) : withoutClassExtension(path);
     const filename = path.split('/').pop() || '';
-    const linkPath = path.replace('.class', '');
+    const linkPath = withoutClassExtension(path);
     const link = jar ? `https://mcsrc.dev/1/${jar.version}/${linkPath}` : '';
 
     const renderLabel = (title: string, value: string) => (
@@ -213,15 +214,16 @@ const getMenuItems = (
         {
             key: 'copy-content',
             label: 'Copy File Content',
-            onClick: () => handleCopyItem(contextMenu.key),
+            onClick: () => {
+                if (isFile) handleCopyItem(path);
+            },
             disabled: !isFile
         },
         {
             key: 'find-all-references',
             label: 'Find All References',
             onClick: () => {
-                const cleanPath = path.replace('.class', '');
-                referencesQuery.next(cleanPath);
+                referencesQuery.next(toClassName(path));
             },
             disabled: !isFile
         },
@@ -237,8 +239,9 @@ const FileList = () => {
     const classes = useObservable(classesList);
     const onSelect: TreeProps['onSelect'] = useCallback((selectedKeys: Key[]) => {
         if (selectedKeys.length === 0) return;
-        if (!classes || !classes.includes(selectedKeys[0] as string)) return;
-        openCodeTab(selectedKeys.join("/"));
+        const key = selectedKeys[0];
+        if (typeof key !== "string" || !isClassFilePath(key) || !classes.includes(key)) return;
+        openCodeTab(key);
     }, [classes]);
 
     const treeData = useObservable(fileTree);

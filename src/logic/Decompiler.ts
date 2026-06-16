@@ -10,6 +10,7 @@ import type { Options } from "./vf";
 import type { DecompileResult } from "../workers/decompile/types";
 import * as worker from "../workers/decompile/client";
 import type { Jar } from "../utils/Jar";
+import { classNameFromClassFilePath, type ClassName } from "../utils/Names";
 
 const decompilerCounter = new BehaviorSubject<number>(0);
 
@@ -44,11 +45,12 @@ export function decompileResultPipeline(jar: Observable<MinecraftJar>): Observab
     ]).pipe(
         distinctUntilChanged(),
         throttleTime(250),
-        switchMap(([className, jar, bytecode]) => {
-            if (!className) {
+        switchMap(([file, jar, bytecode]) => {
+            if (!file) {
                 return of();
             }
 
+            const className = classNameFromClassFilePath(file);
             if (bytecode) {
                 return from(getClassBytecode(className, jar.jar));
             }
@@ -59,7 +61,7 @@ export function decompileResultPipeline(jar: Observable<MinecraftJar>): Observab
     );
 }
 
-export async function getClassBytecode(className: string, jar: Jar) {
+export async function getClassBytecode(className: ClassName, jar: Jar) {
     try {
         decompilerCounter.next(decompilerCounter.value + 1);
         return await worker.getClassBytecode(className, jar);
@@ -68,7 +70,7 @@ export async function getClassBytecode(className: string, jar: Jar) {
     }
 }
 
-export async function decompileClass(className: string, jar: Jar) {
+export async function decompileClass(className: ClassName, jar: Jar) {
     try {
         decompilerCounter.next(decompilerCounter.value + 1);
         return await worker.decompileClass(className, jar);

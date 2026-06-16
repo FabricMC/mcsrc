@@ -1,6 +1,7 @@
 import { editor, languages, Position, Token, type CancellationToken } from 'monaco-editor';
 import type { MemberToken } from '../logic/Tokens';
 import type { DecompileResult } from '../workers/decompile/types';
+import { simpleDottedClassName, toDottedClassName, type DottedClassName } from '../utils/Names';
 
 export class JavdocCompletionProvider implements languages.CompletionItemProvider {
     readonly decompileResult: DecompileResult;
@@ -39,7 +40,7 @@ export class JavdocCompletionProvider implements languages.CompletionItemProvide
         const imports = this.getImportedClasses();
 
         const suggestions: languages.CompletionItem[] = imports.map(importPath => {
-            const className = importPath.split('.').pop() || importPath;
+            const className = simpleDottedClassName(importPath);
 
             return {
                 label: className,
@@ -74,9 +75,9 @@ export class JavdocCompletionProvider implements languages.CompletionItemProvide
         return textAfterBracket.startsWith('#');
     }
 
-    getImportedClasses(): string[] {
+    getImportedClasses(): DottedClassName[] {
         const source = this.decompileResult.source;
-        const importedClasses: string[] = [];
+        const importedClasses: DottedClassName[] = [];
 
         const importRegex = /^\s*import\s+(?!static\b)([^\s;]+)\s*;/gm;
 
@@ -87,7 +88,7 @@ export class JavdocCompletionProvider implements languages.CompletionItemProvide
                 continue;
             }
 
-            importedClasses.push(importPath);
+            importedClasses.push(toDottedClassName(importPath));
         }
 
         return importedClasses;

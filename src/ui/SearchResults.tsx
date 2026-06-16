@@ -2,12 +2,13 @@ import { List } from "antd";
 import { searchResults } from "../logic/JarFile";
 import { useObservable } from "../utils/UseObservable";
 import { openCodeTab } from "../logic/tabs";
+import { withoutClassExtension, type ClassFilePath } from "../utils/Names";
 
 const SearchResults = () => {
     const results = useObservable(searchResults);
 
     return (
-        <List
+        <List<ClassFilePath>
             size="small"
             dataSource={results}
             renderItem={(item) => (
@@ -22,7 +23,7 @@ const SearchResults = () => {
                     onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)'}
                     onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                 >
-                    {item.replace(/\.class$/, '')}
+                    {withoutClassExtension(item)}
                 </List.Item>
             )}
         />

@@ -2,6 +2,7 @@ import type { TreeDataNode } from "antd";
 import { Tab } from "./Tabs";
 import type { Key } from "react";
 import { selectedFile, tabHistory } from "../State";
+import { toClassName, type ClassName } from "../../utils/Names";
 
 export class InheritanceViewTab extends Tab {
     public innerTabs: {
@@ -34,7 +35,7 @@ export class InheritanceViewTab extends Tab {
             }
         };
 
-    private async setSelectedInheritanceClassName(key: string | null) {
+    private async setSelectedInheritanceClassName(key: ClassName | null) {
         // We need to unfortunately do an async import here because else we'll get
         // a circular import (minecraftJar)
         const { selectedInheritanceClassName } = await import("../Inheritance");
@@ -44,8 +45,8 @@ export class InheritanceViewTab extends Tab {
     public open(): void {
         super.open();
 
-        selectedFile.next("");
-        this.setSelectedInheritanceClassName(this.key.replace("hierarchy::", ""));
+        selectedFile.next(undefined);
+        this.setSelectedInheritanceClassName(toClassName(this.key.replace("hierarchy::", "")));
     }
 
     protected onBlur(): void {
@@ -61,6 +62,6 @@ export class InheritanceViewTab extends Tab {
     public openLastTabFromHistory(): void {
         super.openLastTabFromHistory();
         if (tabHistory.value.length > 0) return;
-        this.setSelectedInheritanceClassName("");
+        this.setSelectedInheritanceClassName(null);
     }
 }

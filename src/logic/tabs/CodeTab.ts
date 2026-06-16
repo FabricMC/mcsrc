@@ -1,11 +1,17 @@
 import type { editor } from "monaco-editor";
 import { Tab } from "./Tabs";
 import { selectedFile, tabHistory } from "../State";
+import type { ClassFilePath } from "../../utils/Names";
 
 export class CodeTab extends Tab {
+    public declare key: ClassFilePath;
     public editorRef: editor.IStandaloneCodeEditor | null = null;
     public viewState: editor.ICodeEditorViewState | null = null;
     public model: editor.ITextModel | null = null;
+
+    public constructor(key: ClassFilePath) {
+        super(key);
+    }
 
     public open() {
         super.open();
@@ -80,6 +86,6 @@ export class CodeTab extends Tab {
     public openLastTabFromHistory(): void {
         super.openLastTabFromHistory();
         if (tabHistory.value.length > 0) return;
-        selectedFile.next("");
+        selectedFile.next(undefined);
     }
 }

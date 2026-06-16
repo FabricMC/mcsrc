@@ -1,14 +1,15 @@
 import { BehaviorSubject, combineLatest, distinctUntilChanged, map, of, shareReplay, switchMap } from "rxjs";
 import { jarIndex, type ClassData } from "../workers/jar-index/client";
 import { minecraftJar } from "./MinecraftApi";
+import { classNameFromClassFilePath, isClassFilePath, type ClassName } from "../utils/Names";
 
 export class ClassNode {
-    readonly name: string;
+    readonly name: ClassName;
     parents: ClassNode[] = [];
     children: ClassNode[] = [];
     classData: ClassData | null = null;
 
-    constructor(name: string) {
+    constructor(name: ClassName) {
         this.name = name;
     }
 
@@ -25,9 +26,9 @@ export class ClassNode {
 }
 
 export class InheritanceIndex {
-    private readonly index = new Map<string, ClassNode>();
+    private readonly index = new Map<ClassName, ClassNode>();
 
-    addClass(className: string): ClassNode {
+    addClass(className: ClassName): ClassNode {
         let node = this.index.get(className);
         if (!node) {
             node = new ClassNode(className);
@@ -36,7 +37,7 @@ export class InheritanceIndex {
         return node;
     }
 
-    addParentChildLink(parentName: string, childName: string): void {
+    addParentChildLink(parentName: ClassName, childName: ClassName): void {
         const parent = this.addClass(parentName);
         const child = this.addClass(childName);
 
@@ -51,14 +52,14 @@ export class InheritanceIndex {
         }
     }
 
-    addChildParentLink(childName: string, parentName: string): void {
+    addChildParentLink(childName: ClassName, parentName: ClassName): void {
         this.addParentChildLink(parentName, childName);
     }
 }
 
 
 
-export const selectedInheritanceClassName = new BehaviorSubject<string | null>(null);
+export const selectedInheritanceClassName = new BehaviorSubject<ClassName | null>(null);
 
 export const inheritanceIndex = combineLatest([jarIndex, minecraftJar]).pipe(
     distinctUntilChanged(),
@@ -69,8 +70,8 @@ export const inheritanceIndex = combineLatest([jarIndex, minecraftJar]).pipe(
 
         const classNames = new Set(
             Object.keys(jarInstance.jar.entries)
-                .filter(name => name.endsWith(".class"))
-                .map(name => name.slice(0, -6))
+                .filter(isClassFilePath)
+                .map(classNameFromClassFilePath)
         );
 
         for (const classData of classDataArray) {

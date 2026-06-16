@@ -5,35 +5,35 @@ import { openCodeTab } from "../logic/tabs";
 import { referencesQuery } from "../logic/State";
 import type { ReferenceString } from "../workers/jar-index/types";
 import { theme } from "antd";
+import { toClassFilePath, toClassName, type ClassName } from "../utils/Names";
 
-function getUsageClass(usage: ReferenceString): string {
+function getUsageClass(usage: ReferenceString): ClassName {
     if (usage.startsWith("m:") || usage.startsWith("f:")) {
         const parts = usage.slice(2).split(":");
-        return parts[0];
+        return toClassName(parts[0]);
     }
 
     // class usage
-    return usage;
+    return toClassName(usage.slice(2));
 }
 
 interface ReferenceGroup {
-    className: string;
+    className: ClassName;
     references: ReferenceString[];
 }
 
 const groupedResults: Observable<ReferenceGroup[]> = referenceResults.pipe(
     map(results => {
-        const groups: Record<string, ReferenceString[]> = {};
+        const groups = new Map<ClassName, ReferenceString[]>();
 
         for (const usage of results) {
             const className = getUsageClass(usage);
-            if (!groups[className]) {
-                groups[className] = [];
-            }
-            groups[className].push(usage);
+            const references = groups.get(className) || [];
+            references.push(usage);
+            groups.set(className, references);
         }
 
-        return Object.entries(groups).map(([className, references]) => ({
+        return Array.from(groups.entries()).map(([className, references]) => ({
             className,
             references
         }));
@@ -51,7 +51,7 @@ const UsageGroupItem = ({ group }: UsageGroupItemProps) => {
     return (
         <div style={{ marginBottom: "4px" }}>
             <div
-                onClick={() => openCodeTab(group.className + ".class")}
+                onClick={() => openCodeTab(toClassFilePath(group.className))}
                 style={{
                     cursor: "pointer",
                     fontSize: "13px",
@@ -68,7 +68,9 @@ const UsageGroupItem = ({ group }: UsageGroupItemProps) => {
                 {group.references.map((reference, index) => (
                     <div
                         key={index}
-                        onClick={() => goToReference(query, reference)}
+                        onClick={() => {
+                            if (query) goToReference(query, reference);
+                        }}
                         style={{
                             cursor: "pointer",
                             fontSize: "12px",

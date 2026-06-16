@@ -1,10 +1,11 @@
 import { load } from "../../../java/build/generated/teavm/wasm-gc/java.wasm-runtime.js";
 import indexerWasm from '../../../java/build/generated/teavm/wasm-gc/java.wasm?url';
 import { openJar, type Jar } from "../../utils/Jar.js";
+import type { ClassFilePath, ClassName } from "../../utils/Names.js";
 
-export type Class = string;
-export type Method = `${string}:${string}:${string}`;
-export type Field = `${string}:${string}:${string}`;
+export type Class = ClassName;
+export type Method = `${ClassName}:${string}:${string}`;
+export type Field = `${ClassName}:${string}:${string}`;
 
 // oxlint-disable-next-line typescript/no-redundant-type-constituents
 export type ReferenceKey = Class | Method;
@@ -42,7 +43,7 @@ export class JarIndexer {
         this.#jar = await openJar(name, blob);
     };
 
-    indexBatch = async (classNames: string[]): Promise<void> => {
+    indexBatch = async (classNames: ClassFilePath[]): Promise<void> => {
         if (!this.#jar) {
             throw new Error("Jar not set in worker");
         }
@@ -50,6 +51,9 @@ export class JarIndexer {
         const currentJar = this.#jar; // Capture for closure
         const arrayBufferPromises = classNames.map(async className => {
             const entry = currentJar.entries[className];
+            if (!entry) {
+                throw new Error(`Class entry not found: ${className}`);
+            }
             const data = await entry.blob();
             return data.arrayBuffer();
         });

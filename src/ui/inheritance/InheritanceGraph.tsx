@@ -5,6 +5,7 @@ import { isInterface, isAbstract } from "../../utils/Classfile";
 import { useLayoutEffect } from "react";
 import dagre from "dagre";
 import { InheritanceViewTab, openCodeTab } from "../../logic/tabs";
+import { toClassFilePath, toClassName } from "../../utils/Names";
 
 function buildGraphData(classNode: ClassNode): { nodes: Node[]; edges: Edge[]; } {
     const nodes: Node[] = [];
@@ -202,7 +203,7 @@ const InheritanceGraphInner = ({ tab, data }: { tab: InheritanceViewTab; data: C
         <ReactFlow
             nodes={nodes}
             edges={edges}
-            onNodeClick={(_, { id }) => openCodeTab(`${id}.class`)}
+            onNodeClick={(_, { id }) => openCodeTab(toClassFilePath(toClassName(id)))}
             onMoveEnd={onMoveEnd}
             defaultViewport={tab.innerTabs.graph.viewport}
             proOptions={{ hideAttribution: true }}

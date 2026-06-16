@@ -2,15 +2,16 @@ import { BehaviorSubject, map, Observable } from "rxjs";
 import type { Token } from "../logic/Tokens";
 import { javadocApi } from "./api/JavadocApi";
 import { selectedMinecraftVersion } from "../logic/State";
+import { toClassName, type ClassName } from "../utils/Names";
 
 export type JavadocString = string;
 
 export interface JavadocData {
-    classes: Record<string, {
+    classes: Partial<Record<ClassName, {
         javadoc: JavadocString | null;
         methods: Record<string, JavadocString>;
         fields: Record<string, JavadocString>;
-    }>;
+    }>>;
 }
 
 export const javadocData = new BehaviorSubject<JavadocData>({
@@ -46,7 +47,7 @@ export function setTokenJavadoc(token: Token, javadoc: JavadocString | undefined
 }
 
 // Refreshes the Javadoc data for a specific class from the server
-export async function refreshJavadocDataForClass(className: string) {
+export async function refreshJavadocDataForClass(className: ClassName) {
     const minecraftVersion = selectedMinecraftVersion.value;
     if (!minecraftVersion) {
         throw new Error("No Minecraft version selected");
@@ -55,12 +56,13 @@ export async function refreshJavadocDataForClass(className: string) {
     const data = await javadocApi.getJavadoc(minecraftVersion, className);
 
     for (const [key, entry] of Object.entries(data.data)) {
-        const classEntry = javadocData.getValue().classes[key] || { javadoc: null, methods: {}, fields: {} };
+        const className = toClassName(key);
+        const classEntry = javadocData.getValue().classes[className] || { javadoc: null, methods: {}, fields: {} };
         classEntry.javadoc = entry.value || null;
         classEntry.methods = entry.methods || {};
         classEntry.fields = entry.fields || {};
         const nextData = { ...javadocData.getValue() };
-        nextData.classes[key] = classEntry;
+        nextData.classes[className] = classEntry;
         javadocData.next(nextData);
     }
 }

@@ -1,6 +1,7 @@
 import { openTabs, tabHistory, openTab } from "../State";
 import { enableTabs } from "../Settings";
 import { CodeTab, InheritanceViewTab } from "./index";
+import type { ClassFilePath } from "../../utils/Names";
 
 export abstract class Tab {
     public key: string;
@@ -86,9 +87,9 @@ export const getOpenTab = <T extends Tab>(): T | null => {
     return openTab.value as T | null;
 };
 
-const openTabOfType = <T extends Tab>(
-    key: string,
-    TabClass: new (key: string) => T
+const openTabOfType = <K extends string, T extends Tab>(
+    key: K,
+    TabClass: new (key: K) => T
 ) => {
     const existing = openTabs.value.find(
         t => t.key === key && t instanceof TabClass
@@ -110,7 +111,7 @@ export const openUnknownTypeTab = (key: string) => {
     existing.open();
 };
 
-export const openCodeTab = (key: string) => openTabOfType(key, CodeTab);
+export const openCodeTab = (key: ClassFilePath) => openTabOfType(key, CodeTab);
 export const openInheritanceViewTab = (key: string) => openTabOfType(key, InheritanceViewTab);
 
 export const closeTab = (key: string) => {

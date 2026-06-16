@@ -1,5 +1,6 @@
 import { BehaviorSubject, map } from "rxjs";
 import { IS_JAVADOC_EDITOR } from "../../site";
+import type { ClassName } from "../../utils/Names";
 
 class JavadocApi {
     // The current access token, or null if not authenticated
@@ -31,7 +32,7 @@ class JavadocApi {
         return response.status == 200;
     }
 
-    async getJavadoc(version: string, className: string): Promise<JavadocResponse> {
+    async getJavadoc(version: string, className: ClassName): Promise<JavadocResponse> {
         const requestBody = {
             className
         };
@@ -127,7 +128,7 @@ export interface JavadocEntry {
 }
 
 export interface UpdateJavadocRequest {
-    className: string;
+    className: ClassName;
     target: UpdateTarget | null;
     documentation: string;
 }

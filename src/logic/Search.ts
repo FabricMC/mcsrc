@@ -8,7 +8,7 @@ export function matchesCamelCase(className: string, query: string): boolean {
 }
 
 // Vibe coded mess that no one other than copilot or should read or touch :D
-export function performSearch(query: string, classes: string[]): string[] {
+export function performSearch<T extends string>(query: string, classes: T[]): T[] {
     if (query.length === 0) {
         return [];
     }
@@ -65,4 +65,4 @@ export function performSearch(query: string, classes: string[]): string[] {
     return results;
 }
 
-
+import type { ClassFilePath } from "../utils/Names";

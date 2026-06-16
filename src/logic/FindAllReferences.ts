@@ -5,6 +5,7 @@ import { referencesQuery } from "./State";
 import type { Token } from "./Tokens";
 import type { DecompileResult } from "../workers/decompile/types";
 import type { ReferenceKey, ReferenceString } from "../workers/jar-index/types";
+import { toClassFilePath, toClassName, type ClassName } from "../utils/Names";
 
 export const referenceResults = referencesQuery
     .pipe(
@@ -73,7 +74,7 @@ function getQueryType(query: ReferenceKey): "class" | "method" | "field" {
 
 interface ReferenceNavigation {
     // The class to navigate to
-    className: string;
+    className: ClassName;
     // The reference being navigated to
     query: ReferenceKey;
     // The location of where the reference is found
@@ -83,8 +84,8 @@ interface ReferenceNavigation {
 export const nextReferenceNavigation = new BehaviorSubject<ReferenceNavigation | undefined>(undefined);
 
 export function goToReference(query: ReferenceKey, reference: ReferenceString) {
-    const className = reference.slice(2).split(":")[0].split('$')[0];
-    openCodeTab(className + ".class");
+    const className = toClassName(reference.slice(2).split(":")[0].split('$')[0]);
+    openCodeTab(toClassFilePath(className));
 
     if (reference.startsWith("c:")) {
         // Nothing to jump to
@@ -118,7 +119,7 @@ export function getNextJumpToken(decompileResult: DecompileResult): Token | unde
 
     { // First find the reference token
         const parts = reference.slice(2).split(":");
-        const classname = parts[0];
+        const classname = toClassName(parts[0]);
         const name = parts[1];
         const descriptor = parts[2];
         const expectedType = reference.startsWith("m:") ? "method" : "field";
@@ -169,7 +170,7 @@ export function getNextJumpToken(decompileResult: DecompileResult): Token | unde
         const token = decompileResult.tokens[i];
 
         // Special case for constructor reference
-        if (name == "<init>" && token.type == "class" && token.className == parts[0]) {
+        if (name == "<init>" && token.type == "class" && token.className == toClassName(parts[0])) {
             return token;
         }
 

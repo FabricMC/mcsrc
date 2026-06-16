@@ -34,6 +34,7 @@ import {
 } from './CodeExtensions';
 import { bytecode } from '../logic/Settings';
 import { selectedFile, diffView, openTabs, selectedLines, tabHistory, referencesQuery, mobileDrawerOpen } from '../logic/State';
+import { toClassFilePath } from '../utils/Names';
 
 const IS_ANDROID_CHROME = /Android/.test(navigator.userAgent) && /Chrome/.test(navigator.userAgent);
 
@@ -67,7 +68,7 @@ const Code = () => {
             const decorations = decompileResult.tokens.map(token => {
                 const startPos = model.getPositionAt(token.start);
                 const endPos = model.getPositionAt(token.start + token.length);
-                const canGoTo = !token.declaration && classList && classList.includes(token.className + ".class");
+                const canGoTo = !token.declaration && classList && classList.includes(toClassFilePath(token.className));
 
                 return {
                     range: new Range(startPos.lineNumber, startPos.column, endPos.lineNumber, endPos.column),
@@ -298,7 +299,7 @@ const Code = () => {
     useEffect(() => {
         if (!editorRef.current || !decompileResult || !tokenJump) return;
 
-        if (decompileResult.className + ".class" === tokenJump.className) {
+        if (toClassFilePath(decompileResult.className) === tokenJump.className) {
             requestAnimationFrame(() => {
                 if (editorRef.current && decompileResult) {
                     jumpToToken(decompileResult, tokenJump.targetType, tokenJump.target, editorRef.current);

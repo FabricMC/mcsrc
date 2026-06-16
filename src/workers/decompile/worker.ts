@@ -5,6 +5,7 @@ import type { Token } from "../../logic/Tokens";
 import { type DecompileResult, type DecompileOption, type DecompileData, DecompileJar } from "./types";
 import { openJar } from "../../utils/Jar";
 import { JarIndexer } from "../jar-index/types";
+import { classNameFromDottedClassName, toClassName, type ClassName } from "../../utils/Names";
 
 export class DecompileWorker {
     #lastPromise: Promise<unknown> | undefined = undefined;
@@ -86,7 +87,7 @@ export class DecompileWorker {
     decompileMany = (
         jarName: string,
         jarBlob: Blob,
-        classNames: string[],
+        classNames: ClassName[],
         sab: SharedArrayBuffer,
         splits: number,
         logger?: (index: number) => Promise<void> | void,
@@ -97,8 +98,8 @@ export class DecompileWorker {
         let logPromises: Promise<void>[] = [];
         let nameLogger;
         if (logger) {
-            const class2index = new Map(classNames.map((v, i) => [v, i] as [string, number]));
-            nameLogger = (className: string) => {
+            const class2index = new Map(classNames.map((v, i) => [v, i] as [ClassName, number]));
+            nameLogger = (className: ClassName) => {
                 if (!class2index) return;
                 const i = class2index.get(className);
                 if (i) logPromises.push(Promise.resolve(logger!(i)));
@@ -110,7 +111,7 @@ export class DecompileWorker {
             const i = Atomics.add(state, 0, splits);
             if (i >= classNames.length) break;
 
-            const targetClassNames: string[] = [];
+            const targetClassNames: ClassName[] = [];
             for (let j = 0; j < splits; j++) {
                 if ((i + j) >= classNames.length) break;
 
@@ -145,7 +146,7 @@ export class DecompileWorker {
     });
 
     decompile = (
-        className: string,
+        className: ClassName,
         jarName: string,
         jarBlob: Blob,
     ): Promise<DecompileResult> => this.schedule(async () => {
@@ -170,19 +171,20 @@ export class DecompileWorker {
     });
 
     async #decompile(
-        jarClasses: string[],
-        classNames: string[],
+        jarClasses: ClassName[],
+        classNames: ClassName[],
         classData: DecompileData,
-        logger?: (className: string) => void,
+        logger?: (className: ClassName) => void,
     ): Promise<DecompileResult[]> {
         const allTokens: Record<string, Token[]> = {};
         let currentContent: string | undefined;
         let currentTokens: Token[] | undefined;
-        let currentClassName: string | undefined;
+        let currentClassName: ClassName | undefined;
 
         const sources = await vf.decompile(classNames, {
             source: async (name) => {
-                const data = await classData[name]?.data;
+                const className = toClassName(name);
+                const data = await classData[className]?.data;
 
                 if (!data) {
                     if (name.startsWith("net/minecraft/")) {
@@ -204,7 +206,7 @@ export class DecompileWorker {
                     }
                 },
                 startClass(className) {
-                    currentClassName = className;
+                    currentClassName = toClassName(className);
                 },
                 endClass() {
                     if (logger && currentClassName) logger(currentClassName);
@@ -217,19 +219,19 @@ export class DecompileWorker {
                     currentTokens = [];
                 },
                 visitClass(start, length, declaration, name) {
-                    currentTokens!.push({ type: "class", start, length, className: name, declaration });
+                    currentTokens!.push({ type: "class", start, length, className: toClassName(name), declaration });
                 },
                 visitField(start, length, declaration, className, name, descriptor) {
-                    currentTokens!.push({ type: "field", start, length, className, declaration, name, descriptor });
+                    currentTokens!.push({ type: "field", start, length, className: toClassName(className), declaration, name, descriptor });
                 },
                 visitMethod(start, length, declaration, className, name, descriptor) {
-                    currentTokens!.push({ type: "method", start, length, className, declaration, name, descriptor });
+                    currentTokens!.push({ type: "method", start, length, className: toClassName(className), declaration, name, descriptor });
                 },
                 visitParameter(start, length, declaration, className, _methodName, _methodDescriptor, _index, _name) {
-                    currentTokens!.push({ type: "parameter", start, length, className, declaration });
+                    currentTokens!.push({ type: "parameter", start, length, className: toClassName(className), declaration });
                 },
                 visitLocal(start, length, declaration, className, _methodName, _methodDescriptor, _index, _name) {
-                    currentTokens!.push({ type: "local", start, length, className, declaration });
+                    currentTokens!.push({ type: "local", start, length, className: toClassName(className), declaration });
                 },
                 end() {
                     allTokens[currentContent!] = currentTokens!;
@@ -240,24 +242,25 @@ export class DecompileWorker {
         });
 
         const res: DecompileResult[] = [];
-        for (const [className, source] of Object.entries(sources)) {
+        for (const [rawClassName, source] of Object.entries(sources)) {
+            const className = toClassName(rawClassName);
             const checksum = classData[className]?.checksum ?? 0;
             const tokens = allTokens[source] ?? [];
 
             const importRegex = /^\s*import\s+(?!static\b)([^\s;]+)\s*;/gm;
             let match = null;
             while ((match = importRegex.exec(source)) !== null) {
-                const importPath = match[1].replaceAll('.', '/');
+                const importPath = classNameFromDottedClassName(match[1]);
                 if (importPath.endsWith('*')) {
                     continue;
                 }
 
-                const className = importPath.substring(importPath.lastIndexOf('/') + 1);
+                const simpleClassName = importPath.substring(importPath.lastIndexOf('/') + 1);
 
                 tokens.push({
                     type: "class",
-                    start: match.index + match[0].lastIndexOf(className),
-                    length: importPath.length - importPath.lastIndexOf(className),
+                    start: match.index + match[0].lastIndexOf(simpleClassName),
+                    length: importPath.length - importPath.lastIndexOf(simpleClassName),
                     className: importPath,
                     declaration: false
                 });
@@ -272,7 +275,7 @@ export class DecompileWorker {
     }
 
     #indexer = new JarIndexer();
-    getClassBytecode = (className: string, checksum: number, classData: ArrayBufferLike[]): Promise<DecompileResult> => this.schedule(async () => {
+    getClassBytecode = (className: ClassName, checksum: number, classData: ArrayBufferLike[]): Promise<DecompileResult> => this.schedule(async () => {
         let result = await this.db.results3.get([className, checksum, "bytecode"]);
         if (result) return result;
 

@@ -16,6 +16,7 @@ import {
     registerDiffNavigator,
     type DiffDirection
 } from './DiffNavigation';
+import { classNameFromClassFilePath } from '../../utils/Names';
 
 const IS_ANDROID_CHROME = /Android/.test(navigator.userAgent) && /Chrome/.test(navigator.userAgent);
 
@@ -41,7 +42,7 @@ const DiffCode = () => {
         if (!leftResult) return;
         if (!rightResult) return;
 
-        const currentClass = currentPath.replace(".class", "");
+        const currentClass = classNameFromClassFilePath(currentPath);
         if (leftResult.className !== currentClass) return;
         if (rightResult.className !== currentClass) return;
 

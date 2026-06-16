@@ -4,6 +4,7 @@ import { closeTab, setTabPosition, closeOtherTabs, openUnknownTypeTab, Inheritan
 import React, { useEffect, useRef, useState } from "react";
 import { openTabs, openTab } from "../logic/State";
 import { HierarchyIcon } from "./intellij-icons";
+import { withoutClassExtension } from "../utils/Names";
 
 export const TabsComponent = () => {
     // variables - tabs
@@ -26,6 +27,8 @@ export const TabsComponent = () => {
 
     // variables - tab ghost image
     const ghostImage = useRef<HTMLElement | null>(null);
+
+    const getTabLabel = (key: string) => withoutClassExtension(key).split("/").pop();
 
     // helpers
     const getRects = () => {
@@ -221,7 +224,7 @@ export const TabsComponent = () => {
                                 ref={(el) => { tabRefs.current[tab.key] = el; }}
                                 style={{ userSelect: "none", display: "inline" }}
                             >
-                                {tab.key.replace(".class", "").split("/").pop()}
+                                {getTabLabel(tab.key)}
                             </div>
                         ),
                         icon: (

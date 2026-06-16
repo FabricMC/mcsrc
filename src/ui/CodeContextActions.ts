@@ -2,6 +2,8 @@ import type { editor } from "monaco-editor";
 import { findTokenAtPosition } from './CodeUtils';
 import type { DecompileResult } from "../workers/decompile/types";
 import { openInheritanceViewTab } from "../logic/tabs";
+import { dottedClassNameFromClassName, type ClassFilePath, type ClassName } from "../utils/Names";
+import type { ReferenceKey } from "../workers/jar-index/types";
 
 export const IS_DEFINITION_CONTEXT_KEY_NAME = "is_definition";
 
@@ -11,7 +13,7 @@ async function setClipboard(text: string): Promise<void> {
 
 export function createCopyAwAction(
     decompileResultRef: { current: DecompileResult | undefined; },
-    classListRef: { current: string[] | undefined; },
+    classListRef: { current: ClassFilePath[] | undefined; },
     messageApi: { error: (msg: string) => void; success: (msg: string) => void; }
 ) {
     return {
@@ -48,7 +50,7 @@ export function createCopyAwAction(
 
 export function createCopyAtAction(
     decompileResultRef: { current: DecompileResult | undefined; },
-    classListRef: { current: string[] | undefined; },
+    classListRef: { current: ClassFilePath[] | undefined; },
     messageApi: { error: (msg: string) => void; success: (msg: string) => void; }
 ) {
     return {
@@ -65,13 +67,13 @@ export function createCopyAtAction(
 
             switch (token.type) {
                 case "class":
-                    await setClipboard(`public ${token.className.replaceAll("/", ".")}`);
+                    await setClipboard(`public ${dottedClassNameFromClassName(token.className)}`);
                     break;
                 case "field":
-                    await setClipboard(`public ${token.className.replaceAll("/", ".")} ${token.name}`);
+                    await setClipboard(`public ${dottedClassNameFromClassName(token.className)} ${token.name}`);
                     break;
                 case "method":
-                    await setClipboard(`public ${token.className.replaceAll("/", ".")} ${token.name}${token.descriptor}`);
+                    await setClipboard(`public ${dottedClassNameFromClassName(token.className)} ${token.name}${token.descriptor}`);
                     break;
                 default:
                     messageApi.error("Token is not a class, field, or method.");
@@ -85,7 +87,7 @@ export function createCopyAtAction(
 
 export function createCopyMixinAction(
     decompileResultRef: { current: DecompileResult | undefined; },
-    classListRef: { current: string[] | undefined; },
+    classListRef: { current: ClassFilePath[] | undefined; },
     messageApi: { error: (msg: string) => void; success: (msg: string) => void; }
 ) {
     return {
@@ -122,9 +124,9 @@ export function createCopyMixinAction(
 
 export function createFindAllReferencesAction(
     decompileResultRef: { current: DecompileResult | undefined; },
-    classListRef: { current: string[] | undefined; },
+    classListRef: { current: ClassFilePath[] | undefined; },
     messageApi: { error: (msg: string) => void; },
-    referenceQueryNext: (value: string) => void
+    referenceQueryNext: (value: ReferenceKey) => void
 ) {
     return {
         id: 'find_all_references',
@@ -160,7 +162,7 @@ export function createFindAllReferencesAction(
 export function createViewInheritanceAction(
     decompileResultRef: { current: DecompileResult | undefined; },
     messageApi: { error: (msg: string) => void; },
-    selectedInheritanceClassNameNext: (value: string) => void
+    selectedInheritanceClassNameNext: (value: ClassName) => void
 ) {
     return {
         id: 'view_inheritance',
@@ -173,7 +175,7 @@ export function createViewInheritanceAction(
                 return;
             }
 
-            const className = decompileResultRef.current.className.replace('.class', '');
+            const className = decompileResultRef.current.className;
             console.log(`Viewing inheritance for ${className}`);
             openInheritanceViewTab(`hierarchy::${className}`);
         }

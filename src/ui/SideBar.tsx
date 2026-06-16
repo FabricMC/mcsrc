@@ -50,7 +50,7 @@ const SideBar = () => {
                         Back
                     </Button>
                     <div style={{ fontSize: "12px", textAlign: "center" }}>
-                        References of: {formatReferenceQuery(currentReferenceQuery || "")}
+                        References of: {currentReferenceQuery ? formatReferenceQuery(currentReferenceQuery) : ""}
                     </div>
                 </>
             ) : (

@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, type Key } from "react";
 import { ClassNode } from "../../logic/Inheritance";
 import { InheritanceViewTab, openCodeTab } from "../../logic/tabs";
 import { ClassDataIcon } from "../intellij-icons";
+import { dottedClassNameFromClassName, toClassFilePath, toClassName } from "../../utils/Names";
 
 function getSimpleClassName(fullName: string): string {
     const i = fullName.lastIndexOf('/');
@@ -15,7 +16,7 @@ function renderIcon(node: ClassNode) {
 }
 
 function renderTitle(node: ClassNode) {
-    const fullName = node.name.replaceAll('/', '.');
+    const fullName = dottedClassNameFromClassName(node.name);
 
     return (
         <span>
@@ -93,8 +94,7 @@ const InheritanceTree = ({ tab, data }: { tab: InheritanceViewTab, data: ClassNo
         const selected = selectedKeys[0];
         if (!selected) return;
 
-        // Convert internal class name format (e.g., "net/minecraft/ChatFormatting") to file path
-        openCodeTab(`${selected}.class`);
+        openCodeTab(toClassFilePath(toClassName(String(selected))));
     }, []);
 
     const scrollRef = useRef<HTMLDivElement>(null);

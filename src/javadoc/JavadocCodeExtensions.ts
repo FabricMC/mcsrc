@@ -85,7 +85,7 @@ export function applyJavadocCodeExtensions(monaco: monaco, editor: editor.IStand
         }
     });
 
-    refreshJavadocDataForClass(decompile.className.replace(".class", "")).catch(err => {
+    refreshJavadocDataForClass(decompile.className).catch(err => {
         console.error("Failed to refresh Javadoc data for class:", err);
     });
 

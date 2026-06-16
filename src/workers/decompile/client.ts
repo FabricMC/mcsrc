@@ -3,6 +3,7 @@ import type * as vf from "../../logic/vf";
 import { DecompileJar, type DecompileResult } from "./types";
 import type { Jar } from "../../utils/Jar";
 import type { DecompileWorker } from "./worker";
+import { toClassFilePath, type ClassName } from "../../utils/Names";
 
 function createWorker() {
     const worker = new Worker(new URL("./worker.ts", import.meta.url), { type: "module", name: "decompiler" });
@@ -109,9 +110,8 @@ export function decompileEntireJar(jar: Jar, options?: DecompileEntireJarOptions
     };
 }
 
-export async function decompileClass(className: string, jar: Jar): Promise<DecompileResult> {
-    className = className.replace(".class", "");
-    const entry = jar.entries[`${className}.class`];
+export async function decompileClass(className: ClassName, jar: Jar): Promise<DecompileResult> {
+    const entry = jar.entries[toClassFilePath(className)];
 
     if (!entry) return {
         className,
@@ -125,9 +125,8 @@ export async function decompileClass(className: string, jar: Jar): Promise<Decom
     return await worker.decompile(className, jar.name, jar.blob);
 }
 
-export async function getClassBytecode(className: string, jar: Jar): Promise<DecompileResult> {
-    className = className.replace(".class", "");
-    const entry = jar.entries[`${className}.class`];
+export async function getClassBytecode(className: ClassName, jar: Jar): Promise<DecompileResult> {
+    const entry = jar.entries[toClassFilePath(className)];
 
     if (!entry) return {
         className,
@@ -147,7 +146,7 @@ export async function getClassBytecode(className: string, jar: Jar): Promise<Dec
             continue;
         }
 
-        const data = await jar.entries[`${classFile}.class`].bytes();
+        const data = await jar.entries[toClassFilePath(classFile)]!.bytes();
         classData.push(data.buffer);
     }
 

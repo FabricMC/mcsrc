@@ -3,6 +3,7 @@ import { useObservable } from "../utils/UseObservable";
 import { getDiffChanges } from "../logic/Diff";
 import { combineLatest, map } from "rxjs";
 import { selectedFile, diffView } from "../logic/State";
+import { withoutClassExtension } from "../utils/Names";
 
 const changeInfoObs = combineLatest([selectedFile, getDiffChanges(), diffView]).pipe(
     map(([file, changes, isDiff]) => {
@@ -33,7 +34,7 @@ export const FilepathHeader = () => {
                 direction: "rtl",
                 color: token.colorText
             }}>
-                {info.replace(".class", "").split("/").map((path, i, arr) => (
+                {withoutClassExtension(info).split("/").map((path, i, arr) => (
                     <span key={path}>
                         <span style={{ color: i < arr.length - 1 ? token.colorTextTertiary : token.colorText }}>{path}</span>
                         {i < arr.length - 1 && <span style={{ color: token.colorTextTertiary }}>/</span>}

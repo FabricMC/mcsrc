@@ -1,5 +1,8 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { countLineDiff, updateLineChanges, calculatedLineChanges } from './LineChanges';
+import { toJarEntryPath } from '../utils/Names';
+
+const file = toJarEntryPath;
 
 describe('LineChanges', () => {
     describe('countLineDiff', () => {
@@ -63,42 +66,42 @@ describe('LineChanges', () => {
         });
 
         it('should update the BehaviorSubject with new changes', () => {
-            updateLineChanges('file.java', 'line 1', 'line 1\nline 2');
-            const result = calculatedLineChanges.value.get('file.java');
+            updateLineChanges(file('file.java'), 'line 1', 'line 1\nline 2');
+            const result = calculatedLineChanges.value.get(file('file.java'));
             expect(result).toEqual({ additions: 1, deletions: 0 });
         });
 
         it('should not update the BehaviorSubject if changes are identical', () => {
-            const initialMap = new Map([['file.java', { additions: 1, deletions: 0 }]]);
+            const initialMap = new Map([[file('file.java'), { additions: 1, deletions: 0 }]]);
             calculatedLineChanges.next(initialMap);
 
-            updateLineChanges('file.java', 'line 1', 'line 1\nline 2');
+            updateLineChanges(file('file.java'), 'line 1', 'line 1\nline 2');
 
             expect(calculatedLineChanges.value).toBe(initialMap); // Reference should stay same
         });
 
         it('should add multiple files to the map', () => {
-            updateLineChanges('file1.java', 'a', 'a\nb');
-            updateLineChanges('file2.java', 'x', 'y');
+            updateLineChanges(file('file1.java'), 'a', 'a\nb');
+            updateLineChanges(file('file2.java'), 'x', 'y');
 
-            expect(calculatedLineChanges.value.get('file1.java')).toEqual({ additions: 1, deletions: 0 });
-            expect(calculatedLineChanges.value.get('file2.java')).toEqual({ additions: 1, deletions: 1 });
+            expect(calculatedLineChanges.value.get(file('file1.java'))).toEqual({ additions: 1, deletions: 0 });
+            expect(calculatedLineChanges.value.get(file('file2.java'))).toEqual({ additions: 1, deletions: 1 });
         });
 
         it('should evict old entries when reaching MAX_CALCULATED_LINE_CHANGES', () => {
             // Fill up to 500
             for (let i = 0; i < 500; i++) {
-                updateLineChanges(`file${i}.java`, '', 'line');
+                updateLineChanges(file(`file${i}.java`), '', 'line');
             }
             expect(calculatedLineChanges.value.size).toBe(500);
-            expect(calculatedLineChanges.value.has('file0.java')).toBe(true);
+            expect(calculatedLineChanges.value.has(file('file0.java'))).toBe(true);
 
             // Add 501st entry
-            updateLineChanges('file501.java', '', 'line');
+            updateLineChanges(file('file501.java'), '', 'line');
 
             expect(calculatedLineChanges.value.size).toBe(500);
-            expect(calculatedLineChanges.value.has('file0.java')).toBe(false); // First one should be evicted
-            expect(calculatedLineChanges.value.has('file501.java')).toBe(true);
+            expect(calculatedLineChanges.value.has(file('file0.java'))).toBe(false); // First one should be evicted
+            expect(calculatedLineChanges.value.has(file('file501.java'))).toBe(true);
         });
     });
 });

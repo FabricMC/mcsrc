@@ -13,6 +13,7 @@ import { selectedFile } from "../../logic/State";
 import { openCodeTab } from "../../logic/tabs";
 import { useObservable } from "../../utils/UseObservable";
 import { pendingDiffJump } from "./DiffNavigation";
+import { withoutClassExtension, type ClassFilePath } from "../../utils/Names";
 
 const statusColors: Record<ChangeState, string> = {
     modified: "gold",
@@ -23,8 +24,8 @@ const statusColors: Record<ChangeState, string> = {
 const searchQuery = new BehaviorSubject("");
 
 interface DiffEntry {
-    key: string;
-    file: string;
+    key: ClassFilePath;
+    file: ClassFilePath;
     statusInfo: ChangeInfo;
 }
 
@@ -112,7 +113,7 @@ interface DiffFileRowProps {
 }
 
 const DiffFileRow = memo(({ entry, selected, disabled }: DiffFileRowProps) => {
-    const file = entry.file.replace(".class", "");
+    const file = withoutClassExtension(entry.file);
     const segments = file.split("/");
     const name = segments.at(-1) || file;
     const path = segments.slice(0, -1).join("/");

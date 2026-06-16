@@ -1,8 +1,9 @@
 import { BehaviorSubject } from "rxjs";
+import type { JarEntryPath } from "../utils/Names";
 
 const MAX_CALCULATED_LINE_CHANGES = 500;
 
-export const calculatedLineChanges = new BehaviorSubject<Map<string, { additions: number, deletions: number; }>>(new Map());
+export const calculatedLineChanges = new BehaviorSubject<Map<JarEntryPath, { additions: number, deletions: number; }>>(new Map());
 
 /**
  * Simple line-based diff to count additions and deletions without external libraries.
@@ -70,7 +71,7 @@ export function countLineDiff(oldText: string, newText: string): { additions: nu
     };
 }
 
-export function updateLineChanges(file: string, leftSource: string, rightSource: string) {
+export function updateLineChanges(file: JarEntryPath, leftSource: string, rightSource: string) {
     const { additions, deletions } = countLineDiff(leftSource, rightSource);
 
     const current = calculatedLineChanges.value;

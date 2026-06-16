@@ -1,4 +1,5 @@
 import type { DecompileResult } from "../workers/decompile/types.ts";
+import type { ClassName } from "../utils/Names";
 
 export type TokenType = 'class' | 'field' | 'method' | 'parameter' | 'local';
 
@@ -8,7 +9,7 @@ interface BaseToken {
     // The length of the token in characters
     length: number;
     // The name of the class this token represents
-    className: string;
+    className: ClassName;
     // Whether this token is a declaration or a reference
     declaration: boolean;
 }

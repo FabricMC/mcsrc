@@ -1,10 +1,11 @@
 import { editor } from "monaco-editor";
 import { type Token } from '../logic/Tokens';
+import { toClassFilePath, type ClassFilePath } from "../utils/Names";
 
 export function findTokenAtPosition(
     editor: editor.ICodeEditor,
     decompileResult: { tokens: Token[]; } | undefined,
-    classList: string[] | undefined,
+    classList: ClassFilePath[] | undefined,
     useClassList = true
 ): Token | null {
     const model = editor.getModel();
@@ -29,8 +30,7 @@ export function findTokenAtPosition(
 
     for (const token of decompileResult.tokens) {
         if (targetOffset >= token.start && targetOffset <= token.start + token.length) {
-            const baseClassName = token.className.split('$')[0];
-            const className = baseClassName + ".class";
+            const className = toClassFilePath(token.className.split('$')[0]);
             if (!useClassList || classList!.includes(className)) {
                 return token;
             }

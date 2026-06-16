@@ -1,9 +1,10 @@
 import { read, type Entry, type Reader, type Zip, readBlob } from "@katana-project/zip";
+import type { JarEntryPath } from "./Names";
 
 export interface Jar {
     name: string;
     blob: Blob;
-    entries: { [key: string]: Entry; };
+    entries: Partial<Record<JarEntryPath, Entry>>;
 }
 
 export async function openJar(name: string, blob: Blob): Promise<Jar> {
@@ -26,14 +27,14 @@ class JarImpl implements Jar {
     private zip: Zip;
     public name: string;
     public blob: Blob;
-    public entries: { [key: string]: Entry; } = {};
+    public entries: Partial<Record<JarEntryPath, Entry>> = {};
 
     constructor(name: string, blob: Blob, zip: Zip) {
         this.name = name;
         this.blob = blob;
         this.zip = zip;
         zip.entries.forEach(entry => {
-            this.entries[entry.name] = entry;
+            this.entries[entry.name as JarEntryPath] = entry;
         });
     }
 }

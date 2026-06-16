@@ -2,6 +2,7 @@ import { BehaviorSubject, combineLatest, distinct, distinctUntilChanged, map, Ob
 import { minecraftJar } from './MinecraftApi';
 import { performSearch } from './Search';
 import { searchQuery } from './State';
+import { isClassFilePath, type ClassFilePath } from '../utils/Names';
 
 export const fileList = minecraftJar.pipe(
     distinctUntilChanged(),
@@ -10,7 +11,7 @@ export const fileList = minecraftJar.pipe(
 
 // File list that only contains outer class files
 export const classesList = fileList.pipe(
-    map(files => files.filter(file => file.endsWith('.class') && !file.includes('$')))
+    map(files => files.filter((file): file is ClassFilePath => isClassFilePath(file) && !file.includes('$')))
 );
 
 const debouncedSearchQuery: Observable<string> = searchQuery.pipe(
@@ -18,7 +19,7 @@ const debouncedSearchQuery: Observable<string> = searchQuery.pipe(
     distinctUntilChanged()
 );
 
-export const searchResults: Observable<string[]> = combineLatest([classesList, debouncedSearchQuery]).pipe(
+export const searchResults: Observable<ClassFilePath[]> = combineLatest([classesList, debouncedSearchQuery]).pipe(
     switchMap(([classes, query]) => {
         return [performSearch(query, classes)];
     })

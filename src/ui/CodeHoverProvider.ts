@@ -2,6 +2,7 @@ import { editor, type IMarkdownString, type IPosition, Range } from "monaco-edit
 import { type Token } from '../logic/Tokens';
 import { findTokenAtPosition } from './CodeUtils';
 import type { DecompileResult } from "../workers/decompile/types";
+import { dottedClassNameFromClassName, toClassName, type ClassFilePath } from "../utils/Names";
 
 interface IntegerLiteral {
     value: number;
@@ -100,7 +101,7 @@ export function parseDescriptor(descriptor: string): string {
 
         if (desc[index] === 'L') {
             endIndex = desc.indexOf(';', index);
-            type = desc.substring(index + 1, endIndex).replace(/\//g, '.');
+            type = dottedClassNameFromClassName(toClassName(desc.substring(index + 1, endIndex)));
             endIndex++;
         } else {
             type = typeMap[desc[index]] || desc[index];
@@ -137,7 +138,7 @@ export function parseDescriptor(descriptor: string): string {
 export function createHoverProvider(
     editorRef: { current: editor.ICodeEditor | null },
     decompileResultRef: { current: DecompileResult | undefined },
-    classListRef: { current: string[] | undefined }
+    classListRef: { current: ClassFilePath[] | undefined }
 ) {
     return {
         provideHover(model: editor.ITextModel, position: IPosition) {
@@ -152,7 +153,7 @@ export function createHoverProvider(
                 const contents: IMarkdownString[] = [];
 
                 // Format class name for display
-                const formattedClassName = token.className.replace(/\//g, '.');
+                const formattedClassName = dottedClassNameFromClassName(token.className);
 
                 switch (token.type) {
                     case 'class':
