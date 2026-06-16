@@ -113,6 +113,7 @@ public class ClassIndexVisitor extends ClassVisitor {
 	}
 
 	public void indexMethod(Entry.Method methodEntry) {
+		Indexer.addMemberData(methodEntry.owner(), methodEntry);
 		indexMethodDescriptor(methodEntry, methodEntry.desc());
 	}
 
@@ -144,6 +145,7 @@ public class ClassIndexVisitor extends ClassVisitor {
 		}
 
 		if (type.getSort() == Type.OBJECT) {
+			Indexer.addMemberData(field.owner(), field);
 			Indexer.addReference(type.getInternalName(), field.reference());
 		}
 	}
