@@ -124,7 +124,7 @@ public class Indexer {
         int accessFlags;
     }
 
-    public static final class ClassMemberInfo implements JSObject {
+    public static final class ClassMemberInfo {
         private final String className;
         private final List<String> methods;
         private final List<String> fields;
@@ -141,18 +141,6 @@ public class Indexer {
 
         public void addField(Entry.Field field) {
             fields.add(field.str());
-        }
-
-        public String getClassName() {
-            return className;
-        }
-
-        public String[] getMethods() {
-            return methods.toArray(new String[0]);
-        }
-
-        public String[] getFields() {
-            return fields.toArray(new String[0]);
         }
     }
 }
