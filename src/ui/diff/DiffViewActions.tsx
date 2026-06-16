@@ -81,7 +81,6 @@ export const DiffViewModeButtons = () => {
         <>
             <Tooltip title={isUnifiedDiff ? "Switch to side-by-side diff" : "Switch to unified diff"}>
                 <Button
-                    type={isUnifiedDiff ? "primary" : "default"}
                     icon={isUnifiedDiff ? <SplitCellsOutlined /> : <AlignLeftOutlined />}
                     onClick={() => unifiedDiff.value = !unifiedDiff.value}
                     aria-label={isUnifiedDiff ? "Switch to side-by-side diff" : "Switch to unified diff"}

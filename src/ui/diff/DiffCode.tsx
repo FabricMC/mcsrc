@@ -100,6 +100,7 @@ const DiffCode = () => {
                     readOnly: true,
                     domReadOnly: true,
                     renderSideBySide: !isUnified,
+                    useInlineViewWhenSpaceIsLimited: false,
                     scrollBeyondLastLine: false,
                     editContext: IS_ANDROID_CHROME ? false : undefined,
                     //tabSize: 3,
