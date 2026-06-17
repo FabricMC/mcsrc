@@ -139,13 +139,14 @@ public class ClassIndexVisitor extends ClassVisitor {
 	public void indexField(Entry.Field field) {
 		Type type = Type.getType(field.desc());
 
+		Indexer.addMemberData(field.owner(), field);
+
 		if (type.getSort() == Type.ARRAY) {
 			indexField(new Entry.Field(field.owner(), field.name(), type.getElementType().getDescriptor()));
 			return;
 		}
 
 		if (type.getSort() == Type.OBJECT) {
-			Indexer.addMemberData(field.owner(), field);
 			Indexer.addReference(type.getInternalName(), field.reference());
 		}
 	}
