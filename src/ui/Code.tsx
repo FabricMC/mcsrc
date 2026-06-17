@@ -137,7 +137,7 @@ const Code = () => {
         );
 
         const viewInheritance = monaco.editor.addEditorAction(
-            createViewInheritanceAction(decompileResultRef, messageApi, (value) => selectedInheritanceClassName.next(value))
+            createViewInheritanceAction(decompileResultRef, classListRef, messageApi, (value) => selectedInheritanceClassName.next(value))
         );
 
         const bytecode = setupJavaBytecodeLanguage(monaco);
