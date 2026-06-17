@@ -1,7 +1,7 @@
 import * as Comlink from "comlink";
 import { BehaviorSubject, distinctUntilChanged, map, shareReplay } from "rxjs";
 import { minecraftJar, type MinecraftJar } from "../../logic/MinecraftApi";
-import type { ClassDataString, JarIndexer, ReferenceKey, ReferenceString } from "./types";
+import type {ClassDataString, JarIndexer, MemberData, ReferenceKey, ReferenceString} from "./types";
 import Dexie, { type EntityTable } from "dexie";
 import { isClassFilePath, toClassName, type ClassFilePath, type ClassName } from "../../utils/Names";
 
@@ -162,6 +162,17 @@ export class JarIndex {
         return Promise.all(results).then(arrays => arrays.flat());
     }
 
+    async getMemberData(): Promise<MemberData[]> {
+        await this.indexJar();
+
+        let results: Promise<MemberData[]>[] = [];
+
+        for (const worker of this.workers) {
+            results.push(worker.c.getMemberData());
+        }
+
+        return Promise.all(results).then(arrays => arrays.flat());
+    }
     async getClassData(): Promise<ClassData[]> {
         if (this.classDataCache) {
             return this.classDataCache;

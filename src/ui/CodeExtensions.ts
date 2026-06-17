@@ -6,6 +6,7 @@ import { selectedFile } from "../logic/State";
 import type { DecompileResult } from "../workers/decompile/types";
 import { BehaviorSubject } from "rxjs";
 import { classNameFromClassFilePath, outerClassFilePath, toClassFilePath, type ClassFilePath } from "../utils/Names";
+import { findDeclaration } from "../logic/FindDeclaration.ts";
 
 export type TokenJumpTarget = {
     className: ClassFilePath;
@@ -47,7 +48,7 @@ export function jumpToToken(
         const { line, column } = getTokenLocation(result, token);
         editor.setSelection(new Range(line, column, line, column + token.length));
         editor.revealLineInCenter(line, 0);
-        break;
+        return;
     }
 
     console.warn(`jumpToToken: Target ${targetType} "${target}" not found in ${result.className}`);
@@ -58,7 +59,7 @@ export function createDefinitionProvider(
     classListRef: { current: string[] | undefined; }
 ) {
     return {
-        provideDefinition(model: editor.ITextModel, position: IPosition, token: CancellationToken) {
+        async provideDefinition(model: editor.ITextModel, position: IPosition, token: CancellationToken) {
             const { lineNumber, column } = position;
 
             if (!decompileResultRef.current) {
@@ -84,12 +85,13 @@ export function createDefinitionProvider(
                 }
 
                 if (targetOffset >= token.start && targetOffset <= token.start + token.length) {
-                    const className = toClassFilePath(token.className);
-                    const baseClassName = toClassFilePath(token.className.split('$')[0]);
+                    const targetClass = await findDeclaration(token);
+
+                    const className = toClassFilePath(targetClass);
+                    const baseClassName = outerClassFilePath(className);
                     console.log(`Found token for definition: ${className} at offset ${token.start}`);
 
                     if (classList && (classList.includes(className) || classList.includes(baseClassName))) {
-                        const targetClass = className;
                         const range = new Range(lineNumber, column, lineNumber, column + token.length);
 
                         return {

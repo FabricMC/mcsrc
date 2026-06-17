@@ -17,6 +17,12 @@ export type ReferenceString =
 
 export type ClassDataString = `${string}|${string}|${number}|${string}`;
 
+export type MemberData = {
+    className: ClassName;
+    methods: Method[];
+    fields: Field[];
+};
+
 export class JarIndexer {
     #indexerFunc: Indexer | null = null;
     #jar: Jar | null = null;
@@ -84,6 +90,19 @@ export class JarIndexer {
         const indexer = await this.getIndexer();
         return indexer.getClassData();
     };
+
+    getMemberData = async (): Promise<MemberData[]> => {
+        const indexer = await this.getIndexer();
+        const raw = indexer.getMemberData();
+        return raw.map(item => {
+            let parts = item.split("|");
+            return {
+                className: parts[0] as ClassName,
+                methods: parts[1].split(",") as Method[],
+                fields: parts[2].split(",") as Field[]
+            }
+        })
+    };
 }
 
 interface Indexer {
@@ -92,4 +111,5 @@ interface Indexer {
     getReferenceSize(): number;
     getBytecode(classData: ArrayBufferLike[]): string;
     getClassData(): ClassDataString[];
+    getMemberData(): string[];
 }

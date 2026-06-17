@@ -5,6 +5,8 @@ import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.util.Textifier;
 import org.objectweb.asm.util.TraceClassVisitor;
 import org.teavm.jso.JSExport;
+import org.teavm.jso.JSObject;
+import org.teavm.jso.JSProperty;
 import org.teavm.jso.typedarrays.ArrayBuffer;
 import org.teavm.jso.typedarrays.Int8Array;
 
@@ -17,6 +19,7 @@ public class Indexer {
     private static int referenceSize = 0;
     
     private static final Map<String, ClassInheritanceInfo> inheritanceData = new HashMap<>();
+    private static final Map<String, ClassMemberInfo> memberData = new HashMap<>();
 
     @JSExport
     public static void index(ArrayBuffer arrayBuffer) {
@@ -76,6 +79,29 @@ public class Indexer {
         info.interfaces = interfaces != null ? interfaces : new String[0];
         info.accessFlags = accessFlags;
     }
+
+    public static void addMemberData(String className, Entry.Method method) {
+        ClassMemberInfo info = memberData.computeIfAbsent(className, k -> new ClassMemberInfo(className));
+        info.addMethod(method);
+    }
+
+    public static void addMemberData(String className, Entry.Field field) {
+        ClassMemberInfo info = memberData.computeIfAbsent(className, k -> new ClassMemberInfo(className));
+        info.addField(field);
+    }
+
+    @JSExport
+    public static String[] getMemberData() {
+        List<String> result = new ArrayList<>();
+        for (ClassMemberInfo info : memberData.values()) {
+            StringBuilder sb = new StringBuilder();
+            sb.append(info.className).append("|");
+            sb.append(String.join(",", info.methods)).append("|");
+            sb.append(String.join(",", info.fields));
+            result.add(sb.toString());
+        }
+        return result.toArray(new String[0]);
+    }
     
     @JSExport
     public static String[] getClassData() {
@@ -96,5 +122,25 @@ public class Indexer {
         String superName;
         String[] interfaces;
         int accessFlags;
+    }
+
+    public static final class ClassMemberInfo {
+        private final String className;
+        private final List<String> methods;
+        private final List<String> fields;
+
+        public ClassMemberInfo(String className) {
+            this.className = className;
+            this.methods = new ArrayList<>();
+            this.fields = new ArrayList<>();
+        }
+
+        public void addMethod(Entry.Method method) {
+            methods.add(method.str());
+        }
+
+        public void addField(Entry.Field field) {
+            fields.add(field.str());
+        }
     }
 }
