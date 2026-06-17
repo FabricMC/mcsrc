@@ -92,6 +92,8 @@ async function fetchVersions(): Promise<VersionsList> {
     const mojang = await getJson<VersionsList>(VERSIONS_URL);
     const filteredMojangVersions = mojang.versions.filter(v => {
         if (new Date(v.releaseTime).getFullYear() >= 2026) return true;
+        if (v.id === 'c0.0.13a' || v.id === 'c0.0.11a') return true;
+        if (v.id.startsWith('rd-')) return true;
         const match = v.id.match(/^(\d+)\.(\d+)/);
         if (!match) return false;
         const major = parseInt(match[1], 10);
