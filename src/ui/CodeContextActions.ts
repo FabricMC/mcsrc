@@ -159,6 +159,7 @@ export function createFindAllReferencesAction(
 
 export function createViewInheritanceAction(
     decompileResultRef: { current: DecompileResult | undefined; },
+    classListRef: { current: string[] | undefined; },
     messageApi: { error: (msg: string) => void; },
     selectedInheritanceClassNameNext: (value: string) => void
 ) {
@@ -173,7 +174,15 @@ export function createViewInheritanceAction(
                 return;
             }
 
-            const className = decompileResultRef.current.className.replace('.class', '');
+            let className;
+
+            const token = findTokenAtPosition(editor, decompileResultRef.current, classListRef.current);
+            if (token && token.declaration && token.type === 'class') {
+                className = token.className;
+            } else {
+                className = decompileResultRef.current.className.replace('.class', '');
+            }
+
             console.log(`Viewing inheritance for ${className}`);
             openInheritanceViewTab(`hierarchy::${className}`);
         }
