@@ -86,6 +86,15 @@ async function setupNetworkMocking(page: Page) {
 
 export async function setupTest(page: Page) {
     await setupNetworkMocking(page);
+    await page.addLocatorHandler(page.getByText('About mcsrc.dev'), async () => {
+        const eulaCheckbox = page.getByRole('checkbox', { name: /I agree to the Minecraft/ });
+
+        if (await eulaCheckbox.isVisible()) {
+            await eulaCheckbox.check();
+        } else {
+            await page.keyboard.press('Escape');
+        }
+    });
     await page.addInitScript(() => {
         localStorage.setItem('setting_eula', 'true');
         localStorage.setItem('setting_show_snapshot_versions', 'true');
