@@ -140,3 +140,29 @@ html, body, #root {
 .diff-code-frame .monaco-diff-editor {
   height: 100% !important;
 }
+
+.version-popover-list {
+  max-height: min(420px, calc(100vh - 180px));
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+  padding-right: 8px;
+}
+
+.version-popover-row {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 32px;
+  padding: 2px 12px 2px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.version-popover-row:hover {
+  background: var(--ant-control-item-bg-hover);
+}
+
+.version-popover-row-selected {
+  background: var(--ant-color-primary-bg);
+  color: var(--ant-color-primary-text);
+}

@@ -29,7 +29,7 @@ test.describe('Permalinks and Line Highlighting', () => {
     test('Version-only permalink selects the requested version', async ({ page }) => {
         await page.goto('/1/26.1-mock-2');
 
-        const versionSelect = page.locator('.ant-select').first();
+        const versionSelect = page.getByRole('button', { name: /26\.1-mock-2/ }).first();
         await expect(versionSelect).toContainText('26.1-mock-2');
     });
 
@@ -71,8 +71,8 @@ test.describe('Permalinks and Line Highlighting', () => {
         const diffEditor = page.locator('.monaco-diff-editor');
         await expect(diffEditor).toBeVisible();
 
-        const leftVersionSelect = page.locator('.ant-select').nth(0);
-        const rightVersionSelect = page.locator('.ant-select').nth(1);
+        const leftVersionSelect = page.getByRole('button', { name: /26\.1-mock-1/ }).first();
+        const rightVersionSelect = page.getByRole('button', { name: /26\.1-mock-2/ }).first();
 
         await expect(leftVersionSelect).toContainText('26.1-mock-1');
         await expect(rightVersionSelect).toContainText('26.1-mock-2');

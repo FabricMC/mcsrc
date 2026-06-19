@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { setupTest } from './test-utils';
+import { setupTest, selectMinecraftVersion } from './test-utils';
 
 test.describe('Diff View', () => {
     test.beforeEach(async ({ page }) => {
@@ -9,30 +9,13 @@ test.describe('Diff View', () => {
     test('Opens diff view and selects LevelRenderer', async ({ page }) => {
         await page.goto('/');
 
-        const versionSelect = page.locator('.ant-select').first();
-        await versionSelect.click();
-
-        const compareOption = page.getByText('Compare', { exact: true });
-        await compareOption.click();
+        await page.getByRole('button', { name: 'Compare' }).click();
 
         await expect(page.getByText('Select a file')).toBeVisible();
 
-        const leftVersionSelect = page.locator('.ant-select').nth(0);
-        await leftVersionSelect.click();
+        await selectMinecraftVersion(page, '26.1-mock-1', 0);
 
-        await expect(page.locator('.ant-select-dropdown:visible')).toBeVisible();
-
-        const leftOption = page.locator('.ant-select-dropdown:visible .ant-select-item-option').filter({ hasText: '26.1-mock-1' }).first();
-        await leftOption.click();
-
-        const rightVersionSelect = page.locator('.ant-select').nth(1);
-        await expect(rightVersionSelect).toBeVisible();
-        await rightVersionSelect.click();
-
-        await expect(page.locator('.ant-select-dropdown:visible')).toBeVisible();
-
-        const rightOption = page.locator('.ant-select-dropdown:visible .ant-select-item-option').filter({ hasText: '26.1-mock-2' }).first();
-        await rightOption.click();
+        await selectMinecraftVersion(page, '26.1-mock-2', 1);
 
         const fileList = page.locator('.diff-file-list');
         await expect(fileList.locator('.diff-file-row').first()).toBeVisible();

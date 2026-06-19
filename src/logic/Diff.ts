@@ -1,5 +1,5 @@
 import { BehaviorSubject, combineLatest, from, map, Observable, switchMap, shareReplay } from "rxjs";
-import { minecraftJar, minecraftJarPipeline, type MinecraftJar } from "./MinecraftApi";
+import { minecraftJar, minecraftJarPipeline, minecraftVersionIds, type MinecraftJar } from "./MinecraftApi";
 import { currentResult, decompileResultPipeline } from "./Decompiler";
 import { calculatedLineChanges } from "./LineChanges";
 import { diffLeftSelectedMinecraftVersion, selectedMinecraftVersion } from "./State";
@@ -24,6 +24,11 @@ export function getLeftDiff(): DiffSide {
     if (!leftDiff) {
         leftDiff = {} as DiffSide;
         leftDiff.selectedVersion = diffLeftSelectedMinecraftVersion;
+        combineLatest([leftDiff.selectedVersion, minecraftVersionIds]).subscribe(([version, versions]) => {
+            if (!version && versions.length > 0) {
+                leftDiff!.selectedVersion.next(versions[1] || versions[0] || null);
+            }
+        });
         leftDiff.jar = minecraftJarPipeline(leftDiff.selectedVersion);
         leftDiff.entries = leftDiff.jar.pipe(
             switchMap(jar => from(getEntriesWithCRC(jar)))

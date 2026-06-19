@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { waitForDecompiledContent, setupTest } from './test-utils';
+import { waitForDecompiledContent, setupTest, selectMinecraftVersion } from './test-utils';
 
 test.describe('Version Switching', () => {
     test.beforeEach(async ({ page }) => {
@@ -11,13 +11,7 @@ test.describe('Version Switching', () => {
         await page.getByText('ChatFormatting', { exact: true }).click();
         await waitForDecompiledContent(page, 'enum ChatFormatting');
 
-        const versionSelect = page.locator('.ant-select').first();
-        await versionSelect.click();
-        await page.waitForTimeout(500);
-
-        const versionOptions = page.locator('.ant-select-dropdown:visible .ant-select-item-option');
-        const firstVersion = versionOptions.nth(1);
-        await firstVersion.click();
+        await selectMinecraftVersion(page, '26.1-mock-2');
 
         await page.waitForTimeout(2000);
 
@@ -33,23 +27,17 @@ test.describe('Version Switching', () => {
         await waitForDecompiledContent(page, 'enum ChatFormatting');
 
         const searchBox = page.getByRole('searchbox', { name: 'Search classes' });
-        await searchBox.fill('Minecraft');
+        await searchBox.fill('LevelRenderer');
 
-        const searchResult = page.getByText('net/minecraft/client/Minecraft', { exact: true });
+        const searchResult = page.getByText('net/minecraft/client/renderer/LevelRenderer', { exact: true });
         await searchResult.click();
 
-        await waitForDecompiledContent(page, 'class Minecraft');
+        await waitForDecompiledContent(page, 'class LevelRenderer');
 
-        const versionSelect = page.locator('.ant-select').first();
-        await versionSelect.click();
-        await page.waitForTimeout(500);
-
-        const versionOptions = page.locator('.ant-select-dropdown:visible .ant-select-item-option');
-        const firstVersion = versionOptions.nth(1);
-        await firstVersion.click();
+        await selectMinecraftVersion(page, '26.1-mock-2');
 
         await page.waitForTimeout(2000);
 
-        await waitForDecompiledContent(page, 'class Minecraft');
+        await waitForDecompiledContent(page, 'class LevelRenderer');
     });
 });

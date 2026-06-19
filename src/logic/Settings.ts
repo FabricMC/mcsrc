@@ -81,6 +81,24 @@ export class StringSetting<T extends string = string> extends Setting<T> {
     }
 }
 
+export class StringArraySetting extends Setting<string[]> {
+    constructor(key: string, defaultValue: string[]) {
+        super(
+            key,
+            defaultValue,
+            (s) => {
+                try {
+                    const parsed = JSON.parse(s);
+                    return Array.isArray(parsed) ? parsed.filter((v): v is string => typeof v === "string") : defaultValue;
+                } catch {
+                    return defaultValue;
+                }
+            },
+            v => JSON.stringify(v)
+        );
+    }
+}
+
 export class KeybindSetting extends Setting<KeybindValue> {
     constructor(key: string, defaultValue: KeybindValue) {
         super(key, defaultValue, s => s, v => v);
@@ -145,6 +163,8 @@ export const autoJarIndex = new BooleanSetting('auto_jar_index', true);
 export const displayLambdas = new BooleanSetting('display_lambdas', false);
 export const bytecode = new BooleanSetting('bytecode', false);
 export const unifiedDiff = new BooleanSetting('unified_diff', false);
+export const favoriteMinecraftVersions = new StringArraySetting('favorite_minecraft_versions', []);
+export const showSnapshotVersions = new BooleanSetting('show_snapshot_versions', true);
 export const focusSearch = new KeybindSetting('focus_search', 'Ctrl+ ');
 export const showStructure = new KeybindSetting('show_structure', 'Ctrl+F12');
 

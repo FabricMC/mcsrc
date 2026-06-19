@@ -124,7 +124,7 @@ const DiffSidebar = ({ closeAction = "exit" }: { closeAction?: SidebarCloseActio
                     </div>
                     <DiffSidebarCloseButton action={closeAction} />
                 </Flex>
-                <div style={{ display: "flex", justifyContent: "center", overflowX: "auto" }}>
+                <div style={{ display: "flex", justifyContent: "center", overflowX: "hidden" }}>
                     <DiffVersionSelection />
                 </div>
                 <DiffActions />

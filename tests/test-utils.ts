@@ -15,6 +15,15 @@ export async function waitForDecompiledContent(page: Page, expectedText: string)
     await expect(editor).toContainText(expectedText);
 }
 
+export async function selectMinecraftVersion(page: Page, version: string, selectorIndex = 0) {
+    const selector = page.getByRole('button', { name: /26\.1-mock-/ }).nth(selectorIndex);
+    await selector.click();
+
+    const listbox = page.getByRole('listbox', { name: 'Minecraft versions' });
+    await expect(listbox).toBeVisible();
+    await listbox.getByRole('option').filter({ hasText: version }).click();
+}
+
 async function setupNetworkMocking(page: Page) {
     const testVersions = {
         versions: [
@@ -79,5 +88,7 @@ export async function setupTest(page: Page) {
     await setupNetworkMocking(page);
     await page.addInitScript(() => {
         localStorage.setItem('setting_eula', 'true');
+        localStorage.setItem('setting_show_snapshot_versions', 'true');
+        localStorage.setItem('setting_favorite_minecraft_versions', '[]');
     });
 }
