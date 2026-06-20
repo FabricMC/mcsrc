@@ -15,7 +15,35 @@ jobs:
       - run: npm run build
       - run: npm run test
       - run: npm run lint
-      - run: npx wrangler deploy --temporary
+      - id: deploy
+        env:
+          NO_COLOR: "1"
+        run: |
+          set -o pipefail
+          {
+            echo
+            echo "/*"
+            echo "  X-Robots-Tag: noindex, nofollow, noarchive"
+          } >> dist/_headers
+          find dist -name '*.map' -delete
+
+          npx wrangler deploy --temporary 2>&1 | tee wrangler-deploy.log
+
+          url="$(awk '/https:\/\/.*\.workers\.dev/ { print $1 }' wrangler-deploy.log | tail -n 1)"
+          if [ -z "$url" ]; then
+            echo "Unable to find temporary deployment URL in Wrangler output" >&2
+            exit 1
+          fi
+
+          echo "url=${url}" >> "$GITHUB_OUTPUT"
+
+          {
+            echo "### Temporary preview"
+            echo
+            echo "[Open deployed site](${url})"
+            echo
+            echo "This temporary Wrangler deployment expires after 60 minutes."
+          } >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@v4
         with:
           name: dist
