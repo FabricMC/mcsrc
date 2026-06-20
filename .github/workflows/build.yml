@@ -20,11 +20,7 @@ jobs:
           NO_COLOR: "1"
         run: |
           set -o pipefail
-          {
-            echo
-            echo "/*"
-            echo "  X-Robots-Tag: noindex, nofollow, noarchive"
-          } >> dist/_headers
+          echo "    X-Robots-Tag: noindex, nofollow, noarchive" >> dist/_headers
           find dist -name '*.map' -delete
 
           npx wrangler deploy --temporary 2>&1 | tee wrangler-deploy.log
