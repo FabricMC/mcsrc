@@ -4,6 +4,16 @@ import svgr from 'vite-plugin-svgr';
 
 // https://vite.dev/config/
 export default defineConfig({
+  resolve: {
+    alias: [
+      {
+        // Use Monaco's editor API entrypoint so the build does not auto-register
+        // the TypeScript language worker, which is too large for the deployment file size limit.
+        find: /^monaco-editor$/,
+        replacement: 'monaco-editor/esm/vs/editor/editor.api.js',
+      },
+    ],
+  },
   plugins: [
     react(),
     svgr(),
@@ -47,7 +57,7 @@ export default defineConfig({
     },
   },
   build: {
-    sourcemap: true,
+    sourcemap: false,
     chunkSizeWarningLimit: 10000,
     rollupOptions: {
       onwarn(warning, warn) {
