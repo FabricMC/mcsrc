@@ -44,6 +44,6 @@
     "vite": "^8.0.0",
     "vite-plugin-svgr": "^4.5.0",
     "vitest": "^4.1.0",
-    "wrangler": "^4.73.0"
+    "wrangler": "^4.103.0"
   }
 }
