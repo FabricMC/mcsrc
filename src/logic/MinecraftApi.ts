@@ -22,17 +22,28 @@ interface VersionListEntry {
 interface VersionManifest {
     id: string;
     downloads: {
-        [key: string]: {
-            url: string;
-            sha1: string;
-        };
+        client: VersionDownload;
+        client_mappings?: VersionDownload;
+        [key: string]: VersionDownload | undefined;
     };
+}
+
+interface VersionDownload {
+    url: string;
+    sha1: string;
 }
 
 export interface MinecraftJar {
     version: string;
     jar: Jar;
     blob: Blob;
+    metadata: MinecraftJarMetadata;
+}
+
+export interface MinecraftJarMetadata {
+    clientSha1: string;
+    mappingsSha1?: string;
+    remapped: boolean;
 }
 
 export const minecraftVersions = agreedEula.observable.pipe(
@@ -59,6 +70,8 @@ export const minecraftVersionIds = minecraftVersions.pipe(
 );
 
 export const downloadProgress = new BehaviorSubject<number | undefined>(undefined);
+
+export const REMAPPED_JAR_CACHE_VERSION = 1;
 
 export const minecraftJar = minecraftJarPipeline(selectedMinecraftVersion);
 export function minecraftJarPipeline(source$: Observable<string | null>): Observable<MinecraftJar> {
@@ -91,13 +104,11 @@ async function getJson<T>(url: string): Promise<T> {
 async function fetchVersions(): Promise<VersionsList> {
     const mojang = await getJson<VersionsList>(VERSIONS_URL);
     const filteredMojangVersions = mojang.versions.filter(v => {
+        // Any version released after 2026 is deobfuscated
         if (new Date(v.releaseTime).getFullYear() >= 2026) return true;
         if (v.id === 'c0.0.13a' || v.id === 'c0.0.11a') return true;
         if (v.id.startsWith('rd-')) return true;
-        const match = v.id.match(/^(\d+)\.(\d+)/);
-        if (!match) return false;
-        const major = parseInt(match[1], 10);
-        return major >= 26;
+        return hasOfficialMappings(v);
     });
     const versions = filteredMojangVersions
         .concat(EXPERIMENTAL_VERSIONS.versions)
@@ -105,6 +116,35 @@ async function fetchVersions(): Promise<VersionsList> {
     return {
         versions: versions
     };
+}
+
+const RELEASE_PATTERN = /^1\.\d+(\.\d+)?$/;
+const SNAPSHOT_PATTERN = /^\d{2}w\d{2}[a-z]$/;
+
+function hasOfficialMappings(version: VersionListEntry): boolean {
+    if (version.type === "release" && RELEASE_PATTERN.test(version.id)) {
+        const match = version.id.match(/^1\.(\d+)(?:\.(\d+))?$/);
+        if (!match) return false;
+
+        const minor = parseInt(match[1], 10);
+        const patch = match[2] ? parseInt(match[2], 10) : 0;
+        return minor > 14 || (minor === 14 && patch >= 4);
+    }
+
+    if (version.type === "snapshot" && SNAPSHOT_PATTERN.test(version.id)) {
+        const match = version.id.match(/^(\d{2})w(\d{2})[a-z]$/);
+        if (!match) return false;
+
+        const year = parseInt(match[1], 10) + 2000;
+        const week = parseInt(match[2], 10);
+        return year > 2019 || (year === 2019 && week >= 36);
+    }
+
+    return false;
+}
+
+export function getRemappedJarCacheKey(version: string, client: VersionDownload, mappings: VersionDownload): string {
+    return `https://mcsrc.dev/cache/remapped-jars/v${REMAPPED_JAR_CACHE_VERSION}/${version}/${client.sha1}/${mappings.sha1}.jar`;
 }
 
 async function fetchVersionManifest(version: VersionListEntry): Promise<VersionManifest> {
@@ -175,15 +215,24 @@ async function consumeResponseWithProgress(response: Response, onProgress?: (per
 async function downloadMinecraftJar(version: VersionListEntry, progress: BehaviorSubject<number | undefined>): Promise<MinecraftJar> {
     console.log(`Downloading Minecraft jar for version: ${version.id}`);
     const versionManifest = await fetchVersionManifest(version);
-    const clientUrl = versionManifest.downloads.client.url;
+    const client = versionManifest.downloads.client;
 
-    const blob = await cachedFetch(clientUrl, (percent) => {
+    const blob = await cachedFetch(client.url, (percent) => {
         progress.next(percent);
     });
 
     const jar = await openJar(version.id, blob);
     progress.next(undefined);
-    return { version: version.id, jar, blob };
+    return {
+        version: version.id,
+        jar,
+        blob,
+        metadata: {
+            clientSha1: client.sha1,
+            mappingsSha1: versionManifest.downloads.client_mappings?.sha1,
+            remapped: false,
+        },
+    };
 }
 
 // Hardcode as these are never going to change.
