@@ -1,7 +1,8 @@
-import { BehaviorSubject, combineLatest, distinctUntilChanged, filter, from, map, shareReplay, switchMap, tap, Observable, withLatestFrom } from "rxjs";
+import { BehaviorSubject, combineLatest, distinctUntilChanged, filter, from, map, shareReplay, switchMap, tap, Observable } from "rxjs";
 import { agreedEula } from "./Settings";
 import { openJar, type Jar } from "../utils/Jar";
 import { selectedMinecraftVersion } from "./State";
+import { remapMinecraftJar } from "../workers/remap/client";
 
 const CACHE_NAME = 'mcsrc-v1';
 const VERSIONS_URL = "https://piston-meta.mojang.com/mc/game/version_manifest_v2.json";
@@ -30,7 +31,7 @@ interface VersionManifest {
 
 interface VersionDownload {
     url: string;
-    sha1: string;
+    sha1?: string;
 }
 
 export interface MinecraftJar {
@@ -41,7 +42,7 @@ export interface MinecraftJar {
 }
 
 export interface MinecraftJarMetadata {
-    clientSha1: string;
+    clientSha1?: string;
     mappingsSha1?: string;
     remapped: boolean;
 }
@@ -70,6 +71,7 @@ export const minecraftVersionIds = minecraftVersions.pipe(
 );
 
 export const downloadProgress = new BehaviorSubject<number | undefined>(undefined);
+export const remapProgress = new BehaviorSubject<number | undefined>(undefined);
 
 export const REMAPPED_JAR_CACHE_VERSION = 1;
 
@@ -144,7 +146,9 @@ function hasOfficialMappings(version: VersionListEntry): boolean {
 }
 
 export function getRemappedJarCacheKey(version: string, client: VersionDownload, mappings: VersionDownload): string {
-    return `https://mcsrc.dev/cache/remapped-jars/v${REMAPPED_JAR_CACHE_VERSION}/${version}/${client.sha1}/${mappings.sha1}.jar`;
+    const clientKey = client.sha1 ?? encodeURIComponent(client.url);
+    const mappingsKey = mappings.sha1 ?? encodeURIComponent(mappings.url);
+    return `https://mcsrc.dev/cache/remapped-jars/v${REMAPPED_JAR_CACHE_VERSION}/${version}/${clientKey}/${mappingsKey}.jar`;
 }
 
 async function fetchVersionManifest(version: VersionListEntry): Promise<VersionManifest> {
@@ -216,13 +220,24 @@ async function downloadMinecraftJar(version: VersionListEntry, progress: Behavio
     console.log(`Downloading Minecraft jar for version: ${version.id}`);
     const versionManifest = await fetchVersionManifest(version);
     const client = versionManifest.downloads.client;
+    const mappings = versionManifest.downloads.client_mappings;
 
-    const blob = await cachedFetch(client.url, (percent) => {
-        progress.next(percent);
-    });
+    let rawBlob: Blob;
+    let mappingsBlob: Blob | null;
 
+    try {
+        [rawBlob, mappingsBlob] = await Promise.all([
+            cachedFetch(client.url, (percent) => {
+                progress.next(percent);
+            }),
+            mappings ? cachedFetch(mappings.url) : Promise.resolve(null)
+        ]);
+    } finally {
+        progress.next(undefined);
+    }
+
+    const { blob, remapped } = await prepareMinecraftJarBlob(version.id, rawBlob, client, mappingsBlob, mappings);
     const jar = await openJar(version.id, blob);
-    progress.next(undefined);
     return {
         version: version.id,
         jar,
@@ -230,9 +245,41 @@ async function downloadMinecraftJar(version: VersionListEntry, progress: Behavio
         metadata: {
             clientSha1: client.sha1,
             mappingsSha1: versionManifest.downloads.client_mappings?.sha1,
-            remapped: false,
+            remapped,
         },
     };
+}
+
+async function prepareMinecraftJarBlob(
+    version: string,
+    rawBlob: Blob,
+    client: VersionDownload,
+    mappingsBlob: Blob | null,
+    mappings?: VersionDownload,
+): Promise<{ blob: Blob, remapped: boolean; }> {
+    if (!mappings || !mappingsBlob) {
+        return { blob: rawBlob, remapped: false };
+    }
+
+    const cacheKey = getRemappedJarCacheKey(version, client, mappings);
+    const cache = 'caches' in window ? await caches.open(CACHE_NAME) : null;
+    const cachedResponse = await cache?.match(cacheKey);
+
+    if (cachedResponse) {
+        return { blob: await cachedResponse.blob(), remapped: true };
+    }
+
+    try {
+        remapProgress.next(0);
+        const blob = await remapMinecraftJar(version, rawBlob, mappingsBlob, percent => {
+            remapProgress.next(percent);
+        });
+
+        await cache?.put(cacheKey, new Response(blob));
+        return { blob, remapped: true };
+    } finally {
+        remapProgress.next(undefined);
+    }
 }
 
 // Hardcode as these are never going to change.

@@ -1,14 +1,16 @@
 import { Modal, Progress } from "antd";
-import { downloadProgress } from "../logic/MinecraftApi";
+import { downloadProgress, remapProgress } from "../logic/MinecraftApi";
 import { useObservable } from "../utils/UseObservable";
 
 const ProgressModal = () => {
-    const progress = useObservable(downloadProgress);
-    console.log(`ProgressModal: current progress is ${progress}%`);
+    const download = useObservable(downloadProgress);
+    const remap = useObservable(remapProgress);
+    const isRemapping = remap !== undefined;
+    const progress = isRemapping ? remap : download;
 
     return (
         <Modal
-            title="Downloading Minecraft Jar"
+            title={isRemapping ? "Remapping Minecraft Jar" : "Downloading Minecraft Jar"}
             open={progress !== undefined}
             footer={null}
             closable={false}
