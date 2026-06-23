@@ -6,6 +6,8 @@ import type { ClassFilePath } from "../../utils/Names";
 import { crc32 } from "./crc32";
 import type { ZipEntryData } from "./zip";
 
+const COMPRESS_REMAPPED_CLASSES = false;
+
 export interface RemapClassJob {
     sourcePath: ClassFilePath;
     targetPath: ClassFilePath;
@@ -127,20 +129,20 @@ export class RemapWorker {
                     stats.crcMs += performance.now() - time;
 
                     time = performance.now();
-                    const compressedBytes = await compressClass(remappedBytes);
+                    const outputBytes = await encodeClass(remappedBytes);
                     stats.compressMs += performance.now() - time;
 
                     results.push({
                         name: job.targetPath,
-                        bytes: compressedBytes.bytes,
+                        bytes: outputBytes.bytes,
                         crc32: classCrc32,
                         uncompressedSize: remappedBytes.length,
-                        compressionMethod: compressedBytes.compressionMethod,
+                        compressionMethod: outputBytes.compressionMethod,
                     });
                     stats.classes++;
                     stats.uncompressedBytes += remappedBytes.length;
-                    stats.outputBytes += compressedBytes.bytes.length;
-                    if (compressedBytes.compressionMethod === 8) {
+                    stats.outputBytes += outputBytes.bytes.length;
+                    if (outputBytes.compressionMethod === 8) {
                         stats.compressedClasses++;
                     } else {
                         stats.storedClasses++;
@@ -161,8 +163,8 @@ export class RemapWorker {
     }
 }
 
-async function compressClass(bytes: Uint8Array<ArrayBuffer>): Promise<{ bytes: Uint8Array<ArrayBuffer>, compressionMethod: 0 | 8; }> {
-    if (typeof CompressionStream !== "function") {
+async function encodeClass(bytes: Uint8Array<ArrayBuffer>): Promise<{ bytes: Uint8Array<ArrayBuffer>, compressionMethod: 0 | 8; }> {
+    if (!COMPRESS_REMAPPED_CLASSES || typeof CompressionStream !== "function") {
         return { bytes, compressionMethod: 0 };
     }
 
