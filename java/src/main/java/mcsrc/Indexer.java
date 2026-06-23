@@ -131,6 +131,8 @@ public class Indexer {
 
     @JSExport
     public static void loadMappings(ArrayBuffer mappings) {
+        clearRemapperState();
+
         var mappingsArray = new Int8Array(mappings).copyToJavaArray();
         var mappingsReader = new InputStreamReader(new ByteArrayInputStream(mappingsArray), StandardCharsets.UTF_8);
 
@@ -143,6 +145,12 @@ public class Indexer {
         }
 
         mappingTreeRemapper = new SimpleRemapper(createRemapLookup(mappingTree));
+    }
+
+    @JSExport
+    public static void clearRemapperState() {
+        mappingTree = null;
+        mappingTreeRemapper = null;
     }
 
     @JSExport

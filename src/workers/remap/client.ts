@@ -67,10 +67,21 @@ export async function remapMinecraftJar(
         onProgress?.(100);
         return blob;
     } finally {
-        for (const worker of workers) {
+        await cleanupWorkers(workers);
+    }
+}
+
+async function cleanupWorkers(workers: ReturnType<typeof createWorker>[]): Promise<void> {
+    await Promise.allSettled(workers.map(async worker => {
+        try {
+            await worker.c.dispose();
+        } catch (error) {
+            console.warn("Failed to dispose remap worker cleanly", error);
+        } finally {
+            worker.c[Comlink.releaseProxy]();
             worker.w.terminate();
         }
-    }
+    }));
 }
 
 function createRemapJobs(paths: string[], obfToDeobf: Map<string, string>): RemapClassJob[] {

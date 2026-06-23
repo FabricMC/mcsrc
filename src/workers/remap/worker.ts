@@ -56,6 +56,11 @@ export class RemapWorker {
         return remapper.getObfToDeobf();
     }
 
+    dispose(): void {
+        this.#remapper?.clearRemapperState();
+        this.#remapper = null;
+    }
+
     async remapClasses(
         jarName: string,
         jarBlob: Blob,
@@ -80,75 +85,79 @@ export class RemapWorker {
             outputBytes: 0,
         };
 
-        let time = performance.now();
-        remapper.loadMappings(await mappingsBlob.arrayBuffer());
-        stats.loadMappingsMs = performance.now() - time;
+        try {
+            let time = performance.now();
+            remapper.loadMappings(await mappingsBlob.arrayBuffer());
+            stats.loadMappingsMs = performance.now() - time;
 
-        time = performance.now();
-        const jar = await openJar(jarName, jarBlob);
-        stats.openJarMs = performance.now() - time;
+            time = performance.now();
+            const jar = await openJar(jarName, jarBlob);
+            stats.openJarMs = performance.now() - time;
 
-        const state = new Uint32Array(stateBuffer);
-        const results: RemapWorkerResult[] = [];
-        const logPromises: Promise<void>[] = [];
+            const state = new Uint32Array(stateBuffer);
+            const results: RemapWorkerResult[] = [];
+            const logPromises: Promise<void>[] = [];
 
-        while (true) {
-            const start = Atomics.add(state, 0, batchSize);
-            if (start >= jobs.length) break;
+            while (true) {
+                const start = Atomics.add(state, 0, batchSize);
+                if (start >= jobs.length) break;
 
-            let completed = 0;
-            const end = Math.min(start + batchSize, jobs.length);
+                let completed = 0;
+                const end = Math.min(start + batchSize, jobs.length);
 
-            for (let i = start; i < end; i++) {
-                const job = jobs[i];
-                const entry = jar.entries[job.sourcePath];
-                if (!entry) {
-                    console.warn(`Class entry not found during remap: ${job.sourcePath}`);
+                for (let i = start; i < end; i++) {
+                    const job = jobs[i];
+                    const entry = jar.entries[job.sourcePath];
+                    if (!entry) {
+                        console.warn(`Class entry not found during remap: ${job.sourcePath}`);
+                        completed++;
+                        continue;
+                    }
+
+                    time = performance.now();
+                    const classBytes = await entry.bytes();
+                    stats.readMs += performance.now() - time;
+
+                    time = performance.now();
+                    const remappedBytes = toUint8Array(remapper.remapEntry(toArrayBuffer(classBytes)));
+                    stats.remapMs += performance.now() - time;
+
+                    time = performance.now();
+                    const classCrc32 = crc32(remappedBytes);
+                    stats.crcMs += performance.now() - time;
+
+                    time = performance.now();
+                    const compressedBytes = await compressClass(remappedBytes);
+                    stats.compressMs += performance.now() - time;
+
+                    results.push({
+                        name: job.targetPath,
+                        bytes: compressedBytes.bytes,
+                        crc32: classCrc32,
+                        uncompressedSize: remappedBytes.length,
+                        compressionMethod: compressedBytes.compressionMethod,
+                    });
+                    stats.classes++;
+                    stats.uncompressedBytes += remappedBytes.length;
+                    stats.outputBytes += compressedBytes.bytes.length;
+                    if (compressedBytes.compressionMethod === 8) {
+                        stats.compressedClasses++;
+                    } else {
+                        stats.storedClasses++;
+                    }
                     completed++;
-                    continue;
                 }
 
-                time = performance.now();
-                const classBytes = await entry.bytes();
-                stats.readMs += performance.now() - time;
-
-                time = performance.now();
-                const remappedBytes = toUint8Array(remapper.remapEntry(toArrayBuffer(classBytes)));
-                stats.remapMs += performance.now() - time;
-
-                time = performance.now();
-                const classCrc32 = crc32(remappedBytes);
-                stats.crcMs += performance.now() - time;
-
-                time = performance.now();
-                const compressedBytes = await compressClass(remappedBytes);
-                stats.compressMs += performance.now() - time;
-
-                results.push({
-                    name: job.targetPath,
-                    bytes: compressedBytes.bytes,
-                    crc32: classCrc32,
-                    uncompressedSize: remappedBytes.length,
-                    compressionMethod: compressedBytes.compressionMethod,
-                });
-                stats.classes++;
-                stats.uncompressedBytes += remappedBytes.length;
-                stats.outputBytes += compressedBytes.bytes.length;
-                if (compressedBytes.compressionMethod === 8) {
-                    stats.compressedClasses++;
-                } else {
-                    stats.storedClasses++;
+                if (logger && completed > 0) {
+                    logPromises.push(Promise.resolve(logger(completed)));
                 }
-                completed++;
             }
 
-            if (logger && completed > 0) {
-                logPromises.push(Promise.resolve(logger(completed)));
-            }
+            await Promise.all(logPromises);
+            return { entries: results, stats };
+        } finally {
+            remapper.clearRemapperState();
         }
-
-        await Promise.all(logPromises);
-        return { entries: results, stats };
     }
 }
 
@@ -184,6 +193,7 @@ function toArrayBuffer(bytes: Uint8Array): ArrayBuffer {
 
 interface Remapper {
     loadMappings(data: ArrayBufferLike): void;
+    clearRemapperState(): void;
     remapEntry(classData: ArrayBufferLike): Int8Array;
     getObfToDeobf(): Map<string, string>;
 }
