@@ -1,13 +1,13 @@
 package mcsrc;
 
 import net.fabricmc.mappingio.MappingUtil;
-import net.fabricmc.mappingio.extras.MappingTreeRemapper;
 import net.fabricmc.mappingio.format.proguard.ProGuardFileReader;
 import net.fabricmc.mappingio.tree.MemoryMappingTree;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.commons.ClassRemapper;
+import org.objectweb.asm.commons.SimpleRemapper;
 import org.objectweb.asm.util.Textifier;
 import org.objectweb.asm.util.TraceClassVisitor;
 import org.teavm.jso.JSExport;
@@ -31,7 +31,7 @@ public class Indexer {
     private static final Map<String, ClassInheritanceInfo> inheritanceData = new HashMap<>();
     private static final Map<String, ClassMemberInfo> memberData = new HashMap<>();
     private static MemoryMappingTree mappingTree;
-    private static MappingTreeRemapper mappingTreeRemapper;
+    private static SimpleRemapper mappingTreeRemapper;
 
     @JSExport
     public static void index(ArrayBuffer arrayBuffer) {
@@ -142,7 +142,7 @@ public class Indexer {
             throw new RuntimeException(e);
         }
 
-        mappingTreeRemapper = new MappingTreeRemapper(mappingTree, MappingUtil.NS_TARGET_FALLBACK, MappingUtil.NS_SOURCE_FALLBACK);
+        mappingTreeRemapper = new SimpleRemapper(createRemapLookup(mappingTree));
     }
 
     @JSExport
@@ -171,12 +171,44 @@ public class Indexer {
             }
         };
 
-        reader.accept(new ClassRemapper(writer, mappingTreeRemapper), 0);
+        reader.accept(new ClassRemapper(writer, mappingTreeRemapper), ClassReader.SKIP_FRAMES);
 
         var remappedBytes = writer.toByteArray();
         var array = new Int8Array(remappedBytes.length);
         array.set(remappedBytes);
         return array;
+    }
+
+    private static Map<String, String> createRemapLookup(MemoryMappingTree tree) {
+        int obfId = tree.getNamespaceId(MappingUtil.NS_TARGET_FALLBACK);
+        int deobfId = tree.getNamespaceId(MappingUtil.NS_SOURCE_FALLBACK);
+        var mappings = new HashMap<String, String>();
+
+        for (var classMapping : tree.getClasses()) {
+            String obfClassName = classMapping.getName(obfId);
+            String deobfClassName = classMapping.getName(deobfId);
+            mappings.put(obfClassName, deobfClassName);
+
+            for (var fieldMapping : classMapping.getFields()) {
+                String obfFieldName = fieldMapping.getName(obfId);
+                String deobfFieldName = fieldMapping.getName(deobfId);
+
+                if (!obfFieldName.equals(deobfFieldName)) {
+                    mappings.put(obfClassName + "." + obfFieldName, deobfFieldName);
+                }
+            }
+
+            for (var methodMapping : classMapping.getMethods()) {
+                String obfMethodName = methodMapping.getName(obfId);
+                String deobfMethodName = methodMapping.getName(deobfId);
+
+                if (!obfMethodName.equals(deobfMethodName)) {
+                    mappings.put(obfClassName + "." + obfMethodName + methodMapping.getDesc(obfId), deobfMethodName);
+                }
+            }
+        }
+
+        return mappings;
     }
     
     private static class ClassInheritanceInfo {

@@ -14,6 +14,25 @@ export interface RemapClassJob {
 export interface RemapWorkerResult extends ZipEntryData {
 }
 
+export interface RemapWorkerStats {
+    classes: number;
+    loadMappingsMs: number;
+    openJarMs: number;
+    readMs: number;
+    remapMs: number;
+    crcMs: number;
+    compressMs: number;
+    compressedClasses: number;
+    storedClasses: number;
+    uncompressedBytes: number;
+    outputBytes: number;
+}
+
+export interface RemapWorkerBatchResult {
+    entries: RemapWorkerResult[];
+    stats: RemapWorkerStats;
+}
+
 export class RemapWorker {
     #remapper: Remapper | null = null;
 
@@ -45,11 +64,30 @@ export class RemapWorker {
         stateBuffer: SharedArrayBuffer,
         batchSize: number,
         logger?: (count: number) => Promise<void> | void,
-    ): Promise<RemapWorkerResult[]> {
+    ): Promise<RemapWorkerBatchResult> {
         const remapper = await this.getRemapper();
-        remapper.loadMappings(await mappingsBlob.arrayBuffer());
+        const stats: RemapWorkerStats = {
+            classes: 0,
+            loadMappingsMs: 0,
+            openJarMs: 0,
+            readMs: 0,
+            remapMs: 0,
+            crcMs: 0,
+            compressMs: 0,
+            compressedClasses: 0,
+            storedClasses: 0,
+            uncompressedBytes: 0,
+            outputBytes: 0,
+        };
 
+        let time = performance.now();
+        remapper.loadMappings(await mappingsBlob.arrayBuffer());
+        stats.loadMappingsMs = performance.now() - time;
+
+        time = performance.now();
         const jar = await openJar(jarName, jarBlob);
+        stats.openJarMs = performance.now() - time;
+
         const state = new Uint32Array(stateBuffer);
         const results: RemapWorkerResult[] = [];
         const logPromises: Promise<void>[] = [];
@@ -70,16 +108,37 @@ export class RemapWorker {
                     continue;
                 }
 
-                const remappedBytes = toUint8Array(remapper.remapEntry(toArrayBuffer(await entry.bytes())));
+                time = performance.now();
+                const classBytes = await entry.bytes();
+                stats.readMs += performance.now() - time;
+
+                time = performance.now();
+                const remappedBytes = toUint8Array(remapper.remapEntry(toArrayBuffer(classBytes)));
+                stats.remapMs += performance.now() - time;
+
+                time = performance.now();
+                const classCrc32 = crc32(remappedBytes);
+                stats.crcMs += performance.now() - time;
+
+                time = performance.now();
                 const compressedBytes = await compressClass(remappedBytes);
+                stats.compressMs += performance.now() - time;
 
                 results.push({
                     name: job.targetPath,
                     bytes: compressedBytes.bytes,
-                    crc32: crc32(remappedBytes),
+                    crc32: classCrc32,
                     uncompressedSize: remappedBytes.length,
                     compressionMethod: compressedBytes.compressionMethod,
                 });
+                stats.classes++;
+                stats.uncompressedBytes += remappedBytes.length;
+                stats.outputBytes += compressedBytes.bytes.length;
+                if (compressedBytes.compressionMethod === 8) {
+                    stats.compressedClasses++;
+                } else {
+                    stats.storedClasses++;
+                }
                 completed++;
             }
 
@@ -89,7 +148,7 @@ export class RemapWorker {
         }
 
         await Promise.all(logPromises);
-        return results;
+        return { entries: results, stats };
     }
 }
 
