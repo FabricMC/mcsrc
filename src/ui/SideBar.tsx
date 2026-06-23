@@ -1,22 +1,22 @@
-import { Button, Divider, Flex, Input } from "antd";
+import { Button, Divider, Dropdown, Flex, Input } from "antd";
 import Header from "./Header";
 import FileList from "./FileList";
-import type { InputRef, SearchProps } from "antd/es/input";
+import type { InputProps, InputRef } from "antd/es/input";
+import type { MenuProps } from "antd";
 import { useObservable } from "../utils/UseObservable";
 import { isSearching } from "../logic/JarFile";
 import SearchResults from "./SearchResults";
 import ReferenceResults from "./ReferenceResults";
 import { formatReferenceQuery, isViewingReferences } from "../logic/FindAllReferences";
-import { ArrowLeftOutlined } from "@ant-design/icons";
+import { ArrowLeftOutlined, DownOutlined } from "@ant-design/icons";
 import { focusSearchEvent } from "../logic/Keybinds";
 import { useEffect, useRef } from "react";
-import { searchQuery, referencesQuery } from "../logic/State";
-
-const { Search } = Input;
+import { searchQuery, referencesQuery, searchType, type SearchType } from "../logic/State";
 
 const SideBar = () => {
     const showReference = useObservable(isViewingReferences);
     const currentReferenceQuery = useObservable(referencesQuery);
+    const currentSearchType = useObservable(searchType);
     const focusSearch = useObservable(focusSearchEvent);
     const searchRef = useRef<InputRef>(null);
 
@@ -33,8 +33,18 @@ const SideBar = () => {
         }
     }, [focusSearch, showReference]);
 
-    const onChange: SearchProps['onChange'] = (e) => {
+    const onChange: InputProps['onChange'] = (e) => {
         searchQuery.next(e.target.value);
+    };
+
+    const searchTypeMenuItems: MenuProps["items"] = [
+        { key: "classes", label: "Classes" },
+        { key: "methods", label: "Methods" },
+        { key: "fields", label: "Fields" }
+    ];
+
+    const onSearchTypeMenuClick: MenuProps["onClick"] = ({ key }) => {
+        searchType.next(key as SearchType);
     };
 
     const onBackClick = () => {
@@ -54,7 +64,33 @@ const SideBar = () => {
                     </div>
                 </>
             ) : (
-                <Search ref={searchRef} placeholder="Search classes" allowClear onChange={onChange}></Search>
+                <Input
+                    ref={searchRef}
+                    type="search"
+                    placeholder={`Search ${currentSearchType}`}
+                    allowClear
+                    onChange={onChange}
+                    addonAfter={
+                        <Dropdown
+                            menu={{
+                                items: searchTypeMenuItems,
+                                selectable: true,
+                                selectedKeys: [currentSearchType],
+                                onClick: onSearchTypeMenuClick
+                            }}
+                            trigger={["click"]}
+                        >
+                            <Button
+                                type="text"
+                                size="small"
+                                icon={<DownOutlined />}
+                                aria-label="Search type"
+                                title={`Search type: ${currentSearchType}`}
+                                style={{ width: 28 }}
+                            />
+                        </Dropdown>
+                    }
+                />
             )}
             <Divider size="small" />
             <div style={{ flexGrow: 1, overflowY: "auto" }}>

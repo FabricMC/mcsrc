@@ -17,6 +17,8 @@ const initialTab = initialState.file ? new CodeTab(initialState.file) : null;
 export const openTab = new BehaviorSubject<Tab | null>(initialTab);
 export const openTabs = new BehaviorSubject<Tab[]>(initialTab ? [initialTab] : []);
 export const tabHistory = new BehaviorSubject<string[]>(initialState.file ? [initialState.file] : []);
+export type SearchType = "classes" | "methods" | "fields";
+export const searchType = new BehaviorSubject<SearchType>("classes");
 export const searchQuery = new BehaviorSubject("");
 export const referencesQuery = new BehaviorSubject<ReferenceKey | "">("");
 

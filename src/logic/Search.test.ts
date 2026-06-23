@@ -115,6 +115,23 @@ describe('Search Algorithm', () => {
         });
     });
 
+    describe('Custom Search Text', () => {
+        it('should search member keys by member name', () => {
+            const members = [
+                'com/example/Player:getName:()Ljava/lang/String;',
+                'com/example/Player:setHealth:(I)V',
+                'com/example/Inventory:getItem:(I)Lcom/example/Item;',
+            ];
+
+            const results = performSearch('get', members, member => member.split(':')[1]);
+
+            expect(results).toHaveLength(2);
+            expect(results).toContain('com/example/Player:getName:()Ljava/lang/String;');
+            expect(results).toContain('com/example/Inventory:getItem:(I)Lcom/example/Item;');
+            expect(results).not.toContain('com/example/Player:setHealth:(I)V');
+        });
+    });
+
     describe('Result Limit', () => {
         it('should limit results to 100 items', () => {
             const classes = Array.from({ length: 200 }, (_, i) => `com/example/Class${i}`);
