@@ -1,10 +1,14 @@
 [versions]
 asm = "9.9.1"
 teavm = "0.13.0"
+mapping-io = "0.8.0"
 
 [libraries]
 asm = { module = "org.ow2.asm:asm", version.ref = "asm" }
+asm-commons = { module = "org.ow2.asm:asm-commons", version.ref = "asm" }
 asm-util = { module = "org.ow2.asm:asm-util", version.ref = "asm" }
+mapping-io = { module = "net.fabricmc:mapping-io", version.ref = "mapping-io" }
+mapping-io-extras = { module = "net.fabricmc:mapping-io-extras", version.ref = "mapping-io" }
 teavm-core = { group = "org.teavm", name = "teavm-core", version.ref = "teavm" }
 teavm-jso = { group = "org.teavm", name = "teavm-jso-apis", version.ref = "teavm" }
 
