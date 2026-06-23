@@ -275,7 +275,12 @@ async function prepareMinecraftJarBlob(
             remapProgress.next(percent);
         });
 
-        await cache?.put(cacheKey, new Response(blob));
+        try {
+            await cache?.put(cacheKey, new Response(blob));
+        } catch (error) {
+            console.warn(`Failed to cache remapped jar for ${version}`, error);
+        }
+
         return { blob, remapped: true };
     } finally {
         remapProgress.next(undefined);

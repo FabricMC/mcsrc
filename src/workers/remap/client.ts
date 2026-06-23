@@ -26,7 +26,9 @@ export async function remapMinecraftJar(
 
     try {
         const jar = await openJar(version, jarBlob);
+        const classMapStartTime = performance.now();
         const obfToDeobf = await workers[0].c.getObfToDeobf(mappingsBlob);
+        const classMapLoadMs = performance.now() - classMapStartTime;
         const jobs = createRemapJobs(Object.keys(jar.entries), obfToDeobf);
 
         if (jobs.length === 0) {
@@ -58,7 +60,7 @@ export async function remapMinecraftJar(
         console.log(`Remapped ${results.length} classes for ${version} in ${duration} seconds`);
         console.log(
             `[remap:${version}] workers=${threads} classes=${timings.classes} ` +
-            `loadMappings=${formatMs(timings.loadMappingsMs)} openJar=${formatMs(timings.openJarMs)} ` +
+            `classMapLoad=${formatMs(classMapLoadMs)} loadMappings=${formatMs(timings.loadMappingsMs)} openJar=${formatMs(timings.openJarMs)} ` +
             `read=${formatMs(timings.readMs)} remap=${formatMs(timings.remapMs)} crc=${formatMs(timings.crcMs)} ` +
             `compress=${formatMs(timings.compressMs)} zip=${formatMs(zipMs)} ` +
             `stored=${timings.storedClasses} deflated=${timings.compressedClasses} ` +
