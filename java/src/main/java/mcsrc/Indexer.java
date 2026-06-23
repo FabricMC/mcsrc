@@ -138,8 +138,8 @@ public class Indexer {
 
         try {
             var tree = new MemoryMappingTree();
-            tree.setIndexByDstNames(true);
             ProGuardFileReader.read(mappingsReader, tree);
+            tree.setIndexByDstNames(true);
             mappingTree = tree;
         } catch (IOException e) {
             throw new RuntimeException(e);
