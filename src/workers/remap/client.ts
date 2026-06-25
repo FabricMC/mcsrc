@@ -29,11 +29,16 @@ export async function remapMinecraftJar(
         const classMapStartTime = performance.now();
         const obfToDeobf = await workers[0].c.getObfToDeobf(mappingsBlob);
         const classMapLoadMs = performance.now() - classMapStartTime;
-        const jobs = createRemapJobs(Object.keys(jar.entries), obfToDeobf);
+        const classPaths = Object.keys(jar.entries).filter(isClassFilePath);
+        const jobs = createRemapJobs(classPaths, obfToDeobf);
 
         if (jobs.length === 0) {
             return writeZip([]);
         }
+
+        const remapIndexStartTime = performance.now();
+        const remapIndex = await workers[0].c.buildRemapIndex(version, jarBlob, classPaths);
+        const remapIndexMs = performance.now() - remapIndexStartTime;
 
         let completed = 0;
         onProgress?.(0);
@@ -48,7 +53,7 @@ export async function remapMinecraftJar(
         state[0] = 0;
 
         const workerResults = await Promise.all(workers.map(worker =>
-            worker.c.remapClasses(version, jarBlob, mappingsBlob, jobs, stateBuffer, batchSize, logger)
+            worker.c.remapClasses(version, jarBlob, mappingsBlob, remapIndex, jobs, stateBuffer, batchSize, logger)
         ));
 
         const timings = mergeStats(workerResults.map(result => result.stats));
@@ -60,7 +65,7 @@ export async function remapMinecraftJar(
         console.log(`Remapped ${results.length} classes for ${version} in ${duration} seconds`);
         console.log(
             `[remap:${version}] workers=${threads} classes=${timings.classes} ` +
-            `classMapLoad=${formatMs(classMapLoadMs)} loadMappings=${formatMs(timings.loadMappingsMs)} openJar=${formatMs(timings.openJarMs)} ` +
+            `classMapLoad=${formatMs(classMapLoadMs)} remapIndex=${formatMs(remapIndexMs)} loadMappings=${formatMs(timings.loadMappingsMs)} openJar=${formatMs(timings.openJarMs)} ` +
             `read=${formatMs(timings.readMs)} remap=${formatMs(timings.remapMs)} crc=${formatMs(timings.crcMs)} ` +
             `compress=${formatMs(timings.compressMs)} zip=${formatMs(zipMs)} ` +
             `stored=${timings.storedClasses} deflated=${timings.compressedClasses} ` +
