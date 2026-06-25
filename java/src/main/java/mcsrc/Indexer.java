@@ -5,8 +5,11 @@ import net.fabricmc.mappingio.extras.MappingTreeRemapper;
 import net.fabricmc.mappingio.format.proguard.ProGuardFileReader;
 import net.fabricmc.mappingio.tree.MappingTree;
 import net.fabricmc.mappingio.tree.MemoryMappingTree;
+import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
+import org.objectweb.asm.FieldVisitor;
+import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.commons.ClassRemapper;
 import org.objectweb.asm.commons.Remapper;
@@ -38,6 +41,13 @@ public class Indexer {
         ClassReader classReader = new ClassReader(bytes);
         // Use SKIP_FRAMES for faster parsing - we don't need stack map frames for indexing
         classReader.accept(new ClassIndexVisitor(ASM_VERSION), ClassReader.SKIP_FRAMES);
+    }
+
+    @JSExport
+    public static void indexRemapData(ArrayBuffer arrayBuffer) {
+        byte[] bytes = new Int8Array(arrayBuffer).copyToJavaArray();
+        ClassReader classReader = new ClassReader(bytes);
+        classReader.accept(new RemapDataIndexVisitor(ASM_VERSION), ClassReader.SKIP_CODE | ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);
     }
 
     @JSExport
@@ -249,6 +259,32 @@ public class Indexer {
 
         public void addField(Entry.Field field) {
             fields.add(field.str());
+        }
+    }
+
+    private static final class RemapDataIndexVisitor extends ClassVisitor {
+        private String className;
+
+        private RemapDataIndexVisitor(int api) {
+            super(api);
+        }
+
+        @Override
+        public void visit(int version, int access, String name, String signature, String superName, String[] interfaces) {
+            className = name;
+            addClassData(name, superName, interfaces, access);
+        }
+
+        @Override
+        public FieldVisitor visitField(int access, String name, String descriptor, String signature, Object value) {
+            addMemberData(className, new Entry.Field(className, name, descriptor));
+            return null;
+        }
+
+        @Override
+        public MethodVisitor visitMethod(int access, String name, String descriptor, String signature, String[] exceptions) {
+            addMemberData(className, new Entry.Method(className, name, descriptor));
+            return null;
         }
     }
 

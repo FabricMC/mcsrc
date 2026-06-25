@@ -58,7 +58,7 @@ public class LocalRenameVisitor extends ClassVisitor {
                 args[i] = getNameFromType(argTypes[i].getDescriptor(), true);
             }
 
-            boolean hasMethodBody = (access & Opcodes.ACC_ABSTRACT) == 0;
+            boolean hasMethodBody = (access & (Opcodes.ACC_ABSTRACT | Opcodes.ACC_NATIVE)) == 0;
 
             if (localVariables != null || hasMethodBody && args.length > 0) {
                 if (localVariables == null) {

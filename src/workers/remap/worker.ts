@@ -82,7 +82,7 @@ export class RemapWorker {
                 continue;
             }
 
-            remapper.index(toArrayBuffer(await entry.bytes()));
+            remapper.indexRemapData(toArrayBuffer(await entry.bytes()));
         }
 
         return {
@@ -225,6 +225,7 @@ function toArrayBuffer(bytes: Uint8Array): ArrayBuffer {
 
 interface Remapper {
     index(data: ArrayBufferLike): void;
+    indexRemapData(data: ArrayBufferLike): void;
     loadMappings(data: ArrayBufferLike): void;
     clearIndex(): void;
     clearRemapperState(): void;
