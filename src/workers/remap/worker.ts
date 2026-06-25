@@ -68,27 +68,56 @@ export class RemapWorker {
         this.#remapper = null;
     }
 
-    async buildRemapIndex(jarName: string, jarBlob: Blob, sourcePaths: ClassFilePath[]): Promise<RemapIndex> {
+    async buildRemapIndex(
+        jarName: string,
+        jarBlob: Blob,
+        sourcePaths: ClassFilePath[],
+        stateBuffer: SharedArrayBuffer,
+        batchSize: number,
+        logger?: (count: number) => Promise<void> | void,
+    ): Promise<RemapIndex> {
         const remapper = await this.getRemapper();
         const jar = await openJar(jarName, jarBlob);
+        const state = new Uint32Array(stateBuffer);
+        const logPromises: Promise<void>[] = [];
 
         remapper.clearIndex();
 
-        for (const sourcePath of sourcePaths) {
-            const entry = jar.entries[sourcePath];
+        while (true) {
+            const start = Atomics.add(state, 0, batchSize);
+            if (start >= sourcePaths.length) break;
 
-            if (!entry) {
-                console.warn(`Class entry not found during remap index: ${sourcePath}`);
-                continue;
+            let completed = 0;
+            const end = Math.min(start + batchSize, sourcePaths.length);
+
+            for (let i = start; i < end; i++) {
+                const sourcePath = sourcePaths[i];
+                const entry = jar.entries[sourcePath];
+
+                if (!entry) {
+                    console.warn(`Class entry not found during remap index: ${sourcePath}`);
+                    completed++;
+                    continue;
+                }
+
+                remapper.indexRemapData(toArrayBuffer(await entry.bytes()));
+                completed++;
             }
 
-            remapper.indexRemapData(toArrayBuffer(await entry.bytes()));
+            if (logger && completed > 0) {
+                logPromises.push(Promise.resolve(logger(completed)));
+            }
         }
 
-        return {
+        await Promise.all(logPromises);
+
+        const index = {
             classData: remapper.getClassData(),
             memberData: remapper.getMemberData(),
         };
+
+        remapper.clearIndex();
+        return index;
     }
 
     async remapClasses(
