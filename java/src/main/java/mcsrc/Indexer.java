@@ -315,6 +315,10 @@ public class Indexer {
                 return mappedName;
             }
 
+            if (hasMember(owner, name, descriptor, true)) {
+                return name;
+            }
+
             String inheritedOwner = findInheritedMemberOwner(owner, name, descriptor, true);
             return inheritedOwner == null ? name : delegate.mapMethodName(inheritedOwner, name, descriptor);
         }
@@ -325,6 +329,10 @@ public class Indexer {
 
             if (mappedName != null) {
                 return mappedName;
+            }
+
+            if (hasMember(owner, name, descriptor, false)) {
+                return name;
             }
 
             String inheritedOwner = findInheritedMemberOwner(owner, name, descriptor, false);
@@ -372,6 +380,17 @@ public class Indexer {
             }
 
             return null;
+        }
+
+        private static boolean hasMember(String owner, String name, String descriptor, boolean method) {
+            ClassMemberInfo memberInfo = memberData.get(owner);
+
+            if (memberInfo == null) {
+                return false;
+            }
+
+            String member = "%s:%s:%s".formatted(owner, name, descriptor);
+            return (method ? memberInfo.methods : memberInfo.fields).contains(member);
         }
 
         private static void addParents(String owner, ArrayDeque<String> queue) {
