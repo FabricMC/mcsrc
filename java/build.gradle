@@ -9,7 +9,10 @@ repositories {
 
 dependencies {
     api libs.asm
+    api libs.asm.commons
     api libs.asm.util
+    api libs.mapping.io
+    api libs.mapping.io.extras
     api libs.teavm.core
     testImplementation libs.teavm.jso
 }
@@ -24,6 +27,7 @@ sourceSets {
     dummy1
     dummy2
     dummy3
+    dummy4
 }
 
 tasks.register('dummy1Jar', Jar) {
@@ -41,6 +45,12 @@ tasks.register('dummy2Jar', Jar) {
 tasks.register('dummy3Jar', Jar) {
     from sourceSets.dummy3.output
     archiveBaseName = 'dummy3'
+    archiveClassifier = ''
+}
+
+tasks.register('dummy4Jar', Jar) {
+    from sourceSets.dummy4.output
+    archiveBaseName = 'dummy4'
     archiveClassifier = ''
 }
 
@@ -67,4 +77,5 @@ tasks.named("build") {
     dependsOn tasks.dummy1Jar
     dependsOn tasks.dummy2Jar
     dependsOn tasks.dummy3Jar
+    dependsOn tasks.dummy4Jar
 }

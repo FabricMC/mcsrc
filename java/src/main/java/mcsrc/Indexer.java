@@ -1,17 +1,27 @@
 package mcsrc;
 
+import net.fabricmc.mappingio.MappingUtil;
+import net.fabricmc.mappingio.extras.MappingTreeRemapper;
+import net.fabricmc.mappingio.format.proguard.ProGuardFileReader;
+import net.fabricmc.mappingio.tree.MemoryMappingTree;
 import org.objectweb.asm.ClassReader;
+import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.commons.ClassRemapper;
 import org.objectweb.asm.util.Textifier;
 import org.objectweb.asm.util.TraceClassVisitor;
 import org.teavm.jso.JSExport;
-import org.teavm.jso.JSObject;
-import org.teavm.jso.JSProperty;
+import org.teavm.jso.core.JSMap;
+import org.teavm.jso.core.JSString;
 import org.teavm.jso.typedarrays.ArrayBuffer;
 import org.teavm.jso.typedarrays.Int8Array;
 
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 public class Indexer {
@@ -20,6 +30,8 @@ public class Indexer {
     
     private static final Map<String, ClassInheritanceInfo> inheritanceData = new HashMap<>();
     private static final Map<String, ClassMemberInfo> memberData = new HashMap<>();
+    private static MemoryMappingTree mappingTree;
+    private static MappingTreeRemapper mappingTreeRemapper;
 
     @JSExport
     public static void index(ArrayBuffer arrayBuffer) {
@@ -116,7 +128,66 @@ public class Indexer {
         }
         return result.toArray(new String[0]);
     }
-    
+
+    @JSExport
+    public static void loadMappings(ArrayBuffer mappings) {
+        clearRemapperState();
+
+        var mappingsArray = new Int8Array(mappings).copyToJavaArray();
+        var mappingsReader = new InputStreamReader(new ByteArrayInputStream(mappingsArray), StandardCharsets.UTF_8);
+
+        try {
+            var tree = new MemoryMappingTree();
+            ProGuardFileReader.read(mappingsReader, tree);
+            tree.setIndexByDstNames(true);
+            mappingTree = tree;
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+
+        mappingTreeRemapper = new MappingTreeRemapper(mappingTree, MappingUtil.NS_TARGET_FALLBACK, MappingUtil.NS_SOURCE_FALLBACK);
+    }
+
+    @JSExport
+    public static void clearRemapperState() {
+        mappingTree = null;
+        mappingTreeRemapper = null;
+    }
+
+    @JSExport
+    public static JSMap<JSString, JSString> getObfToDeobf() {
+        int obfId = mappingTree.getNamespaceId(MappingUtil.NS_TARGET_FALLBACK);
+        int deobfId = mappingTree.getNamespaceId(MappingUtil.NS_SOURCE_FALLBACK);
+        var map = new JSMap<JSString, JSString>();
+
+        for (var mapping : mappingTree.getClasses()) {
+            String obfName = mapping.getName(obfId);
+            String deobfName = mapping.getName(deobfId);
+            map.set(JSString.valueOf(obfName), JSString.valueOf(deobfName));
+        }
+
+        return map;
+    }
+
+    @JSExport
+    public static Int8Array remapEntry(ArrayBuffer entry) {
+        var classBytes = new Int8Array(entry).copyToJavaArray();
+        ClassReader reader = new ClassReader(classBytes);
+        ClassWriter writer = new ClassWriter(0) {
+            @Override
+            protected String getCommonSuperClass(String type1, String type2) {
+                return "java/lang/Object";
+            }
+        };
+
+        reader.accept(new ClassRemapper(writer, mappingTreeRemapper), ClassReader.SKIP_FRAMES);
+
+        var remappedBytes = writer.toByteArray();
+        var array = new Int8Array(remappedBytes.length);
+        array.set(remappedBytes);
+        return array;
+    }
+
     private static class ClassInheritanceInfo {
         String className;
         String superName;

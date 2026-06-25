@@ -9,9 +9,10 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { Key } from 'antd/es/table/interface';
 import { openCodeTab } from '../logic/tabs';
 import { minecraftJar, type MinecraftJar } from '../logic/MinecraftApi';
-import { decompileClass } from '../logic/Decompiler';
+import { decompileClass, getDecompilerOptions } from '../logic/Decompiler';
 import { selectedFile, referencesQuery } from '../logic/State';
-import { autoJarIndex, compactPackages } from '../logic/Settings';
+import { autoJarIndex, compactPackages, displayLambdas } from '../logic/Settings';
+import { setOptions } from '../workers/decompile/client';
 import { jarIndex, type ClassData } from '../workers/jar-index/client';
 import { ClassDataIcon, JavaIcon, PackageIcon } from './intellij-icons';
 import { classNameFromClassFilePath, dottedClassNameFromClassName, isClassFilePath, toClassName, withoutClassExtension, type ClassFilePath } from '../utils/Names';
@@ -127,6 +128,7 @@ function getPathKeys(filePath: string): Key[] {
 const handleCopyContent = async (path: ClassFilePath, jar: MinecraftJar) => {
     try {
         message.loading({ content: 'Decompiling...', key: 'copy-content' });
+        await setOptions(getDecompilerOptions(displayLambdas.value, jar.metadata.remapped));
         const result = await decompileClass(classNameFromClassFilePath(path), jar.jar);
         await navigator.clipboard.writeText(result.source);
         message.success({ content: 'Content copied to clipboard', key: 'copy-content' });

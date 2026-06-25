@@ -1,7 +1,6 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import {
     BehaviorSubject,
-    combineLatest, distinctUntilChanged, from, map, Observable, of, shareReplay, switchMap, tap, throttleTime
+    combineLatest, distinctUntilChanged, from, map, Observable, of, shareReplay, switchMap, throttleTime
 } from "rxjs";
 import { minecraftJar, type MinecraftJar } from "./MinecraftApi";
 import { selectedFile } from "./State";
@@ -19,21 +18,19 @@ export const isDecompiling = decompilerCounter.pipe(
     distinctUntilChanged()
 );
 
-const decompilerOptions = combineLatest([
-    displayLambdas.observable
-]).pipe(
-    distinctUntilChanged(),
-    switchMap(([displayLambdas]) => {
-        const options: Options = {};
+export function getDecompilerOptions(displayLambdas: boolean, remapped: boolean): Options {
+    const options: Options = {};
 
-        if (displayLambdas) {
-            options["mark-corresponding-synthetics"] = "1";
-        }
+    if (displayLambdas) {
+        options["mark-corresponding-synthetics"] = "1";
+    }
 
-        return of(options);
-    }),
-);
-decompilerOptions.subscribe(v => worker.setOptions(v));
+    if (remapped) {
+        options["variable-renaming"] = "tiny";
+    }
+
+    return options;
+}
 
 export const currentResult = decompileResultPipeline(minecraftJar);
 export function decompileResultPipeline(jar: Observable<MinecraftJar>): Observable<DecompileResult> {
@@ -41,11 +38,11 @@ export function decompileResultPipeline(jar: Observable<MinecraftJar>): Observab
         selectedFile,
         jar,
         bytecode.observable,
-        decompilerOptions,
+        displayLambdas.observable,
     ]).pipe(
         distinctUntilChanged(),
         throttleTime(250),
-        switchMap(([file, jar, bytecode]) => {
+        switchMap(([file, jar, bytecode, displayLambdas]) => {
             if (!file) {
                 return of();
             }
@@ -55,7 +52,10 @@ export function decompileResultPipeline(jar: Observable<MinecraftJar>): Observab
                 return from(getClassBytecode(className, jar.jar));
             }
 
-            return from(decompileClass(className, jar.jar));
+            const options = getDecompilerOptions(displayLambdas, jar.metadata.remapped);
+            return from(worker.setOptions(options)).pipe(
+                switchMap(() => from(decompileClass(className, jar.jar)))
+            );
         }),
         shareReplay({ bufferSize: 1, refCount: false })
     );

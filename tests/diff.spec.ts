@@ -8,6 +8,7 @@ test.describe('Diff View', () => {
 
     test('Opens diff view and selects LevelRenderer', async ({ page }) => {
         await page.goto('/');
+        await expect(page.locator('.ant-modal-wrap')).toBeHidden();
 
         await page.getByRole('button', { name: 'Compare' }).click();
 
