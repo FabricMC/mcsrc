@@ -27,7 +27,7 @@ export const JarDecompilerModal = () => {
         modalOpen.next(false);
         if (!jar) return;
 
-        await setOptions(getDecompilerOptions(displayLambdas.value, jar.metadata.remapped));
+        await setOptions(getDecompilerOptions(displayLambdas.value));
 
         const task = decompileEntireJar(jar.jar, {
             threads: decompilerThreads.value,

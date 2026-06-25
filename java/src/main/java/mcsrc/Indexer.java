@@ -180,7 +180,7 @@ public class Indexer {
             }
         };
 
-        reader.accept(new ClassRemapper(writer, mappingTreeRemapper), ClassReader.SKIP_FRAMES);
+        reader.accept(new ClassRemapper(new LocalRenameVisitor(Opcodes.ASM9, writer), mappingTreeRemapper), ClassReader.SKIP_FRAMES);
 
         var remappedBytes = writer.toByteArray();
         var array = new Int8Array(remappedBytes.length);

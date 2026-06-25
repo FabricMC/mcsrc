@@ -18,15 +18,11 @@ export const isDecompiling = decompilerCounter.pipe(
     distinctUntilChanged()
 );
 
-export function getDecompilerOptions(displayLambdas: boolean, remapped: boolean): Options {
+export function getDecompilerOptions(displayLambdas: boolean): Options {
     const options: Options = {};
 
     if (displayLambdas) {
         options["mark-corresponding-synthetics"] = "1";
-    }
-
-    if (remapped) {
-        options["variable-renaming"] = "tiny";
     }
 
     return options;
@@ -52,7 +48,7 @@ export function decompileResultPipeline(jar: Observable<MinecraftJar>): Observab
                 return from(getClassBytecode(className, jar.jar));
             }
 
-            const options = getDecompilerOptions(displayLambdas, jar.metadata.remapped);
+            const options = getDecompilerOptions(displayLambdas);
             return from(worker.setOptions(options)).pipe(
                 switchMap(() => from(decompileClass(className, jar.jar)))
             );
