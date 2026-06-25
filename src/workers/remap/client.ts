@@ -29,38 +29,67 @@ export async function remapMinecraftJar(
         const classMapStartTime = performance.now();
         const obfToDeobf = await workers[0].c.getObfToDeobf(mappingsBlob);
         const classMapLoadMs = performance.now() - classMapStartTime;
-        const jobs = createRemapJobs(Object.keys(jar.entries), obfToDeobf);
+        const classPaths = Object.keys(jar.entries).filter(isClassFilePath);
+        const jobs = createRemapJobs(classPaths, obfToDeobf);
 
         if (jobs.length === 0) {
             return writeZip([]);
         }
 
-        let completed = 0;
         onProgress?.(0);
 
-        const logger = onProgress ? Comlink.proxy((count: number) => {
-            completed += count;
-            onProgress(Math.round((completed / jobs.length) * 100));
+        let indexed = 0;
+        const indexLogger = onProgress ? Comlink.proxy((count: number) => {
+            indexed += count;
+            onProgress(Math.round((indexed / classPaths.length) * 50));
         }) : undefined;
 
-        const stateBuffer = new SharedArrayBuffer(Uint32Array.BYTES_PER_ELEMENT);
-        const state = new Uint32Array(stateBuffer);
+        let stateBuffer = new SharedArrayBuffer(Uint32Array.BYTES_PER_ELEMENT);
+        let state = new Uint32Array(stateBuffer);
         state[0] = 0;
 
-        const workerResults = await Promise.all(workers.map(worker =>
-            worker.c.remapClasses(version, jarBlob, mappingsBlob, jobs, stateBuffer, batchSize, logger)
+        const remapIndexStartTime = performance.now();
+        const remapIndexResults = await Promise.all(workers.map(worker =>
+            worker.c.buildRemapIndex(version, jarBlob, classPaths, stateBuffer, batchSize, indexLogger)
         ));
+        const remapIndex = mergeRemapIndexes(remapIndexResults);
+        clearRemapIndexes(remapIndexResults);
+        const remapIndexMs = performance.now() - remapIndexStartTime;
+
+        onProgress?.(50);
+
+        let remapped = 0;
+        const remapLogger = onProgress ? Comlink.proxy((count: number) => {
+            remapped += count;
+            onProgress(50 + Math.round((remapped / jobs.length) * 50));
+        }) : undefined;
+
+        stateBuffer = new SharedArrayBuffer(Uint32Array.BYTES_PER_ELEMENT);
+        state = new Uint32Array(stateBuffer);
+        state[0] = 0;
+
+        let workerResults;
+
+        try {
+            workerResults = await Promise.all(workers.map(worker =>
+                worker.c.remapClasses(version, jarBlob, mappingsBlob, remapIndex, jobs, stateBuffer, batchSize, remapLogger)
+            ));
+        } finally {
+            remapIndex.classData.length = 0;
+            remapIndex.memberData.length = 0;
+        }
 
         const timings = mergeStats(workerResults.map(result => result.stats));
         const results = workerResults.flatMap(result => result.entries).sort((a, b) => a.name.localeCompare(b.name));
         const zipStartTime = performance.now();
         const blob = writeZip(results);
         const zipMs = performance.now() - zipStartTime;
-        const duration = ((performance.now() - startTime) / 1000).toFixed(2);
-        console.log(`Remapped ${results.length} classes for ${version} in ${duration} seconds`);
+        const totalMs = performance.now() - startTime;
+        const remapMs = timings.loadMappingsMs + timings.openJarMs + timings.readMs + timings.remapMs + timings.crcMs + timings.compressMs;
+        console.log(`Remapped ${results.length} classes for ${version}: indexing=${formatMs(remapIndexMs)} remapping=${formatMs(remapMs)} total=${formatMs(totalMs)}`);
         console.log(
             `[remap:${version}] workers=${threads} classes=${timings.classes} ` +
-            `classMapLoad=${formatMs(classMapLoadMs)} loadMappings=${formatMs(timings.loadMappingsMs)} openJar=${formatMs(timings.openJarMs)} ` +
+            `classMapLoad=${formatMs(classMapLoadMs)} remapIndex=${formatMs(remapIndexMs)} loadMappings=${formatMs(timings.loadMappingsMs)} openJar=${formatMs(timings.openJarMs)} ` +
             `read=${formatMs(timings.readMs)} remap=${formatMs(timings.remapMs)} crc=${formatMs(timings.crcMs)} ` +
             `compress=${formatMs(timings.compressMs)} zip=${formatMs(zipMs)} ` +
             `stored=${timings.storedClasses} deflated=${timings.compressedClasses} ` +
@@ -107,6 +136,20 @@ function createRemapJobs(paths: string[], obfToDeobf: Map<string, string>): Rema
     }
 
     return jobs;
+}
+
+function mergeRemapIndexes(indexes: { classData: string[], memberData: string[] }[]): { classData: string[], memberData: string[] } {
+    return {
+        classData: indexes.flatMap(index => index.classData),
+        memberData: indexes.flatMap(index => index.memberData),
+    };
+}
+
+function clearRemapIndexes(indexes: { classData: string[], memberData: string[] }[]): void {
+    for (const index of indexes) {
+        index.classData.length = 0;
+        index.memberData.length = 0;
+    }
 }
 
 function mergeStats(stats: RemapWorkerStats[]): RemapWorkerStats {

@@ -30,6 +30,11 @@ export interface RemapWorkerStats {
     outputBytes: number;
 }
 
+export interface RemapIndex {
+    classData: string[];
+    memberData: string[];
+}
+
 export interface RemapWorkerBatchResult {
     entries: RemapWorkerResult[];
     stats: RemapWorkerStats;
@@ -63,10 +68,63 @@ export class RemapWorker {
         this.#remapper = null;
     }
 
+    async buildRemapIndex(
+        jarName: string,
+        jarBlob: Blob,
+        sourcePaths: ClassFilePath[],
+        stateBuffer: SharedArrayBuffer,
+        batchSize: number,
+        logger?: (count: number) => Promise<void> | void,
+    ): Promise<RemapIndex> {
+        const remapper = await this.getRemapper();
+        const jar = await openJar(jarName, jarBlob);
+        const state = new Uint32Array(stateBuffer);
+        const logPromises: Promise<void>[] = [];
+
+        remapper.clearIndex();
+
+        while (true) {
+            const start = Atomics.add(state, 0, batchSize);
+            if (start >= sourcePaths.length) break;
+
+            let completed = 0;
+            const end = Math.min(start + batchSize, sourcePaths.length);
+
+            for (let i = start; i < end; i++) {
+                const sourcePath = sourcePaths[i];
+                const entry = jar.entries[sourcePath];
+
+                if (!entry) {
+                    console.warn(`Class entry not found during remap index: ${sourcePath}`);
+                    completed++;
+                    continue;
+                }
+
+                remapper.indexRemapData(toArrayBuffer(await entry.bytes()));
+                completed++;
+            }
+
+            if (logger && completed > 0) {
+                logPromises.push(Promise.resolve(logger(completed)));
+            }
+        }
+
+        await Promise.all(logPromises);
+
+        const index = {
+            classData: remapper.getClassData(),
+            memberData: remapper.getMemberData(),
+        };
+
+        remapper.clearIndex();
+        return index;
+    }
+
     async remapClasses(
         jarName: string,
         jarBlob: Blob,
         mappingsBlob: Blob,
+        remapIndex: RemapIndex,
         jobs: RemapClassJob[],
         stateBuffer: SharedArrayBuffer,
         batchSize: number,
@@ -90,6 +148,7 @@ export class RemapWorker {
         try {
             let time = performance.now();
             remapper.loadMappings(await mappingsBlob.arrayBuffer());
+            remapper.loadRemapIndex(remapIndex.classData, remapIndex.memberData);
             stats.loadMappingsMs = performance.now() - time;
 
             time = performance.now();
@@ -194,10 +253,16 @@ function toArrayBuffer(bytes: Uint8Array): ArrayBuffer {
 }
 
 interface Remapper {
+    index(data: ArrayBufferLike): void;
+    indexRemapData(data: ArrayBufferLike): void;
     loadMappings(data: ArrayBufferLike): void;
+    clearIndex(): void;
     clearRemapperState(): void;
     remapEntry(classData: ArrayBufferLike): Int8Array;
     getObfToDeobf(): Map<string, string>;
+    getClassData(): string[];
+    getMemberData(): string[];
+    loadRemapIndex(classData: string[], memberData: string[]): void;
 }
 
 Comlink.expose(new RemapWorker());
