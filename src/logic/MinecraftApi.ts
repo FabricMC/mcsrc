@@ -73,7 +73,7 @@ export const minecraftVersionIds = minecraftVersions.pipe(
 export const downloadProgress = new BehaviorSubject<number | undefined>(undefined);
 export const remapProgress = new BehaviorSubject<number | undefined>(undefined);
 
-export const REMAPPED_JAR_CACHE_VERSION = 6;
+export const REMAPPED_JAR_CACHE_VERSION = 7;
 
 export const minecraftJar = minecraftJarPipeline(selectedMinecraftVersion);
 export function minecraftJarPipeline(source$: Observable<string | null>): Observable<MinecraftJar> {
