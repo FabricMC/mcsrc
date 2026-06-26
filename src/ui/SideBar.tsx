@@ -8,7 +8,7 @@ import { isSearching } from "../logic/JarFile";
 import SearchResults from "./SearchResults";
 import ReferenceResults from "./ReferenceResults";
 import { formatReferenceQuery, isViewingReferences } from "../logic/FindAllReferences";
-import { ArrowLeftOutlined, DownOutlined } from "@ant-design/icons";
+import { ArrowLeftOutlined, CaretDownOutlined, SearchOutlined } from "@ant-design/icons";
 import { focusSearchEvent } from "../logic/Keybinds";
 import { useEffect, useRef } from "react";
 import { searchQuery, referencesQuery, searchType, type SearchType } from "../logic/State";
@@ -84,10 +84,10 @@ const SideBar = () => {
                             <Button
                                 type="text"
                                 size="small"
-                                icon={<DownOutlined />}
+                                icon={<><SearchOutlined /><CaretDownOutlined style={{ fontSize: "10px", verticalAlign: "0.1em", marginLeft: "-2px" }} /></>}
                                 aria-label="Search type"
                                 title={`Search type: ${currentSearchType}`}
-                                style={{ width: 22 }}
+                                style={{ width: 38 }}
                             />
                         </Dropdown>
                     }
