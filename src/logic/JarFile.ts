@@ -1,4 +1,4 @@
-import { combineLatest, distinctUntilChanged, map, Observable, switchMap, throttleTime } from 'rxjs';
+import { combineLatest, debounceTime, distinctUntilChanged, map, Observable, switchMap } from 'rxjs';
 import { minecraftJar } from './MinecraftApi';
 import { performSearch } from './Search';
 import { searchQuery, searchType } from './State';
@@ -17,7 +17,7 @@ export const classesList = fileList.pipe(
 );
 
 const debouncedSearchQuery: Observable<string> = searchQuery.pipe(
-    throttleTime(200),
+    debounceTime(200),
     distinctUntilChanged()
 );
 
