@@ -66,6 +66,7 @@ const SideBar = () => {
             ) : (
                 <Input
                     ref={searchRef}
+                    className="class-search-input"
                     type="search"
                     placeholder={`Search ${currentSearchType}`}
                     allowClear
@@ -86,7 +87,7 @@ const SideBar = () => {
                                 icon={<DownOutlined />}
                                 aria-label="Search type"
                                 title={`Search type: ${currentSearchType}`}
-                                style={{ width: 28 }}
+                                style={{ width: 22 }}
                             />
                         </Dropdown>
                     }
