@@ -11,7 +11,13 @@ vi.mock('./State', () => ({
     selectedMinecraftVersion: { subscribe: vi.fn() },
     selectedFile: { subscribe: vi.fn() },
     selectedLines: { subscribe: vi.fn() },
+    diffLeftSelectedMinecraftVersion: { subscribe: vi.fn() },
     diffView: { subscribe: vi.fn() }
+}));
+
+vi.mock('./MinecraftApi', () => ({
+    hasOfficialMappings: vi.fn(),
+    minecraftVersions: { subscribe: vi.fn() }
 }));
 
 // Import the actual parsing function

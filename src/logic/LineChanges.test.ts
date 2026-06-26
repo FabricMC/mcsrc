@@ -58,6 +58,12 @@ describe('LineChanges', () => {
             const newText = 'start\nmiddle-new\nend';
             expect(countLineDiff(oldText, newText)).toEqual({ additions: 1, deletions: 1 });
         });
+
+        it('should count reordered lines as additions and deletions', () => {
+            const oldText = 'start\nfirst\nsecond\nend';
+            const newText = 'start\nsecond\nfirst\nend';
+            expect(countLineDiff(oldText, newText)).toEqual({ additions: 1, deletions: 1 });
+        });
     });
 
     describe('updateLineChanges', () => {

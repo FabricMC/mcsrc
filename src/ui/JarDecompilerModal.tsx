@@ -3,8 +3,9 @@ import { JavaOutlined } from '@ant-design/icons';
 import { BehaviorSubject } from "rxjs";
 import { useObservable } from "../utils/UseObservable";
 import { BooleanOption, NumberOption } from "./SettingsModal";
-import { decompilerSplits, decompilerThreads, MAX_THREADS, preferWasmDecompiler } from "../logic/Settings";
-import { decompileEntireJar, deleteCache, type DecompileEntireJarTask } from "../workers/decompile/client";
+import { decompilerSplits, decompilerThreads, displayLambdas, MAX_THREADS, preferWasmDecompiler } from "../logic/Settings";
+import { getDecompilerOptions } from "../logic/Decompiler";
+import { decompileEntireJar, deleteCache, setOptions, type DecompileEntireJarTask } from "../workers/decompile/client";
 import { minecraftJar } from "../logic/MinecraftApi";
 
 const modalOpen = new BehaviorSubject(false);
@@ -22,9 +23,11 @@ export const JarDecompilerModal = () => {
     const [messageApi, messageCtx] = message.useMessage();
     const [modalApi, modalCtx] = Modal.useModal();
 
-    const onOk = () => {
+    const onOk = async () => {
         modalOpen.next(false);
         if (!jar) return;
+
+        await setOptions(getDecompilerOptions(displayLambdas.value));
 
         const task = decompileEntireJar(jar.jar, {
             threads: decompilerThreads.value,

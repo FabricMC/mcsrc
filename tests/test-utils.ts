@@ -16,7 +16,7 @@ export async function waitForDecompiledContent(page: Page, expectedText: string)
 }
 
 export async function selectMinecraftVersion(page: Page, version: string, selectorIndex = 0) {
-    const selector = page.getByRole('button', { name: /26\.1-mock-/ }).nth(selectorIndex);
+    const selector = page.locator('button:has(.anticon-down)').nth(selectorIndex);
     await selector.click();
 
     const listbox = page.getByRole('listbox', { name: 'Minecraft versions' });
@@ -44,6 +44,12 @@ async function setupNetworkMocking(page: Page) {
                 type: "snapshot",
                 url: "http://localhost:4173/test-data/dummy1-manifest.json",
                 releaseTime: "2026-01-13T12:47:34+00:00"
+            },
+            {
+                id: "19w36a",
+                type: "snapshot",
+                url: "http://localhost:4173/test-data/dummy4-manifest.json",
+                releaseTime: "2019-09-04T12:00:00+00:00"
             }
         ]
     };
@@ -82,6 +88,44 @@ async function setupNetworkMocking(page: Page) {
             });
         });
     }
+
+    await page.route('http://localhost:4173/test-data/dummy4-manifest.json', async (route) => {
+        await route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({
+                id: '19w36a',
+                downloads: {
+                    client: {
+                        sha1: 'dummy4-client',
+                        url: 'http://localhost:4173/test-data/dummy4.jar'
+                    },
+                    client_mappings: {
+                        sha1: 'dummy4-mappings',
+                        url: 'http://localhost:4173/test-data/dummy4.txt'
+                    }
+                }
+            })
+        });
+    });
+
+    await page.route('http://localhost:4173/test-data/dummy4.jar', async (route) => {
+        const jarPath = path.join(__dirname, '../java/build/libs/dummy4.jar');
+        const jarBuffer = fs.readFileSync(jarPath);
+        await route.fulfill({
+            status: 200,
+            contentType: 'application/java-archive',
+            body: jarBuffer
+        });
+    });
+
+    await page.route('http://localhost:4173/test-data/dummy4.txt', async (route) => {
+        await route.fulfill({
+            status: 200,
+            contentType: 'text/plain',
+            body: 'net.minecraft.ChatFormatting -> a.b:\n'
+        });
+    });
 }
 
 export async function setupTest(page: Page) {
