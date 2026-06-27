@@ -1,4 +1,4 @@
-import { BehaviorSubject, combineLatest, distinct, distinctUntilChanged, map, Observable, switchMap, throttleTime } from 'rxjs';
+import { BehaviorSubject, asyncScheduler, combineLatest, distinct, distinctUntilChanged, map, Observable, switchMap, throttleTime } from 'rxjs';
 import { minecraftJar } from './MinecraftApi';
 import { performSearch } from './Search';
 import { searchQuery } from './State';
@@ -15,7 +15,7 @@ export const classesList = fileList.pipe(
 );
 
 const debouncedSearchQuery: Observable<string> = searchQuery.pipe(
-    throttleTime(200),
+    throttleTime(200, asyncScheduler, { trailing: true }),
     distinctUntilChanged()
 );
 
