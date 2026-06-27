@@ -2,7 +2,7 @@ import { combineLatest } from "rxjs";
 import { resetPermalinkAffectingSettings, supportsPermalinking } from "./Settings";
 import { diffLeftSelectedMinecraftVersion, diffView, selectedFile, selectedLines, selectedMinecraftVersion } from "./State";
 import { toClassFilePath, withoutClassExtension, type ClassFilePath } from "../utils/Names";
-import { hasOfficialMappings, minecraftVersions } from "./MinecraftApi";
+import { isUnobfuscated, minecraftVersions } from "./MinecraftApi";
 
 export interface State {
     version: number; // Allows us to change the permalink structure in the future
@@ -141,7 +141,7 @@ if (typeof window !== "undefined") {
             }
 
             const versionEntry = minecraftVersions.find(v => v.id === minecraftVersion);
-            if (versionEntry && hasOfficialMappings(versionEntry)) {
+            if (versionEntry && !isUnobfuscated(versionEntry)) {
                 supported = false;
             }
 
