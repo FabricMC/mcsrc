@@ -105,13 +105,7 @@ async function getJson<T>(url: string): Promise<T> {
 
 async function fetchVersions(): Promise<VersionsList> {
     const mojang = await getJson<VersionsList>(VERSIONS_URL);
-    const filteredMojangVersions = mojang.versions.filter(v => {
-        // Any version released after 2026 is deobfuscated
-        if (new Date(v.releaseTime).getFullYear() >= 2026) return true;
-        if (v.id === 'c0.0.13a' || v.id === 'c0.0.11a') return true;
-        if (v.id.startsWith('rd-')) return true;
-        return hasOfficialMappings(v);
-    });
+    const filteredMojangVersions = mojang.filter(isSupported);
     const versions = filteredMojangVersions
         .concat(EXPERIMENTAL_VERSIONS.versions)
         .sort((a, b) => b.releaseTime.localeCompare(a.releaseTime));
@@ -120,28 +114,20 @@ async function fetchVersions(): Promise<VersionsList> {
     };
 }
 
-const RELEASE_PATTERN = /^1\.\d+(\.\d+)?$/;
-const SNAPSHOT_PATTERN = /^\d{2}w\d{2}[a-z]$/;
+export function isUnobfuscated(version: VersionListEntry): boolean {
+        // Any version released after 2025-12-16 is unobfuscated (starting from 26.1-snapshot-1)
+        if (new Date(version.releaseTime) >= new Date(2025, 11, 16)) return true;
+        if (version.id === 'c0.0.13a' || version.id === 'c0.0.11a') return true;
+        if (version.id.startsWith('rd-')) return true;
+        return false;
+}
 
-export function hasOfficialMappings(version: VersionListEntry): boolean {
-    if (version.type === "release" && RELEASE_PATTERN.test(version.id)) {
-        const match = version.id.match(/^1\.(\d+)(?:\.(\d+))?$/);
-        if (!match) return false;
-
-        const minor = parseInt(match[1], 10);
-        const patch = match[2] ? parseInt(match[2], 10) : 0;
-        return minor > 14 || (minor === 14 && patch >= 4);
-    }
-
-    if (version.type === "snapshot" && SNAPSHOT_PATTERN.test(version.id)) {
-        const match = version.id.match(/^(\d{2})w(\d{2})[a-z]$/);
-        if (!match) return false;
-
-        const year = parseInt(match[1], 10) + 2000;
-        const week = parseInt(match[2], 10);
-        return year > 2019 || (year === 2019 && week >= 36);
-    }
-
+function isSupported(version: VersionListEntry): boolean {
+    if(isUnobfuscated(version)) return true;
+    // Versions starting from 19w36a (released on 2019-09-04) have official mappings available
+    if (new Date(version.releaseTime) >= new Date(2019, 8, 4)) return true;
+    // Official mappings were backported to 1.14.4
+    if (version.id === "1.14.4") return true;
     return false;
 }
 
