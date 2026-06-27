@@ -112,17 +112,19 @@ async function fetchVersions(): Promise<VersionListEntry[]> {
 }
 
 export function isUnobfuscated(version: VersionListEntry): boolean {
-        // Any version released after 2025-12-16 is unobfuscated (starting from 26.1-snapshot-1)
-        if (new Date(version.releaseTime) >= new Date(2025, 11, 16)) return true;
-        if (version.id === 'c0.0.13a' || version.id === 'c0.0.11a') return true;
-        if (version.id.startsWith('rd-')) return true;
-        return false;
+    // Not present in the official manifest, but used by entries in EXPERIMENTAL_VERSIONS
+    if (version.type === 'unobfuscated') return true;
+    // Any version released after 2025-12-16 is unobfuscated (starting from 26.1-snapshot-1)
+    if (new Date(version.releaseTime) >= new Date("2025-12-16")) return true;
+    if (version.id === 'c0.0.13a' || version.id === 'c0.0.11a') return true;
+    if (version.id.startsWith('rd-')) return true;
+    return false;
 }
 
 function isSupported(version: VersionListEntry): boolean {
     if(isUnobfuscated(version)) return true;
     // Versions starting from 19w36a (released on 2019-09-04) have official mappings available
-    if (new Date(version.releaseTime) >= new Date(2019, 8, 4)) return true;
+    if (new Date(version.releaseTime) >= new Date("2019-09-04")) return true;
     // Official mappings were backported to 1.14.4
     if (version.id === "1.14.4") return true;
     return false;
