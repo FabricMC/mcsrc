@@ -46,8 +46,10 @@ function VersionSelector({
             .filter(v => v.id.toLowerCase().includes(normalizedQuery)) ?? [];
 
         return [...visibleVersions].sort((a, b) => {
+            const exactMatch = Number(b.id === normalizedQuery) - Number(a.id === normalizedQuery);
             const favoriteSort = Number(favoriteSet.has(b.id)) - Number(favoriteSet.has(a.id));
-            return favoriteSort || versions!.indexOf(a) - versions!.indexOf(b);
+            const versionOrder = versions!.indexOf(a) - versions!.indexOf(a);
+            return exactMatch || favoriteSort || versionOrder;
         });
     }, [favoriteSet, query, showSnapshots, versions]);
     const dividerIndex = filteredVersions.findIndex(version => !favoriteSet.has(version.id));
@@ -77,6 +79,7 @@ function VersionSelector({
                     prefix={<SearchOutlined />}
                     value={query}
                     ref={inputRef}
+                    onPressEnter={() => { if (filteredVersions[0].id == query) selectVersion(query); }}
                     onChange={event => setQuery(event.target.value)}
                 />
                 <Tooltip title={showSnapshots ? "Hide snapshots" : "Show snapshots"}>
