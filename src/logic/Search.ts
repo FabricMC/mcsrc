@@ -8,7 +8,7 @@ export function matchesCamelCase(className: string, query: string): boolean {
 }
 
 // Vibe coded mess that no one other than copilot or should read or touch :D
-export function performSearch<T extends string>(query: string, classes: T[]): T[] {
+export function performSearch<T extends string>(query: string, classes: T[], getSearchText: (item: T) => string = item => item): T[] {
     if (query.length === 0) {
         return [];
     }
@@ -17,13 +17,15 @@ export function performSearch<T extends string>(query: string, classes: T[]): T[
 
     const results = classes
         .filter(className => {
-            const simpleClassName = className.split('/').pop() || className;
+            const searchText = getSearchText(className);
+            const simpleClassName = searchText.split('/').pop() || searchText;
             const lowerSimpleName = simpleClassName.toLowerCase();
 
             return lowerSimpleName.includes(lowerQuery) || matchesCamelCase(simpleClassName, query);
         })
         .map(className => {
-            const simpleClassName = className.split('/').pop() || className;
+            const searchText = getSearchText(className);
+            const simpleClassName = searchText.split('/').pop() || searchText;
             const lowerSimpleName = simpleClassName.toLowerCase();
 
             let score = 0;
@@ -51,8 +53,10 @@ export function performSearch<T extends string>(query: string, classes: T[]): T[
                 return a.score - b.score;
             }
 
-            const aSimple = a.className.split('/').pop() || a.className;
-            const bSimple = b.className.split('/').pop() || b.className;
+            const aText = getSearchText(a.className);
+            const bText = getSearchText(b.className);
+            const aSimple = aText.split('/').pop() || aText;
+            const bSimple = bText.split('/').pop() || bText;
             if (aSimple.length !== bSimple.length) {
                 return aSimple.length - bSimple.length;
             }
