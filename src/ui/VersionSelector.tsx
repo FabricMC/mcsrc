@@ -1,7 +1,7 @@
 import { Button, Divider, Empty, Flex, Input, Popover, Tooltip } from "antd";
-import type { ButtonProps } from "antd";
+import type { ButtonProps, InputRef } from "antd";
 import { DownOutlined, EyeInvisibleOutlined, EyeOutlined, SearchOutlined, StarFilled, StarOutlined } from "@ant-design/icons";
-import { Fragment, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import type { BehaviorSubject } from "rxjs";
 import { minecraftVersions } from "../logic/MinecraftApi";
 import { selectedMinecraftVersion } from "../logic/State";
@@ -27,6 +27,16 @@ function VersionSelector({
     const showSnapshots = useObservable(showSnapshotVersions.observable) ?? true;
     const [open, setOpen] = useState(false);
     const [query, setQuery] = useState("");
+    const inputRef = useRef<InputRef>(null);
+
+    useEffect(() => {
+        if (open) {
+            // the setTimeout is required
+            setTimeout(() => {
+                inputRef.current?.focus();
+            }, 0);
+        }
+    }, [open]);
 
     const favoriteSet = useMemo(() => new Set(favoriteVersions), [favoriteVersions]);
     const filteredVersions = useMemo(() => {
@@ -36,8 +46,10 @@ function VersionSelector({
             .filter(v => v.id.toLowerCase().includes(normalizedQuery)) ?? [];
 
         return [...visibleVersions].sort((a, b) => {
+            const exactMatch = Number(b.id === normalizedQuery) - Number(a.id === normalizedQuery);
             const favoriteSort = Number(favoriteSet.has(b.id)) - Number(favoriteSet.has(a.id));
-            return favoriteSort || versions!.indexOf(a) - versions!.indexOf(b);
+            const versionOrder = versions!.indexOf(a) - versions!.indexOf(a);
+            return exactMatch || favoriteSort || versionOrder;
         });
     }, [favoriteSet, query, showSnapshots, versions]);
     const dividerIndex = filteredVersions.findIndex(version => !favoriteSet.has(version.id));
@@ -66,6 +78,8 @@ function VersionSelector({
                     placeholder="Search versions"
                     prefix={<SearchOutlined />}
                     value={query}
+                    ref={inputRef}
+                    onPressEnter={() => { if (filteredVersions[0].id == query) selectVersion(query); }}
                     onChange={event => setQuery(event.target.value)}
                 />
                 <Tooltip title={showSnapshots ? "Hide snapshots" : "Show snapshots"}>
