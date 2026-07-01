@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { setupTest, selectMinecraftVersion } from './test-utils';
+import { setupTest, selectMinecraftVersion, waitForBlockingModalToClose } from './test-utils';
 
 test.describe('Diff View', () => {
     test.beforeEach(async ({ page }) => {
@@ -8,7 +8,7 @@ test.describe('Diff View', () => {
 
     test('Opens diff view and selects LevelRenderer', async ({ page }) => {
         await page.goto('/');
-        await expect(page.locator('.ant-modal-wrap')).toBeHidden();
+        await waitForBlockingModalToClose(page);
 
         await page.getByRole('button', { name: 'Compare' }).click();
 

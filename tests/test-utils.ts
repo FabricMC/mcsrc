@@ -24,6 +24,11 @@ export async function selectMinecraftVersion(page: Page, version: string, select
     await listbox.getByRole('option').filter({ hasText: version }).click();
 }
 
+export async function waitForBlockingModalToClose(page: Page) {
+    const aboutModal = page.locator('.ant-modal-wrap').filter({ hasText: 'About mcsrc.dev' });
+    await expect(aboutModal).toBeHidden();
+}
+
 async function setupNetworkMocking(page: Page) {
     const testVersions = {
         versions: [
@@ -138,6 +143,8 @@ export async function setupTest(page: Page) {
         } else {
             await page.keyboard.press('Escape');
         }
+
+        await waitForBlockingModalToClose(page);
     });
     await page.addInitScript(() => {
         localStorage.setItem('setting_eula', 'true');
