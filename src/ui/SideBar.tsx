@@ -7,18 +7,17 @@ import { isSearching } from "../logic/JarFile";
 import SearchResults from "./SearchResults";
 import ReferenceResults from "./ReferenceResults";
 import { formatReferenceQuery, isViewingReferences } from "../logic/FindAllReferences";
-import { ArrowLeftOutlined } from "@ant-design/icons";
+import { ArrowLeftOutlined, SearchOutlined } from "@ant-design/icons";
 import { focusSearchEvent } from "../logic/Keybinds";
 import { useEffect, useRef } from "react";
 import { searchQuery, referencesQuery } from "../logic/State";
-
-const { Search } = Input;
 
 const SideBar = () => {
     const showReference = useObservable(isViewingReferences);
     const currentReferenceQuery = useObservable(referencesQuery);
     const focusSearch = useObservable(focusSearchEvent);
     const searchRef = useRef<InputRef>(null);
+    const searchQueryValue = useObservable(searchQuery);
 
     useEffect(() => {
         if (focusSearch) {
@@ -54,7 +53,8 @@ const SideBar = () => {
                     </div>
                 </>
             ) : (
-                <Search ref={searchRef} placeholder="Search classes" allowClear onChange={onChange}></Search>
+                <Input ref={searchRef} placeholder="Search classes" allowClear
+                    onChange={onChange} suffix={!searchQueryValue.length ? <SearchOutlined /> : null} />
             )}
             <Divider size="small" />
             <div style={{ flexGrow: 1, overflowY: "auto" }}>
