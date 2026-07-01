@@ -6,6 +6,7 @@ import { dottedClassNameFromClassName, type ClassFilePath, type ClassName } from
 import type { ReferenceKey } from "../workers/jar-index/types";
 
 export const IS_DEFINITION_CONTEXT_KEY_NAME = "is_definition";
+export const IS_MC_DEFINITION_CONTEXT_KEY_NAME = "is_mc_definition";
 
 async function setClipboard(text: string): Promise<void> {
     await navigator.clipboard.writeText(text);
@@ -20,7 +21,7 @@ export function createCopyAwAction(
         id: 'copy_aw',
         label: 'Copy Class Tweaker / Access Widener',
         contextMenuGroupId: '9_cutcopypaste',
-        precondition: IS_DEFINITION_CONTEXT_KEY_NAME,
+        precondition: IS_MC_DEFINITION_CONTEXT_KEY_NAME,
         run: async function (editor: editor.ICodeEditor, ...args: any[]): Promise<void> {
             const token = findTokenAtPosition(editor, decompileResultRef.current, classListRef.current);
             if (!token) {
@@ -57,7 +58,7 @@ export function createCopyAtAction(
         id: 'copy_at',
         label: 'Copy Access Transformer',
         contextMenuGroupId: '9_cutcopypaste',
-        precondition: IS_DEFINITION_CONTEXT_KEY_NAME,
+        precondition: IS_MC_DEFINITION_CONTEXT_KEY_NAME,
         run: async function (editor: editor.ICodeEditor, ...args: any[]): Promise<void> {
             const token = findTokenAtPosition(editor, decompileResultRef.current, classListRef.current);
             if (!token) {
@@ -96,7 +97,7 @@ export function createCopyMixinAction(
         contextMenuGroupId: '9_cutcopypaste',
         precondition: IS_DEFINITION_CONTEXT_KEY_NAME,
         run: async function (editor: editor.ICodeEditor, ...args: any[]): Promise<void> {
-            const token = findTokenAtPosition(editor, decompileResultRef.current, classListRef.current);
+            const token = findTokenAtPosition(editor, decompileResultRef.current, classListRef.current, false);
             if (!token) {
                 messageApi.error("Failed to find token for Mixin target.");
                 return;
@@ -135,7 +136,7 @@ export function createFindAllReferencesAction(
         contextMenuOrder: 1,
         precondition: IS_DEFINITION_CONTEXT_KEY_NAME,
         run: async function (editor: editor.ICodeEditor, ...args: any[]): Promise<void> {
-            const token = findTokenAtPosition(editor, decompileResultRef.current, classListRef.current);
+            const token = findTokenAtPosition(editor, decompileResultRef.current, classListRef.current, false);
             if (!token) {
                 messageApi.error("Failed to find token for references.");
                 return;

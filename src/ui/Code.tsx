@@ -15,9 +15,10 @@ import { IS_JAVADOC_EDITOR } from '../site';
 import { applyJavadocCodeExtensions } from '../javadoc/JavadocCodeExtensions';
 import { selectedInheritanceClassName } from '../logic/Inheritance';
 import { createHoverProvider } from './CodeHoverProvider';
-import { findTokenAtPosition } from './CodeUtils';
+import { isDefinitionAtPosition } from './CodeUtils';
 import {
     IS_DEFINITION_CONTEXT_KEY_NAME,
+    IS_MC_DEFINITION_CONTEXT_KEY_NAME,
     createCopyAwAction,
     createCopyAtAction,
     createCopyMixinAction,
@@ -375,10 +376,11 @@ const Code = () => {
                     // Update context key when cursor position changes
                     // We use this to know when to show the options to copy AW/Mixin strings
                     const isDefinitionContextKey = codeEditor.createContextKey<boolean>(IS_DEFINITION_CONTEXT_KEY_NAME, false);
+                    const isMcDefinitionContextKey = codeEditor.createContextKey<boolean>(IS_MC_DEFINITION_CONTEXT_KEY_NAME, false);
                     codeEditor.onDidChangeCursorPosition((e) => {
-                        const token = findTokenAtPosition(codeEditor, decompileResultRef.current, classListRef.current);
-                        const validToken = token != null && (token.type == "class" || token.type == "method" || token.type == "field");
-                        isDefinitionContextKey.set(validToken);
+                        const definition = isDefinitionAtPosition(codeEditor, decompileResultRef.current, classListRef.current);
+                        isDefinitionContextKey.set(definition != null);
+                        isMcDefinitionContextKey.set(definition == "minecraft");
                     });
                 }} />
         </Spin>
