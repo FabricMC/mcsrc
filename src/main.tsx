@@ -3,6 +3,8 @@ import { createRoot } from 'react-dom/client';
 import * as monaco from 'monaco-editor';
 import { loader } from '@monaco-editor/react';
 import App from './ui/App.tsx';
+import "monaco-editor/esm/vs/basic-languages/java/java.contribution.js";
+import "monaco-editor/esm/vs/basic-languages/markdown/markdown.contribution.js";
 
 import "./index.css";
 import MonacoWorker from "monaco-editor/esm/vs/editor/editor.worker.js?worker";
