@@ -378,9 +378,9 @@ const Code = () => {
                     const isDefinitionContextKey = codeEditor.createContextKey<boolean>(IS_DEFINITION_CONTEXT_KEY_NAME, false);
                     const isMcDefinitionContextKey = codeEditor.createContextKey<boolean>(IS_MC_DEFINITION_CONTEXT_KEY_NAME, false);
                     codeEditor.onDidChangeCursorPosition((e) => {
-                        const { normal, minecraft } = isDefinitionAtPosition(codeEditor, decompileResultRef.current, classListRef.current);
-                        isDefinitionContextKey.set(normal);
-                        isMcDefinitionContextKey.set(minecraft);
+                        const definition = isDefinitionAtPosition(codeEditor, decompileResultRef.current, classListRef.current);
+                        isDefinitionContextKey.set(definition != null);
+                        isMcDefinitionContextKey.set(definition == "minecraft");
                     });
                 }} />
         </Spin>

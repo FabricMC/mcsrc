@@ -2,6 +2,8 @@ import { editor } from "monaco-editor";
 import { type Token } from '../logic/Tokens';
 import { toClassFilePath, type ClassFilePath } from "../utils/Names";
 
+export type DefinitionType = "generic" | "minecraft";
+
 function getTargetOffset(editor: editor.ICodeEditor): number | null {
     const model = editor.getModel();
     if (!model) {
@@ -57,10 +59,10 @@ export function isDefinitionAtPosition(
     editor: editor.ICodeEditor,
     decompileResult: { tokens: Token[]; },
     classList: ClassFilePath[]
-): { normal: boolean, minecraft: boolean } {
+): DefinitionType | null {
     const targetOffset = getTargetOffset(editor);
     if (!targetOffset) {
-        return { normal: false, minecraft: false };
+        return null;
     }
 
     let found: boolean = false;
@@ -75,11 +77,11 @@ export function isDefinitionAtPosition(
             found = true;
             const className = toClassFilePath(token.className.split('$')[0]);
             if (classList.includes(className)) {
-                return { normal: true, minecraft: true };
+                return "minecraft";
             }
         }
     }
 
-    return { normal: found, minecraft: false };
+    return found ? "generic" : null;
 }
 
