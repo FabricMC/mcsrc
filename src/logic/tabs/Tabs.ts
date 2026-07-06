@@ -51,10 +51,11 @@ export abstract class Tab {
     protected onBlur() { };
 
     protected pushToTabHistory() {
-        if (tabHistory.value.length < 50) {
-            // Limit history to 50
-            tabHistory.next([...tabHistory.value, this.key]);
-        }
+        // Limit history to 50, forgetting older entries
+        const entriesToForget = tabHistory.value.length < 50 ? 0 : 1;
+        const newHistory = tabHistory.value.slice(entriesToForget);
+        newHistory.push(this.key);
+        tabHistory.next(newHistory);
     }
 
     protected removeFromTabHistory() {
