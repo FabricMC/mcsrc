@@ -83,7 +83,7 @@ const DiffCode = () => {
             modifiedEditorCopyLink.dispose();
             originalEditorCopyLink.dispose();
         };
-    }, [originalEditor, modifiedEditor]);
+    }, [originalEditor, modifiedEditor, messageApi]);
 
     useEffect(() => {
         if (loading) return;
