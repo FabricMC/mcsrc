@@ -25,6 +25,9 @@ const DiffCode = () => {
     const rightResult = useObservable(getRightDiff().result);
     const editorRef = useRef<editor.IStandaloneDiffEditor | null>(null);
     const [diffEditor, setDiffEditor] = useState<editor.IStandaloneDiffEditor | null>(null);
+    const [originalEditor, setOriginalEditor] = useState<editor.IStandaloneCodeEditor | null>(null);
+    const [modifiedEditor, setModifiedEditor] = useState<editor.IStandaloneCodeEditor | null>(null);
+    const [editorsReady, setEditorsReady] = useState(false);
     const loading = useObservable(isDecompiling);
     const currentPath = useObservable(selectedFile);
     const isUnified = useObservable(unifiedDiff.observable);
@@ -42,8 +45,25 @@ const DiffCode = () => {
 
     const monaco = useMonaco();
 
-    function getActiveSelectionEditor(editor: editor.IStandaloneDiffEditor) {
-        return selectionSide === "left" ? editor.getOriginalEditor() : editor.getModifiedEditor();
+    function handleOnEditorMount(editor: editor.IStandaloneDiffEditor) {
+        const checkEditors = () => {
+            const original = editor.getOriginalEditor();
+            const modified = editor.getModifiedEditor();
+            if (original && modified) {
+                setOriginalEditor(original);
+                setModifiedEditor(modified);
+                setEditorsReady(true);
+
+                return true;
+            }
+            return false;
+        };
+
+        const interval = setInterval(() => {
+            if (checkEditors()) {
+                clearInterval(interval);
+            }
+        }, 100);
     }
 
     useEffect(() => {
@@ -91,6 +111,10 @@ const DiffCode = () => {
             const editor = editorRef.current;
             lineHighlightRef.current?.clear();
 
+            const getActiveSelectionEditor = (editor: editor.IStandaloneDiffEditor) => {
+                return selectionSide === "left" ? editor.getOriginalEditor() : editor.getModifiedEditor();
+            }
+
             const executeScroll = () => {
                 const currentLine = selectedLine?.line;
                 if (currentLine) {
@@ -114,7 +138,7 @@ const DiffCode = () => {
                 executeScroll();
             });
         }
-    }, [leftResult, rightResult, selectedLine]);
+    }, [leftResult, rightResult, selectedLine, selectionSide]);
 
     // Handle gutter clicks for line linking
     useEffect(() => {
@@ -122,10 +146,10 @@ const DiffCode = () => {
     }, [selectedLine]);
 
     useEffect(() => {
-        if (!editorRef.current?.getOriginalEditor() || !editorRef.current?.getModifiedEditor()) return;
+        if (!originalEditor || !modifiedEditor) return;
 
         const onMouseDownEvents =
-            [editorRef.current?.getOriginalEditor(), editorRef.current?.getModifiedEditor()].map((codeEditor, index) => {
+            [originalEditor, modifiedEditor].map((codeEditor, index) => {
                 return codeEditor.onMouseDown((e) => {
                     if (e.target.type === editor.MouseTargetType.GUTTER_LINE_NUMBERS ||
                         e.target.type === editor.MouseTargetType.GUTTER_GLYPH_MARGIN) {
@@ -149,13 +173,14 @@ const DiffCode = () => {
         return () => {
             onMouseDownEvents.forEach(event => event.dispose());
         };
-    }, [editorRef.current?.getOriginalEditor(), editorRef.current?.getModifiedEditor(), selectedLines, diffSelectionSide]);
+    }, [editorsReady, originalEditor, modifiedEditor]);
 
     // Left line selection in the unified mode is not supported
     // If the user tries to the line in the unified mode or entering with a line hash URL, fall back to side-by-side
     // If the user tries to switch to unified mode while left line is selected, cancel the selection
     useEffect(() => {
-        if (!unifiedDiff.value || !selectedLine?.line || !selectionSide) return;
+        if (!isUnified || !unifiedDiff.value) return; // To avoid observable updating latency
+        if (!selectedLine?.line || !selectionSide || !selectionSide) return;
 
         if (Date.now() - lastLineSelectionTime.current < 500 || Date.now() - loadTime.current < 500) {
             unifiedDiff.value = false;
@@ -164,7 +189,7 @@ const DiffCode = () => {
             diffSelectionSide.next(null);
         }
         messageApi.warning("Left line selection is not supported in unified mode.");
-    }, [unifiedDiff.value, selectedLine?.line, selectionSide, messageApi]);
+    }, [isUnified, selectedLine?.line, selectionSide, messageApi]);
 
     return (
         <Spin
@@ -193,6 +218,8 @@ const DiffCode = () => {
                 onMount={(editor) => {
                     editorRef.current = editor;
                     setDiffEditor(editor);
+
+                    handleOnEditorMount(editor);
                 }}
                 options={{
                     readOnly: true,
