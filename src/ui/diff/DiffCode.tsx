@@ -17,6 +17,7 @@ import {
     type DiffDirection
 } from './DiffNavigation';
 import { classNameFromClassFilePath } from '../../utils/Names';
+import { createCopyPermalinkAction } from './DiffCodeContextActions.ts';
 
 const IS_ANDROID_CHROME = /Android/.test(navigator.userAgent) && /Chrome/.test(navigator.userAgent);
 
@@ -70,6 +71,13 @@ const DiffCode = () => {
         if (!monaco) return;
         monaco.editor.setTheme(darkMode ? "vs-dark" : "vs");
     }, [monaco, darkMode]);
+
+    useEffect(() => {
+        if (!originalEditor || !modifiedEditor) return;
+
+        originalEditor.addAction(createCopyPermalinkAction(messageApi, "left"));
+        modifiedEditor.addAction(createCopyPermalinkAction(messageApi, "right"));
+    }, [originalEditor, modifiedEditor]);
 
     useEffect(() => {
         if (loading) return;
