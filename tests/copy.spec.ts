@@ -42,10 +42,10 @@ test.describe('Copy Actions in Code Context Actions', () => {
             await page.goto('/1/26.1-mock-2/net/minecraft/ChatFormatting');
             await waitForDecompiledContent(page, 'enum ChatFormatting');
 
-            page.getByRole('code').getByText('ChatFormatting').click({ button: 'right' });
-
-            await expect(page.getByRole('menuitem', { name: name })).toBeVisible();
-            page.getByRole('menuitem', { name: name }).click();
+            await page.getByRole('code').getByText('ChatFormatting').click({ button: 'right' });
+            // Use anyway. Maybe the hook needs some time.
+            await page.waitForTimeout(50);
+            await page.getByRole('menuitem', { name: name }).click();
 
             await expect(page.getByText(successMessage)).toBeVisible();
 
