@@ -75,8 +75,14 @@ const DiffCode = () => {
     useEffect(() => {
         if (!originalEditor || !modifiedEditor) return;
 
-        originalEditor.addAction(createCopyPermalinkAction(messageApi, "left"));
-        modifiedEditor.addAction(createCopyPermalinkAction(messageApi, "right"));
+        const originalEditorCopyLink = originalEditor.addAction(createCopyPermalinkAction(messageApi, "left"));
+        const modifiedEditorCopyLink = modifiedEditor.addAction(createCopyPermalinkAction(messageApi, "right"));
+
+        return () => {
+            // Dispose in the oppsite order
+            modifiedEditorCopyLink.dispose();
+            originalEditorCopyLink.dispose();
+        };
     }, [originalEditor, modifiedEditor]);
 
     useEffect(() => {
