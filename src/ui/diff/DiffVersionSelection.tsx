@@ -2,6 +2,7 @@ import { Flex, Button, Tooltip } from "antd";
 import { SwapOutlined } from "@ant-design/icons";
 import { getLeftDiff, getRightDiff } from "../../logic/Diff";
 import VersionSelector from "../VersionSelector";
+import { swapDiffSelectionSideIfPresent } from "../../logic/State";
 
 const DiffVersionSelection = () => {
     return (
@@ -16,6 +17,8 @@ const DiffVersionSelection = () => {
                         const right = getRightDiff().selectedVersion.getValue();
                         getLeftDiff().selectedVersion.next(right);
                         getRightDiff().selectedVersion.next(left);
+
+                        swapDiffSelectionSideIfPresent();
                     }}
                 />
             </Tooltip>

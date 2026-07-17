@@ -28,6 +28,13 @@ export const selectedLines = new BehaviorSubject<SelectedLines | null>(initialSt
 
 export const diffView = new BehaviorSubject<boolean>(!!initialState.diff);
 export const diffLeftSelectedMinecraftVersion = new BehaviorSubject<string | null>(initialState.diff?.leftMinecraftVersion ?? null);
+export const diffSelectionSide = new BehaviorSubject<'left' | 'right' | null>(initialState.diff?.selectionSide ?? null);
+
+export function swapDiffSelectionSideIfPresent() {
+    if (diffSelectionSide.value) {
+        diffSelectionSide.next(diffSelectionSide.value === 'left' ? 'right' : 'left');
+    }
+}
 
 // Reset selected lines when file changes (skip initial emission to preserve permalink selection)
 selectedFile.pipe(pairwise()).subscribe(([previousFile, currentFile]) => {

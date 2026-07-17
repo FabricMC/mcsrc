@@ -1,6 +1,6 @@
 import { combineLatest } from "rxjs";
 import { resetPermalinkAffectingSettings, supportsPermalinking } from "./Settings";
-import { diffLeftSelectedMinecraftVersion, diffView, selectedFile, selectedLines, selectedMinecraftVersion } from "./State";
+import { diffLeftSelectedMinecraftVersion, diffSelectionSide, diffView, selectedFile, selectedLines, selectedMinecraftVersion } from "./State";
 import { toClassFilePath, withoutClassExtension, type ClassFilePath } from "../utils/Names";
 
 export interface State {
@@ -13,6 +13,7 @@ export interface State {
     } | null;
     diff?: {
         leftMinecraftVersion: string;
+        selectionSide?: 'left' | 'right'; // if it's undefined, default to right
     };
 }
 
@@ -24,14 +25,23 @@ const DEFAULT_STATE: State = {
 };
 
 export const parsePathToState = (path: string): State | null => {
-    // Check for line number marker (e.g., #L123 or #L10-20)
+    // Check for line number marker (e.g., #L123 or #L10-20, or #R123)
+    // In normal mode L stands for line
+    // In diff mode L stands for left, R stands for right
+    // L & R cannot be mixed
     let lineNumber: number | null = null;
     let lineEnd: number | null = null;
-    const lineMatch = path.match(/(?:#|%23)L(\d+)(?:-(\d+))?$/);
+    let diffSide: 'left' | 'right' | undefined = undefined;
+    const lineMatch = path.match(/(?:#|%23)([LR])(\d+)(?:-(\d+))?$/);
     if (lineMatch) {
-        lineNumber = parseInt(lineMatch[1], 10);
-        if (lineMatch[2]) {
-            lineEnd = parseInt(lineMatch[2], 10);
+        if (!lineMatch[1] || !lineMatch[2]) {
+            return null;
+        }
+
+        diffSide = lineMatch[1] === 'L' ? 'left' : 'right';
+        lineNumber = parseInt(lineMatch[2], 10);
+        if (lineMatch[3]) {
+            lineEnd = parseInt(lineMatch[3], 10);
         }
         path = path.substring(0, lineMatch.index);
     }
@@ -55,8 +65,8 @@ export const parsePathToState = (path: string): State | null => {
             version,
             minecraftVersion: rightMinecraftVersion,
             file: filePath ? toClassFilePath(filePath) : undefined,
-            selectedLines: null,
-            diff: { leftMinecraftVersion }
+            selectedLines: lineNumber ? { line: lineNumber, lineEnd: lineEnd || undefined } : null,
+            diff: { leftMinecraftVersion, selectionSide: diffSide }
         };
     }
 
@@ -66,6 +76,12 @@ export const parsePathToState = (path: string): State | null => {
     // Backwards compatibility with the incorrect version name used previously
     if (minecraftVersion == "25w45a") {
         minecraftVersion = "25w45a_unobfuscated";
+    }
+
+    // #R not available in normal mode
+    if (diffSide === 'right') {
+        lineNumber = null;
+        lineEnd = null;
     }
 
     return {
@@ -88,7 +104,7 @@ export const getInitialState = (): State => {
         : (hash.startsWith('#/') ? hash.slice(2) : (hash.startsWith('#') ? hash.slice(1) : ''));
 
     // For new style (pathname-based), append hash if it contains line number
-    if (newStyle && hash.startsWith('#L')) {
+    if (newStyle && (hash.startsWith('#L') || hash.startsWith('#R'))) {
         path += hash;
     }
 
@@ -114,14 +130,16 @@ if (typeof window !== "undefined") {
             selectedFile,
             selectedLines,
             supportsPermalinking,
-            diffView
+            diffView,
+            diffSelectionSide
         ]).subscribe(([
             minecraftVersion,
             diffLeftMinecraftVersion,
             file,
             selectedLines,
             supported,
-            diffView
+            diffView,
+            diffSelectionSide
         ]) => {
             if (!file && !diffView) {
                 document.title = "mcsrc.dev";
@@ -149,6 +167,17 @@ if (typeof window !== "undefined") {
                 url += `diff/${diffLeftMinecraftVersion}/${minecraftVersion}`;
                 if (file) {
                     url += `/${withoutClassExtension(file)}`;
+                }
+
+                if (selectedLines) {
+                    const side = diffSelectionSide === 'left' ? 'L' : 'R';
+
+                    const { line, lineEnd } = selectedLines;
+                    if (lineEnd && lineEnd !== line) {
+                        url += `#${side}${Math.min(line, lineEnd)}-${Math.max(line, lineEnd)}`;
+                    } else {
+                        url += `#${side}${line}`;
+                    }
                 }
             } else {
                 url += `${minecraftVersion}/${withoutClassExtension(file!)}`;

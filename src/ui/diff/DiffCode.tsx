@@ -3,12 +3,12 @@ import { useObservable } from '../../utils/UseObservable';
 import { getLeftDiff, getRightDiff } from '../../logic/Diff';
 import { updateLineChanges } from '../../logic/LineChanges';
 import { useEffect, useRef, useState } from 'react';
-import type { editor } from 'monaco-editor';
-import { Spin } from "antd";
+import { editor, Range } from 'monaco-editor';
+import { message, Spin } from "antd";
 import { LoadingOutlined } from '@ant-design/icons';
 import { isDecompiling } from "../../logic/Decompiler.ts";
 import { unifiedDiff } from '../../logic/Settings';
-import { selectedFile } from '../../logic/State.ts';
+import { selectedFile, selectedLines, diffSelectionSide } from '../../logic/State.ts';
 import { isDarkMode } from '../../logic/Browser';
 import {
     jumpToCurrentFileEdge,
@@ -29,7 +29,22 @@ const DiffCode = () => {
     const currentPath = useObservable(selectedFile);
     const isUnified = useObservable(unifiedDiff.observable);
     const darkMode = useObservable(isDarkMode);
+
+    const selectedLine = useObservable(selectedLines);
+    const selectionSide = useObservable(diffSelectionSide);
+    const lineHighlightRef = useRef<editor.IEditorDecorationsCollection | null>(null);
+    const selectedLineRef = useRef(selectedLine);
+    const lastLineSelectionTime = useRef(0);
+
+    const loadTime = useRef(Date.now());
+
+    const [messageApi, contextHolder] = message.useMessage();
+
     const monaco = useMonaco();
+
+    function getActiveSelectionEditor(editor: editor.IStandaloneDiffEditor) {
+        return selectionSide === "left" ? editor.getOriginalEditor() : editor.getModifiedEditor();
+    }
 
     useEffect(() => {
         if (!monaco) return;
@@ -70,6 +85,87 @@ const DiffCode = () => {
         };
     }, [diffEditor]);
 
+    // Scroll to top when source changes, or to specific line if specified
+    useEffect(() => {
+        if (editorRef.current && leftResult && rightResult) {
+            const editor = editorRef.current;
+            lineHighlightRef.current?.clear();
+
+            const executeScroll = () => {
+                const currentLine = selectedLine?.line;
+                if (currentLine) {
+                    const lineEnd = selectedLine?.lineEnd ?? currentLine;
+                    getActiveSelectionEditor(editor).revealLinesInCenterIfOutsideViewport(currentLine, lineEnd);
+
+                    // Highlight the line range
+                    lineHighlightRef.current = getActiveSelectionEditor(editor).createDecorationsCollection([{
+                        range: new Range(currentLine, 1, lineEnd, 1),
+                        options: {
+                            isWholeLine: true,
+                            className: 'highlighted-line',
+                            glyphMarginClassName: 'highlighted-line-glyph'
+                        }
+                    }]);
+                }
+            };
+
+            // Use requestAnimationFrame to ensure Monaco has finished layout
+            requestAnimationFrame(() => {
+                executeScroll();
+            });
+        }
+    }, [leftResult, rightResult, selectedLine]);
+
+    // Handle gutter clicks for line linking
+    useEffect(() => {
+        selectedLineRef.current = selectedLine;
+    }, [selectedLine]);
+
+    useEffect(() => {
+        if (!editorRef.current?.getOriginalEditor() || !editorRef.current?.getModifiedEditor()) return;
+
+        const onMouseDownEvents =
+            [editorRef.current?.getOriginalEditor(), editorRef.current?.getModifiedEditor()].map((codeEditor, index) => {
+                return codeEditor.onMouseDown((e) => {
+                    if (e.target.type === editor.MouseTargetType.GUTTER_LINE_NUMBERS ||
+                        e.target.type === editor.MouseTargetType.GUTTER_GLYPH_MARGIN) {
+                        const lineNumber = e.target.position?.lineNumber;
+
+                        if (lineNumber) {
+                            // Shift-click to select a range
+                            if (e.event.shiftKey && selectedLineRef.current) {
+                                selectedLines.next({ line: selectedLineRef.current.line, lineEnd: lineNumber });
+                            } else {
+                                selectedLines.next({ line: lineNumber });
+                            }
+                            diffSelectionSide.next(index === 0 ? 'left' : 'right');
+
+                            lastLineSelectionTime.current = Date.now();
+                        }
+                    }
+                });
+            });
+
+        return () => {
+            onMouseDownEvents.forEach(event => event.dispose());
+        };
+    }, [editorRef.current?.getOriginalEditor(), editorRef.current?.getModifiedEditor(), selectedLines, diffSelectionSide]);
+
+    // Left line selection in the unified mode is not supported
+    // If the user tries to the line in the unified mode or entering with a line hash URL, fall back to side-by-side
+    // If the user tries to switch to unified mode while left line is selected, cancel the selection
+    useEffect(() => {
+        if (!unifiedDiff.value || !selectedLine?.line || !selectionSide) return;
+
+        if (Date.now() - lastLineSelectionTime.current < 500 || Date.now() - loadTime.current < 500) {
+            unifiedDiff.value = false;
+        } else {
+            selectedLines.next(null);
+            diffSelectionSide.next(null);
+        }
+        messageApi.warning("Left line selection is not supported in unified mode.");
+    }, [unifiedDiff.value, selectedLine?.line, selectionSide, messageApi]);
+
     return (
         <Spin
             indicator={<LoadingOutlined spin />}
@@ -86,6 +182,7 @@ const DiffCode = () => {
                 }
             }}
         >
+            {contextHolder}
             <DiffEditor
                 language="java"
                 theme={darkMode ? "vs-dark" : "vs"}
@@ -104,6 +201,7 @@ const DiffCode = () => {
                     useInlineViewWhenSpaceIsLimited: false,
                     scrollBeyondLastLine: false,
                     editContext: IS_ANDROID_CHROME ? false : undefined,
+                    selectOnLineNumbers: false // To avoid blue flash when selecting lines
                     //tabSize: 3,
                 }} />
         </Spin>
