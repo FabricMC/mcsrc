@@ -38,7 +38,7 @@ test.describe('Copy Actions in Code Context Actions', () => {
     });
 
     for (const { name, successMessage, copyText } of testOptions) {
-        test(name, async ({ page }) => {
+        test(name + ' (normal mode)', async ({ page }) => {
             await page.goto('/1/26.1-mock-2/net/minecraft/ChatFormatting');
             await waitForDecompiledContent(page, 'enum ChatFormatting');
 
@@ -53,4 +53,21 @@ test.describe('Copy Actions in Code Context Actions', () => {
             expect(clipboardText).toEqual(copyText.replace('$(server_origin)', (new URL(page.url())).origin));
         });
     }
+
+    test('Copy Permalink (diff mode)', async ({ page }) => {
+        await page.goto('/1/diff/26.1-mock-1/26.1-mock-2/net/minecraft/client/renderer/LevelRenderer');
+        await waitForDecompiledContent(page, 'class LevelRenderer');
+
+        await page.getByRole('code').getByText('LevelRenderer').first().click({ button: 'right' });
+        // Use anyway. Maybe the hook needs some time.
+        await page.waitForTimeout(50);
+        await page.getByRole('menuitem', { name: 'Copy Permalink' }).click();
+
+        await expect(page.getByText('Copied Permalink')).toBeVisible();
+
+        const clipboardText = await page.evaluate(() => (window as any).__clipboardText);
+        const expected = '$(server_origin)/1/diff/26.1-mock-1/26.1-mock-2/net/minecraft/client/renderer/LevelRenderer#L3'
+            .replace('$(server_origin)', (new URL(page.url())).origin);
+        expect(clipboardText).toEqual(expected);
+    });
 });
