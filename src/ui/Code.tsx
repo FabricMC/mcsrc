@@ -22,7 +22,8 @@ import {
     createCopyAtAction,
     createCopyMixinAction,
     createFindAllReferencesAction,
-    createViewInheritanceAction
+    createViewInheritanceAction,
+    createCopyPermalinkAction
 } from './CodeContextActions';
 import {
     clearTokenJump,
@@ -118,6 +119,8 @@ const Code = () => {
             createFoldingRangeProvider(monaco)
         );
 
+        const copyLink = monaco.editor.addEditorAction(createCopyPermalinkAction(messageApi));
+
         const copyAw = monaco.editor.addEditorAction(
             createCopyAwAction(decompileResultRef, classListRef, messageApi)
         );
@@ -151,6 +154,7 @@ const Code = () => {
             copyMixin.dispose();
             copyAt.dispose();
             copyAw.dispose();
+            copyLink.dispose();
             foldingRange.dispose();
             editorOpener.dispose();
             hoverProvider.dispose();
