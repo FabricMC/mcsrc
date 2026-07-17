@@ -185,7 +185,6 @@ const Code = () => {
                 const currentLine = selectedLine?.line;
                 if (currentLine) {
                     const lineEnd = selectedLine?.lineEnd ?? currentLine;
-                    editor.setSelection(new Range(currentLine, 1, currentLine, 1));
                     editor.revealLinesInCenterIfOutsideViewport(currentLine, lineEnd);
 
                     // Highlight the line range
@@ -372,6 +371,7 @@ const Code = () => {
                     foldingHighlight: false,
                     scrollBeyondLastLine: false,
                     editContext: IS_ANDROID_CHROME ? false : undefined, // Disable content editable on Android Chrome to attempt to stop the virtual keyboard from appearing
+                    selectOnLineNumbers: false // To avoid blue flash when selecting lines
                 }}
                 onMount={(codeEditor) => {
                     editorRef.current = codeEditor;
