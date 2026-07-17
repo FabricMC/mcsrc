@@ -180,7 +180,7 @@ const DiffCode = () => {
     // If the user tries to switch to unified mode while left line is selected, cancel the selection
     useEffect(() => {
         if (!isUnified || !unifiedDiff.value) return; // To avoid observable updating latency
-        if (!selectedLine?.line || !selectionSide || !selectionSide) return;
+        if (!selectedLine?.line || !selectionSide || !selectionSide || selectionSide === 'right') return;
 
         if (Date.now() - lastLineSelectionTime.current < 500 || Date.now() - loadTime.current < 500) {
             unifiedDiff.value = false;
