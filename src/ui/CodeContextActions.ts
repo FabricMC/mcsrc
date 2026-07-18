@@ -4,6 +4,8 @@ import type { DecompileResult } from "../workers/decompile/types";
 import { openInheritanceViewTab } from "../logic/tabs";
 import { dottedClassNameFromClassName, type ClassFilePath, type ClassName } from "../utils/Names";
 import type { ReferenceKey } from "../workers/jar-index/types";
+import { supportsPermalinking } from "../logic/Settings";
+import { firstValueFrom } from "rxjs";
 
 export const IS_DEFINITION_CONTEXT_KEY_NAME = "is_definition";
 
@@ -22,6 +24,11 @@ export function createCopyPermalinkAction(
             const position = editor.getPosition();
             if (!position) {
                 messageApi.error("Failed to get cursor position.");
+                return;
+            }
+
+            if (!await firstValueFrom(supportsPermalinking)) {
+                messageApi.error("Permalinks are not supported in this environment.");
                 return;
             }
 

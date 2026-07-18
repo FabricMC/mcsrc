@@ -1,4 +1,6 @@
 import type { editor } from "monaco-editor";
+import { supportsPermalinking } from "../../logic/Settings";
+import { firstValueFrom } from "rxjs";
 
 async function setClipboard(text: string): Promise<void> {
     await navigator.clipboard.writeText(text);
@@ -16,6 +18,11 @@ export function createCopyPermalinkAction(
             const position = editor.getPosition();
             if (!position) {
                 messageApi.error("Failed to get cursor position.");
+                return;
+            }
+
+            if (!await firstValueFrom(supportsPermalinking)) {
+                messageApi.error("Permalinks are not supported in this environment.");
                 return;
             }
 
