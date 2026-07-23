@@ -9,6 +9,7 @@ const readAhead = 4;
 export type Class = ClassName;
 export type Method = `${ClassName}:${string}:${string}`;
 export type Field = `${ClassName}:${string}:${string}`;
+export type StringData = `${ClassName}|${string}`;
 
 // oxlint-disable-next-line typescript/no-redundant-type-constituents
 export type ReferenceKey = Class | Method;
@@ -105,7 +106,7 @@ export class JarIndexer {
         const indexer = await this.getIndexer();
         const raw = indexer.getMemberData();
         return raw.map(item => {
-            let parts = item.split("|");
+            const parts = item.split("|");
             return {
                 className: parts[0] as ClassName,
                 methods: parts[1] ? parts[1].split(",") as Method[] : [],
@@ -115,8 +116,13 @@ export class JarIndexer {
                     return [value.slice(0, separator), Number(value.slice(separator + 1))];
                 })),
                 methodBridges: Object.fromEntries((parts[4] || "").split(",").filter(Boolean).map(value => value.split("=")))
-            }
-        })
+            };
+        });
+    };
+
+    getStringData = async (): Promise<StringData[]> => {
+        const indexer = await this.getIndexer();
+        return indexer.getStringData() as StringData[];
     };
 }
 
@@ -127,5 +133,6 @@ interface Indexer {
     getBytecode(classData: ArrayBufferLike[]): string;
     getClassData(): ClassDataString[];
     getMemberData(): string[];
+    getStringData(): string[];
     clearDeclarations(): void;
 }

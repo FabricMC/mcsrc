@@ -64,6 +64,14 @@ public final class WasmInterface {
     }
 
     @JSExport
+    public static String[] getStringData() {
+    return INDEXER.data().strings().entrySet().stream()
+            .flatMap(entry -> entry.getValue().stream()
+                .map(value -> entry.getKey() + "|" + value))
+            .toArray(String[]::new);
+    }
+
+    @JSExport
     public static void loadMappings(ArrayBuffer mappings) {
         remapper = new ClassFileRemapper(toBytes(mappings));
     }

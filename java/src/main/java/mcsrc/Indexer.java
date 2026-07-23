@@ -21,6 +21,7 @@ public final class Indexer {
     private Map<Entry.Member, Integer> referenceIds;
     private Map<String, String> strings;
     private final ArrayList<Entry.Member> callers = new ArrayList<>();
+    private final Map<String, Set<String>> stringLiterals = new HashMap<>();
 
     public void index(byte[] classBytes) {
         new ClassReader(classBytes).accept(new ClassIndexVisitor(this), ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);
@@ -67,7 +68,7 @@ public final class Indexer {
     public IndexData data() {
         Map<String, MemberData> memberData = new HashMap<>();
         members.forEach((name, data) -> memberData.put(name, data.snapshot()));
-        return new IndexData(classes, memberData);
+        return new IndexData(classes, memberData, stringLiterals);
     }
 
     public void clear() {
@@ -77,6 +78,7 @@ public final class Indexer {
         callers.trimToSize();
         referenceIds = null;
         strings = null;
+        stringLiterals = new HashMap<>();
     }
 
     /** Releases exported declarations while preserving references and their callers. */
@@ -162,6 +164,10 @@ public final class Indexer {
         field = new Entry.Field(canonicalString(field.owner()), canonicalString(field.name()), canonicalString(field.desc()));
         members.computeIfAbsent(field.owner(), MutableMemberData::new).fields.add(field);
         return field;
+    }
+
+    void addString(String className, String value) {
+        stringLiterals.computeIfAbsent(className, ignored -> new HashSet<>()).add(value);
     }
 
     private static final class MutableMemberData {

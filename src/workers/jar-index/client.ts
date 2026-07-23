@@ -1,7 +1,7 @@
 import * as Comlink from "comlink";
 import { BehaviorSubject, distinctUntilChanged, map, shareReplay } from "rxjs";
 import { minecraftJar, type MinecraftJar } from "../../logic/MinecraftApi";
-import type {ClassDataString, JarIndexer, MemberData, ReferenceKey, ReferenceString} from "./types";
+import type {ClassDataString, JarIndexer, MemberData, ReferenceKey, ReferenceString, StringData} from "./types";
 import Dexie, { type EntityTable } from "dexie";
 import { isClassFilePath, toClassName, type ClassFilePath, type ClassName } from "../../utils/Names";
 
@@ -73,6 +73,7 @@ export class JarIndex {
     private indexPromise: Promise<void> | null = null;
     private memberDataPromise: Promise<MemberData[]> | null = null;
     private classDataPromise: Promise<ClassData[]> | null = null;
+    private stringLiteralsPromise: Promise<StringData[]> | null = null;
 
     constructor(minecraftJar: MinecraftJar) {
         this.minecraftJar = minecraftJar;
@@ -87,6 +88,7 @@ export class JarIndex {
         }
         this.memberDataPromise = null;
         this.classDataPromise = null;
+        this.stringLiteralsPromise = null;
         this.indexPromise = null;
     }
 
@@ -177,8 +179,9 @@ export class JarIndex {
 
     private async loadMemberData(): Promise<MemberData[]> {
         await this.indexJar();
-        // Cache both exports on the page before releasing the worker declarations.
+        // Cache all exports on the page before releasing the worker declarations.
         await this.getClassData();
+        await this.getStringData();
         const members = (await Promise.all(this.workers.map(worker => worker.c.getMemberData()))).flat();
         await Promise.all(this.workers.map(worker => worker.c.clearDeclarations()));
         return members;
@@ -205,6 +208,21 @@ export class JarIndex {
         return classes;
     }
 
+    getStringData(): Promise<StringData[]> {
+        if (!this.stringLiteralsPromise) {
+            this.stringLiteralsPromise = this.loadStringData().catch(error => {
+                this.stringLiteralsPromise = null;
+                throw error;
+            });
+        }
+        return this.stringLiteralsPromise;
+    }
+
+    private async loadStringData(): Promise<StringData[]> {
+        await this.indexJar();
+        const results = await Promise.all(this.workers.map(worker => worker.c.getStringData()));
+        return results.flat() as StringData[];
+    }
 }
 
 let bytecodeWorker: ReturnType<typeof createWrorker> | null = null;

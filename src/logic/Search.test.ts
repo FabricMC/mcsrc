@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { performSearch, getCamelCaseAcronym, matchesCamelCase } from './Search';
+import { performLiteralSearch, performSearch, getCamelCaseAcronym, matchesCamelCase } from './Search';
 
 describe('Search Algorithm', () => {
 
@@ -182,6 +182,20 @@ describe('Search Algorithm', () => {
             const classes = ['com/example/Player'];
             const results = performSearch('', classes);
             expect(results).toHaveLength(0);
+        });
+    });
+
+    describe('Literal String Matching', () => {
+        it('should search the complete literal without CamelCase or path parsing', () => {
+            const strings = [
+                'a/Class|textures/gui/player.png',
+                'b/Class|PlayerInventory',
+                'c/Class|other'
+            ];
+
+            const results = performLiteralSearch('gui/player', strings, value => value.slice(value.indexOf('|') + 1));
+
+            expect(results).toEqual(['a/Class|textures/gui/player.png']);
         });
     });
 

@@ -48,13 +48,33 @@ function getMatchScore(simpleClassName: string, query: string): number | undefin
     return undefined;
 }
 
+export function performLiteralSearch<T extends string>(query: string, values: T[], getSearchText: (item: T) => string): T[] {
+    if (query.length === 0) {
+        return [];
+    }
+
+    const lowerQuery = query.toLowerCase();
+
+    return values
+        .filter(value => getSearchText(value).toLowerCase().includes(lowerQuery))
+        .map(value => {
+            const text = getSearchText(value).toLowerCase();
+            const index = text.indexOf(lowerQuery);
+            const score = text === lowerQuery ? 0 : text.startsWith(lowerQuery) ? 1 : 2 + index;
+            return { value, score };
+        })
+        .sort((a, b) => a.score - b.score || getSearchText(a.value).localeCompare(getSearchText(b.value)))
+        .slice(0, 100)
+        .map(result => result.value);
+}
+
 export function performSearch<T>(query: string, classes: T[], getSearchText: (item: T) => string = item => String(item)): T[] {
     const terms = query.match(/\S+/g) ?? [];
     if (terms.length === 0) {
         return [];
     }
 
-    const results: { className: T; simpleClassName: string; score: number }[] = [];
+    const results: { className: T; simpleClassName: string; score: number; }[] = [];
     for (const className of classes) {
         const searchText = getSearchText(className);
         const simpleClassName = searchText.split('/').pop() || searchText;

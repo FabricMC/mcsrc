@@ -6,5 +6,6 @@ declare module "*/mcsrc.js" {
     export function getReferenceSize(): number;
     export function getBytecode(classData: ArrayBufferLike[]): string;
     export function getClassData(): string[];
+    export function getStringData(): string[];
     export function clearDeclarations(): void;
 }

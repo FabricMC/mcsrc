@@ -139,6 +139,14 @@ function formatSearchResult(item: SearchResult, mutedColor: string) {
         </>;
     }
 
+    if (item.type === "strings") {
+        const separator = item.value.indexOf("|");
+        const className = item.value.slice(0, separator);
+        const literal = item.value.slice(separator + 1);
+        const owner = className.split("/").pop() || className;
+        return <><span style={{ color: mutedColor }}>{owner}: </span><code>{JSON.stringify(literal)}</code></>;
+    }
+
     const [className, name, descriptor] = item.value.split(":");
     const owner = className.split("/").pop() || className;
 
