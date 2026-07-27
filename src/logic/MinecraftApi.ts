@@ -181,7 +181,7 @@ async function fetchBlobWithRetryAndProgress(url: string, retries: number, onPro
             });
         } catch (e) {
             if (onProgress) {
-                onProgress(percent.value, retryCount);
+                onProgress(percent.value, retryCount + 1);
             }
             error = e;
         }
