@@ -5,6 +5,7 @@ import { selectedMinecraftVersion } from "./State";
 import { remapMinecraftJar } from "../workers/remap/client";
 
 import EXPERIMENTAL_VERSIONS from "./experimental_versions.json";
+import type { ProgressInfo } from "../utils/Progress";
 
 const CACHE_NAME = 'mcsrc-v1';
 const VERSIONS_URL = "https://piston-meta.mojang.com/mc/game/version_manifest_v2.json";
@@ -71,8 +72,8 @@ export const minecraftVersionIds = minecraftVersions.pipe(
     map(versions => versions.map(v => v.id))
 );
 
-export const downloadProgress = new BehaviorSubject<number | undefined>(undefined);
-export const remapProgress = new BehaviorSubject<number | undefined>(undefined);
+export const downloadProgress = new BehaviorSubject<ProgressInfo | undefined>(undefined);
+export const remapProgress = new BehaviorSubject<ProgressInfo | undefined>(undefined);
 
 export const REMAPPED_JAR_CACHE_VERSION = 7;
 
@@ -104,8 +105,20 @@ async function getJson<T>(url: string): Promise<T> {
     return response.json();
 }
 
+async function getJsonWithRetry<T>(url: string, retryCount: number = 5): Promise<T> {
+    try {
+        return await getJson<T>(url);
+    } catch (error) {
+        if (retryCount > 0) {
+            return await getJsonWithRetry(url, retryCount - 1);
+        } else {
+            throw error;
+        }
+    }
+}
+
 async function fetchVersions(): Promise<VersionListEntry[]> {
-    const mojang = await getJson<VersionsList>(VERSIONS_URL);
+    const mojang = await getJsonWithRetry<VersionsList>(VERSIONS_URL);
     const allVersions = mojang.versions.concat(EXPERIMENTAL_VERSIONS.versions);
     const filteredVersions = allVersions.filter(isSupported);
     const versions = filteredVersions
@@ -142,16 +155,50 @@ export function getRemappedJarCacheKey(version: string, client: VersionDownload,
 }
 
 async function fetchVersionManifest(version: VersionListEntry): Promise<VersionManifest> {
-    return getJson<VersionManifest>(version.url);
+    return getJsonWithRetry<VersionManifest>(version.url);
 }
 
-async function cachedFetch(url: string, onProgress?: (percent: number) => void): Promise<Blob> {
+async function fetchBlobAndHeaders(url: string, onProgress: (percent: number) => void): Promise<{ blob: Blob, headers: Headers; }> {
+    const response = await fetch(url);
+
+    if (!response.ok) {
+        throw new Error(`Failed to fetch ${url}: ${response.statusText}`);
+    }
+
+    return { blob: await consumeResponseWithProgress(response, onProgress), headers: response.headers };
+}
+
+async function fetchBlobWithRetryAndProgress(url: string, retries: number, onProgress?: (percent: number, retryCount: number) => void): Promise<{ blob: Blob, headers: Headers; }> {
+    let percent = { value: 0 };
+    let error: any = null;
+    for (let retryCount = 0; retryCount <= retries; retryCount++) {
+        try {
+            return await fetchBlobAndHeaders(url, p => {
+                percent.value = p; // to prevent closure issue
+                if (onProgress) {
+                    onProgress(p, retryCount);
+                }
+            });
+        } catch (e) {
+            if (onProgress) {
+                onProgress(percent.value, retryCount);
+            }
+            error = e;
+        }
+
+        await new Promise(resolve => setTimeout(resolve, Math.pow(2, retryCount) * 1000));
+    }
+
+    throw error;
+}
+
+async function cachedFetch(url: string, onProgress?: (percent: number, retryCount: number) => void): Promise<Blob> {
     if (!('caches' in window)) {
         const response = await fetch(url);
         if (!response.ok) {
             throw new Error(`Failed to fetch ${url}: ${response.statusText}`);
         }
-        return await consumeResponseWithProgress(response, onProgress);
+        return (await fetchBlobWithRetryAndProgress(url, 5, onProgress)).blob;
     }
 
     const cache = await caches.open(CACHE_NAME);
@@ -160,16 +207,11 @@ async function cachedFetch(url: string, onProgress?: (percent: number) => void):
         return await cachedResponse.blob();
     }
 
-    const response = await fetch(url);
-    if (!response.ok) {
-        throw new Error(`Failed to fetch ${url}: ${response.statusText}`);
-    }
-
-    const blob = await consumeResponseWithProgress(response, onProgress);
+    const { blob, headers } = await fetchBlobWithRetryAndProgress(url, 5, onProgress);
 
     // Cache the blob after it's been consumed
     await cache.put(url, new Response(blob, {
-        headers: response.headers
+        headers: headers
     }));
 
     return blob;
@@ -206,7 +248,7 @@ async function consumeResponseWithProgress(response: Response, onProgress?: (per
     return new Blob(chunks);
 }
 
-async function downloadMinecraftJar(version: VersionListEntry, progress: BehaviorSubject<number | undefined>): Promise<MinecraftJar> {
+async function downloadMinecraftJar(version: VersionListEntry, progress: BehaviorSubject<ProgressInfo | undefined>): Promise<MinecraftJar> {
     console.log(`Downloading Minecraft jar for version: ${version.id}`);
     const versionManifest = await fetchVersionManifest(version);
     const client = versionManifest.downloads.client;
@@ -217,8 +259,8 @@ async function downloadMinecraftJar(version: VersionListEntry, progress: Behavio
 
     try {
         [rawBlob, mappingsBlob] = await Promise.all([
-            cachedFetch(client.url, (percent) => {
-                progress.next(percent);
+            cachedFetch(client.url, (percent, retryCount) => {
+                progress.next({ percent, retryCount });
             }),
             mappings ? cachedFetch(mappings.url) : Promise.resolve(null)
         ]);
@@ -260,9 +302,9 @@ async function prepareMinecraftJarBlob(
     }
 
     try {
-        remapProgress.next(0);
+        remapProgress.next({ percent: 0, retryCount: 0 });
         const blob = await remapMinecraftJar(version, rawBlob, mappingsBlob, percent => {
-            remapProgress.next(percent);
+            remapProgress.next({ percent, retryCount: 0 });
         });
 
         try {
