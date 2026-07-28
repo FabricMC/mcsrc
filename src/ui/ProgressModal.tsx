@@ -17,7 +17,7 @@ const ProgressModal = () => {
     const [retryInfo, setRetryInfo] = useState("");
 
     useEffect(() => {
-        if (progress && progress.retryCount > 1) {
+        if (progress && progress.retryCount > 0) {
             setRetryInfo(` (Retry ${progress.retryCount})`);
         } else {
             setRetryInfo("");
