@@ -5,7 +5,6 @@ import { selectedMinecraftVersion } from "./State";
 import { remapMinecraftJar } from "../workers/remap/client";
 
 import EXPERIMENTAL_VERSIONS from "./experimental_versions.json";
-import type { ProgressInfo } from "../utils/Progress";
 
 const CACHE_NAME = 'mcsrc-v1';
 const VERSIONS_URL = "https://piston-meta.mojang.com/mc/game/version_manifest_v2.json";
@@ -48,6 +47,11 @@ export interface MinecraftJarMetadata {
     clientSha1?: string;
     mappingsSha1?: string;
     remapped: boolean;
+}
+
+export interface ProgressInfo {
+    percent: number;
+    retryCount: number; // If the current progress failed, retryCount++
 }
 
 export const minecraftVersions = agreedEula.observable.pipe(

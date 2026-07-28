@@ -2,7 +2,7 @@ import { Modal, Progress } from "antd";
 import { downloadProgress, remapProgress } from "../logic/MinecraftApi";
 import { useObservable } from "../utils/UseObservable";
 import { useEffect, useRef, useState, type RefObject } from "react";
-import type { ProgressInfo } from "../utils/Progress";
+import type { ProgressInfo } from "../logic/MinecraftApi";
 
 const ProgressModal = () => {
     const download = useObservable(downloadProgress);
