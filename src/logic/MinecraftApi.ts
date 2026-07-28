@@ -185,8 +185,6 @@ async function fetchBlobWithRetryAndProgress(url: string, retries: number, onPro
             }
             error = e;
         }
-
-        await new Promise(resolve => setTimeout(resolve, Math.pow(2, retryCount) * 1000));
     }
 
     throw error;
