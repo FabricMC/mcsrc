@@ -9,7 +9,7 @@ const readAhead = 4;
 export type Class = ClassName;
 export type Method = `${ClassName}:${string}:${string}`;
 export type Field = `${ClassName}:${string}:${string}`;
-export type StringData = `${ClassName}|${string}`;
+export type StringData = `${ClassName}|${string}|${string}`;
 
 // oxlint-disable-next-line typescript/no-redundant-type-constituents
 export type ReferenceKey = Class | Method;

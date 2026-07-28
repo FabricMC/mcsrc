@@ -166,8 +166,8 @@ public final class Indexer {
         return field;
     }
 
-    void addString(String className, String value) {
-        stringLiterals.computeIfAbsent(className, ignored -> new HashSet<>()).add(value);
+    void addString(String className, String memberName, String value) {
+        stringLiterals.computeIfAbsent(className + "|" + memberName, ignored -> new HashSet<>()).add(value);
     }
 
     private static final class MutableMemberData {

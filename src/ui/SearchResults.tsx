@@ -140,11 +140,11 @@ function formatSearchResult(item: SearchResult, mutedColor: string) {
     }
 
     if (item.type === "strings") {
-        const separator = item.value.indexOf("|");
-        const className = item.value.slice(0, separator);
-        const literal = item.value.slice(separator + 1);
+        const [className, memberName, literal] = item.value.split("|", 3);
         const owner = className.split("/").pop() || className;
-        return <><span style={{ color: mutedColor }}>{owner}: </span><code>{JSON.stringify(literal)}</code></>;
+        return <div style={{ justifyContent: "start" }}>
+            <span style={{ color: mutedColor }}>{owner}.{memberName}: </span><code>{literal}</code>
+        </div>;
     }
 
     const [className, name, descriptor] = item.value.split(":");

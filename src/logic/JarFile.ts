@@ -22,10 +22,14 @@ const debouncedSearchQuery: Observable<string> = searchQuery.pipe(
 );
 
 export type SearchResult =
-    | { type: "classes"; value: ClassFilePath }
-    | { type: "methods"; value: Method }
-    | { type: "fields"; value: Field }
-    | { type: "strings"; value: StringData };
+    | { type: "classes"; value: ClassFilePath; }
+    | { type: "methods"; value: Method; }
+    | { type: "fields"; value: Field; }
+    | { type: "strings"; value: StringData; };
+
+function stringLiteralText(stringData: StringData): string {
+    return stringData.split("|")[2] || stringData;
+}
 
 function memberSearchText(member: Method | Field): string {
     return member.split(":")[1] || member;
@@ -39,7 +43,7 @@ export const searchResults: Observable<SearchResult[]> = combineLatest([classesL
 
         if (type === "strings") {
             const strings = await index.getStringData();
-            return performLiteralSearch(query, strings, value => value.substring(value.indexOf("|") + 1))
+            return performLiteralSearch(query, strings, stringLiteralText)
                 .map(value => ({ type, value }));
         }
 

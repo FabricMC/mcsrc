@@ -27,7 +27,7 @@ final class ClassIndexVisitor extends ClassVisitor {
 	public FieldVisitor visitField(int access, String name, String desc, String signature, Object value) {
 		indexField(new Entry.Field(this.name, name, desc));
 		if (value instanceof String string) {
-			indexer.addString(this.name, string);
+			indexer.addString(this.name, name, string);
 		}
 		return super.visitField(access, name, desc, signature, value);
 	}
@@ -68,7 +68,7 @@ final class ClassIndexVisitor extends ClassVisitor {
 		@Override
 		public void visitLdcInsn(Object value) {
 			if (value instanceof String string) {
-				indexer.addString(ClassIndexVisitor.this.name, string);
+				indexer.addString(ClassIndexVisitor.this.name, callerEntry.name(), string);
 			}
 
 			if (value instanceof Type type && (type.getSort() == Type.OBJECT || type.getSort() == Type.ARRAY)) {

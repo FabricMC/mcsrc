@@ -188,14 +188,14 @@ describe('Search Algorithm', () => {
     describe('Literal String Matching', () => {
         it('should search the complete literal without CamelCase or path parsing', () => {
             const strings = [
-                'a/Class|textures/gui/player.png',
-                'b/Class|PlayerInventory',
-                'c/Class|other'
+                'a/Class|render|textures/gui/player.png',
+                'b/Class|inventory|PlayerInventory',
+                'c/Class|other|other'
             ];
 
-            const results = performLiteralSearch('gui/player', strings, value => value.slice(value.indexOf('|') + 1));
+            const results = performLiteralSearch('gui/player', strings, value => value.slice(value.indexOf('|', value.indexOf('|') + 1) + 1));
 
-            expect(results).toEqual(['a/Class|textures/gui/player.png']);
+            expect(results).toEqual(['a/Class|render|textures/gui/player.png']);
         });
     });
 
