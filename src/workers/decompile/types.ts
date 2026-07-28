@@ -5,6 +5,7 @@ import { classNameFromClassFilePath, isClassFilePath, toClassFilePath, type Clas
 export type DecompileResult = {
     className: ClassName;
     checksum: number;
+    jarName: string;
     source: string;
     tokens: Token[];
     language: 'java' | 'bytecode';

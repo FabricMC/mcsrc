@@ -116,6 +116,7 @@ export async function decompileClass(className: ClassName, jar: Jar): Promise<De
     if (!entry) return {
         className,
         checksum: 0,
+        jarName: jar.name,
         source: `// Class not found: ${className}`,
         tokens: [],
         language: "java",
@@ -131,6 +132,7 @@ export async function getClassBytecode(className: ClassName, jar: Jar): Promise<
     if (!entry) return {
         className,
         checksum: 0,
+        jarName: jar.name,
         source: `// Class not found: ${className}`,
         tokens: [],
         language: "bytecode",
@@ -151,5 +153,5 @@ export async function getClassBytecode(className: ClassName, jar: Jar): Promise<
     }
 
     const worker = await findWorker();
-    return await worker.getClassBytecode(className, entry.crc32, classData);
+    return await worker.getClassBytecode(className, entry.crc32, jar.name, classData);
 }
