@@ -11,8 +11,8 @@ import { LoadingOutlined } from '@ant-design/icons';
 import { getTokenLocation } from '../logic/Tokens';
 import { getNextJumpToken, nextReferenceNavigation } from '../logic/FindAllReferences';
 import { setupJavaBytecodeLanguage } from '../utils/JavaBytecode';
-import { IS_JAVADOC_EDITOR } from '../site';
 import { applyJavadocCodeExtensions } from '../javadoc/JavadocCodeExtensions';
+import { ENABLE_JAVADOC_EDITOR } from '../javadoc/JavadocConfig';
 import { selectedInheritanceClassName } from '../logic/Inheritance';
 import { createHoverProvider } from './CodeHoverProvider';
 import { findTokenAtPosition } from './CodeUtils';
@@ -158,7 +158,7 @@ const Code = () => {
         };
     }, [monaco, decompileResult, classList, resetViewTrigger, messageApi]);
 
-    if (IS_JAVADOC_EDITOR) {
+    if (ENABLE_JAVADOC_EDITOR) {
         useEffect(() => {
             if (!monaco || !editorRef.current || !decompileResult) return;
 

@@ -5,9 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "dev:javadoc": "vite --mode javadoc",
     "build": "tsc -b && vite build",
-    "build:javadoc": "tsc -b && vite build --mode javadoc",
     "preview": "vite preview",
     "test": "vitest run",
     "test:e2e": "playwright test",
