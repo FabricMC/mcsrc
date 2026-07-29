@@ -118,6 +118,18 @@ html, body, #root {
     height: 100%;
 }
 
+.settings-tab-content {
+  padding: 16px 12px 4px;
+}
+
+.settings-form .ant-form-item {
+  margin-bottom: 16px;
+}
+
+.settings-form .ant-form-item:last-child {
+  margin-bottom: 0;
+}
+
 .diff-shell {
   height: 100%;
   min-height: 0;
