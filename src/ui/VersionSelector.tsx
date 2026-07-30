@@ -1,7 +1,7 @@
 import { Button, Divider, Empty, Flex, Select, Tooltip } from "antd";
 import type { ButtonProps } from "antd";
-import { EyeInvisibleOutlined, EyeOutlined, StarFilled, StarOutlined } from "@ant-design/icons";
-import { useEffect, useMemo, useState } from "react";
+import { DownOutlined, EyeInvisibleOutlined, EyeOutlined, StarFilled, StarOutlined } from "@ant-design/icons";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { BehaviorSubject } from "rxjs";
 import { minecraftVersions } from "../logic/MinecraftApi";
 import { selectedMinecraftVersion } from "../logic/State";
@@ -25,6 +25,10 @@ function VersionSelector({
     const currentVersion = useObservable(selectedVersion);
     const favoriteVersions = useObservable(favoriteMinecraftVersions.observable) ?? EMPTY_FAVORITE_VERSIONS;
     const showSnapshots = useObservable(showSnapshotVersions.observable) ?? true;
+    const inputRef = useRef<HTMLInputElement>(null);
+    const [open, setOpen] = useState(false);
+    const openRef = useRef(open);
+    openRef.current = open;
     const [query, setQuery] = useState("");
     const calculateHeight = () => Math.min(420, window.innerHeight - 55);
     const [height, setHeight] = useState(calculateHeight());
@@ -64,6 +68,22 @@ function VersionSelector({
         selectedVersion.next(version);
     };
 
+    const inputElement = useMemo(() => ((props: any) =>
+        <input
+            {...props}
+            inputMode="none"
+            ref={inputRef}
+            onMouseDown={() => {
+                if (openRef.current) {
+                    inputRef.current?.setAttribute('inputmode', 'search');
+                }
+            }}
+            onBlur={() => {
+                inputRef.current?.setAttribute('inputmode', 'none');
+            }}
+        />
+    ), []);
+
     return (
         <Select
             aria-label="Select Minecraft version"
@@ -74,20 +94,12 @@ function VersionSelector({
             size={size}
             style={{ minWidth: minWidth }}
             listHeight={height}
+            open={open}
+            onOpenChange={setOpen}
             notFoundContent={<Empty description="No versions found" image={Empty.PRESENTED_IMAGE_SIMPLE} />}
-
-            // before any click: no inputmode
-            // first click: inputmode=none (no virtual keyboard)
-            // any click after: inputmode=search (with virtual keyboard)
-            // lose focus: remove inputmode
-            onMouseDown={(e) => {
-                if (e.target instanceof HTMLInputElement) {
-                    const newValue = e.target.hasAttribute('inputmode') ? 'search' : 'none';
-                    e.target.setAttribute('inputmode', newValue);
-                }
-            }}
-            onBlur={(e) => e.target.removeAttribute('inputmode')}
-
+            suffix={<DownOutlined onMouseDown={() => { if (open) setOpen(false); }} style={{ cursor: "pointer" }} />}
+            onMouseDown={(e) => e.stopPropagation()}
+            components={{ input: inputElement }}
             popupRender={(menu) => (
                 <>
                     {menu}
