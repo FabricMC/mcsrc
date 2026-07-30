@@ -158,19 +158,34 @@ public class Indexer {
     }
 
     @JSExport
-    public static String[] readJavadocs(ArrayBuffer mappings) throws IOException {
+    public static String readJavadocs(ArrayBuffer mappings) throws IOException {
         byte[] bytes = new Int8Array(mappings).copyToJavaArray();
         return JavadocMappings.read(bytes);
     }
 
     @JSExport
-    public static Int8Array writeJavadocs(String format, String[] entries) throws IOException {
-        return toInt8Array(JavadocMappings.write(format, entries));
+    public static Int8Array writeJavadocs(String format) throws IOException {
+        return toInt8Array(JavadocMappings.write(format));
     }
 
     @JSExport
     public static Int8Array createJavadocs(String format) throws IOException {
-        return toInt8Array(JavadocMappings.write(format, new String[0]));
+        return toInt8Array(JavadocMappings.create(format));
+    }
+
+    @JSExport
+    public static void resetJavadocs() {
+        JavadocMappings.reset();
+    }
+
+    @JSExport
+    public static String getJavadoc(int kind, String owner, String name, String descriptor) {
+        return JavadocMappings.get(kind, owner, name, descriptor);
+    }
+
+    @JSExport
+    public static void setJavadoc(int kind, String owner, String name, String descriptor, String comment) throws IOException {
+        JavadocMappings.set(kind, owner, name, descriptor, comment);
     }
 
     @JSExport

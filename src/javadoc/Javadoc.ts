@@ -1,101 +1,72 @@
-import { BehaviorSubject, map, Observable } from "rxjs";
+import { BehaviorSubject, map, type Observable } from "rxjs";
 import type { Token } from "../logic/Tokens";
-import type { ClassName } from "../utils/Names";
-import { writeJavadocFile, type JavadocFile } from "./JavadocStorage";
+import {
+    getStoredJavadoc,
+    setStoredJavadoc,
+    writeJavadocFile,
+    type JavadocElementKind,
+    type JavadocFile,
+} from "./JavadocStorage";
 
 export type JavadocString = string;
-
-export interface JavadocData {
-    classes: Partial<Record<ClassName, {
-        javadoc: JavadocString | null;
-        methods: Record<string, JavadocString>;
-        fields: Record<string, JavadocString>;
-    }>>;
-}
-
-export const javadocData = new BehaviorSubject<JavadocData>({
-    classes: {}
-});
 
 export const activeJavadocFile = new BehaviorSubject<JavadocFile | null>(null);
 export const javadocModeEnabled = activeJavadocFile.pipe(map(file => file !== null));
 export const activeJavadocToken = new BehaviorSubject<Token | null>(null);
+export const javadocRevision = new BehaviorSubject(0);
 
-export function activateJavadocFile(file: JavadocFile, data: JavadocData) {
-    javadocData.next(data);
+export function activateJavadocFile(file: JavadocFile) {
     activeJavadocFile.next(file);
-}
-
-export function withTokenJavadoc(
-    data: JavadocData,
-    token: Token,
-    javadoc: JavadocString | undefined,
-): JavadocData {
-    const existing = data.classes[token.className];
-    const classEntry = {
-        javadoc: existing?.javadoc ?? null,
-        methods: { ...existing?.methods },
-        fields: { ...existing?.fields },
-    };
-    const value = javadoc || undefined;
-
-    if (token.type === 'class') {
-        classEntry.javadoc = value ?? null;
-    } else if (token.type === 'method') {
-        if (value === undefined) {
-            delete classEntry.methods[memberKey(token.name, token.descriptor)];
-        } else {
-            classEntry.methods[memberKey(token.name, token.descriptor)] = value;
-        }
-    } else if (token.type === 'field') {
-        if (value === undefined) {
-            delete classEntry.fields[memberKey(token.name, token.descriptor)];
-        } else {
-            classEntry.fields[memberKey(token.name, token.descriptor)] = value;
-        }
-    }
-
-    const classes = { ...data.classes };
-
-    if (classEntry.javadoc || Object.keys(classEntry.methods).length || Object.keys(classEntry.fields).length) {
-        classes[token.className] = classEntry;
-    } else {
-        delete classes[token.className];
-    }
-
-    return { classes };
+    publishJavadocChange();
 }
 
 export async function saveTokenJavadoc(token: Token, javadoc: JavadocString | undefined) {
     const file = activeJavadocFile.value;
     if (!file) throw new Error("No Javadoc mapping file selected");
 
-    const nextData = withTokenJavadoc(javadocData.value, token, javadoc);
-    await writeJavadocFile(file, nextData);
-    javadocData.next(nextData);
+    const target = getJavadocTarget(token);
+    if (!target) throw new Error("This token cannot have Javadoc");
+
+    const previous = getStoredJavadoc(...target);
+    setStoredJavadoc(...target, javadoc || null);
+
+    try {
+        await writeJavadocFile(file);
+    } catch (error) {
+        setStoredJavadoc(...target, previous);
+        throw error;
+    }
+
+    publishJavadocChange();
 }
 
 export function observeJavadocForToken(token: Token): Observable<JavadocString | null> {
-    return javadocData.pipe(
-        map(data => {
-            return getJavadocForToken(token, data);
-        })
-    );
+    return javadocRevision.pipe(map(() => getJavadocForToken(token)));
 }
 
-export function getJavadocForToken(token: Token, javadoc: JavadocData): JavadocString | null {
+export function getJavadocForToken(token: Token): JavadocString | null {
+    const target = getJavadocTarget(token);
+    return target ? getStoredJavadoc(...target) : null;
+}
+
+function getJavadocTarget(token: Token): [
+    JavadocElementKind,
+    string,
+    string,
+    string,
+] | null {
     switch (token.type) {
-        case 'class':
-            return javadoc.classes[token.className]?.javadoc || null;
-        case 'method':
-            return javadoc.classes[token.className]?.methods[memberKey(token.name, token.descriptor)] || null;
-        case 'field':
-            return javadoc.classes[token.className]?.fields[memberKey(token.name, token.descriptor)] || null;
+        case "class":
+            return [0, token.className, "", ""];
+        case "field":
+            return [1, token.className, token.name, token.descriptor];
+        case "method":
+            return [2, token.className, token.name, token.descriptor];
+        default:
+            return null;
     }
-
-    return null;
 }
 
-function memberKey(name: string, descriptor: string): string {
-    return `${name}\0${descriptor}`;
+function publishJavadocChange() {
+    javadocRevision.next(javadocRevision.value + 1);
 }

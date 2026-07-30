@@ -5,7 +5,7 @@ import {
     type IDisposable,
 } from "monaco-editor";
 import { getTokenLocation, type Token } from "../logic/Tokens";
-import { activeJavadocToken, getJavadocForToken, javadocData } from "./Javadoc";
+import { activeJavadocToken, getJavadocForToken, javadocRevision } from "./Javadoc";
 import type { DecompileResult } from "../workers/decompile/types";
 
 type monaco = typeof import("monaco-editor");
@@ -14,7 +14,7 @@ const EDIT_JAVADOC_COMMAND_ID = 'editor.action.editJavadoc';
 
 export function applyJavadocCodeExtensions(monaco: monaco, editor: editor.IStandaloneCodeEditor, decompile: DecompileResult): IDisposable {
     const viewZoneIds: string[] = [];
-    const javadocDataSub = javadocData.subscribe((javadoc) => {
+    const javadocRevisionSub = javadocRevision.subscribe(() => {
         editor.changeViewZones((accessor) => {
             // Remove any existing zones
             viewZoneIds.forEach(id => accessor.removeZone(id));
@@ -23,7 +23,7 @@ export function applyJavadocCodeExtensions(monaco: monaco, editor: editor.IStand
             decompile.tokens
                 .filter(token => token.declaration)
                 .forEach(token => {
-                    const mdValue = getJavadocForToken(token, javadoc);
+                    const mdValue = getJavadocForToken(token);
                     if (mdValue == null) {
                         return;
                     }
@@ -90,7 +90,7 @@ export function applyJavadocCodeExtensions(monaco: monaco, editor: editor.IStand
             editJavadocCommand.dispose();
             codeLense.dispose();
 
-            javadocDataSub.unsubscribe();
+            javadocRevisionSub.unsubscribe();
             editor.changeViewZones((accessor) => {
                 viewZoneIds.forEach(id => accessor.removeZone(id));
             });

@@ -44,13 +44,13 @@ const JavadocFilePicker = () => {
                     multiple: false,
                     types: [mappingFilePickerType],
                 });
-                const loaded = await readJavadocFile(handle);
-                activateJavadocFile(loaded.file, loaded.data);
+                const file = await readJavadocFile(handle);
+                activateJavadocFile(file);
             } else {
                 const format = key as JavadocFormat;
                 const handle = await window.showSaveFilePicker(createPickerOptions(format));
                 const file = await createJavadocFile(handle, format);
-                activateJavadocFile(file, { classes: {} });
+                activateJavadocFile(file);
             }
 
             messageApi.success("Javadoc mapping file opened.");

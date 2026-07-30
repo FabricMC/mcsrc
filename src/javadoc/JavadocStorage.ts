@@ -1,9 +1,8 @@
 import { load } from "../../java/build/generated/teavm/wasm-gc/java.wasm-runtime.js";
 import mappingsWasm from "../../java/build/generated/teavm/wasm-gc/java.wasm?url";
-import type { ClassName } from "../utils/Names";
-import type { JavadocData } from "./Javadoc";
 
 export type JavadocFormat = "tiny2" | "enigma";
+export type JavadocElementKind = 0 | 1 | 2;
 
 export interface JavadocFile {
     handle: FileSystemFileHandle;
@@ -11,83 +10,68 @@ export interface JavadocFile {
 }
 
 interface JavadocMappingsBridge {
-    readJavadocs(data: ArrayBuffer): string[];
-    writeJavadocs(format: JavadocFormat, entries: string[]): Int8Array;
+    readJavadocs(data: ArrayBuffer): string;
+    writeJavadocs(format: JavadocFormat): Int8Array;
     createJavadocs(format: JavadocFormat): Int8Array;
+    resetJavadocs(): void;
+    getJavadoc(
+        kind: JavadocElementKind,
+        owner: string,
+        name: string,
+        descriptor: string,
+    ): string | null;
+    setJavadoc(
+        kind: JavadocElementKind,
+        owner: string,
+        name: string,
+        descriptor: string,
+        comment: string | null,
+    ): void;
 }
 
 let bridge: JavadocMappingsBridge | null = null;
 
-export async function readJavadocFile(handle: FileSystemFileHandle): Promise<{
-    file: JavadocFile;
-    data: JavadocData;
-}> {
+export async function readJavadocFile(handle: FileSystemFileHandle): Promise<JavadocFile> {
     const selectedFile = await handle.getFile();
-    const entries = (await getBridge()).readJavadocs(await selectedFile.arrayBuffer());
-    const format = entries.shift() as JavadocFormat | undefined;
-    if (format !== "tiny2" && format !== "enigma") throw new Error("Invalid Javadoc mapping format");
+    const format = (await getBridge()).readJavadocs(await selectedFile.arrayBuffer());
+    if (format !== "tiny2" && format !== "enigma") {
+        throw new Error("Invalid Javadoc mapping format");
+    }
 
-    return {
-        file: { handle, format },
-        data: fromEntries(entries),
-    };
+    return { handle, format };
 }
 
 export async function createJavadocFile(
     handle: FileSystemFileHandle,
     format: JavadocFormat,
 ): Promise<JavadocFile> {
-    await writeBytes(handle, (await getBridge()).createJavadocs(format));
+    const mappingsBridge = await getBridge();
+    await writeBytes(handle, mappingsBridge.createJavadocs(format));
+    mappingsBridge.resetJavadocs();
     return { handle, format };
 }
 
-export async function writeJavadocFile(file: JavadocFile, data: JavadocData): Promise<void> {
-    await writeBytes(file.handle, (await getBridge()).writeJavadocs(file.format, toEntries(data)));
+export async function writeJavadocFile(file: JavadocFile): Promise<void> {
+    await writeBytes(file.handle, requireBridge().writeJavadocs(file.format));
 }
 
-function fromEntries(entries: string[]): JavadocData {
-    const classes: JavadocData["classes"] = {};
-
-    for (let i = 0; i < entries.length; i += 5) {
-        const [kind, owner, name, descriptor, comment] = entries.slice(i, i + 5);
-        if (!kind || !owner || comment === undefined) throw new Error("Invalid Javadoc mapping data");
-
-        const clazz = classes[owner as ClassName] ??= { javadoc: null, fields: {}, methods: {} };
-        if (kind === "c") clazz.javadoc = comment || null;
-        else if (kind === "f") clazz.fields[name + "\0" + descriptor] = comment;
-        else if (kind === "m") clazz.methods[name + "\0" + descriptor] = comment;
-        else throw new Error(`Invalid Javadoc mapping entry: ${kind}`);
-    }
-
-    return { classes };
-}
-
-function toEntries(data: JavadocData): string[] {
-    const result: string[] = [];
-    for (const [owner, clazz] of Object.entries(data.classes).sort(([a], [b]) => a.localeCompare(b))) {
-        if (!clazz) continue;
-        const fields = Object.entries(clazz.fields ?? {}).sort(([a], [b]) => a.localeCompare(b));
-        const methods = Object.entries(clazz.methods ?? {}).sort(([a], [b]) => a.localeCompare(b));
-        if (!clazz.javadoc && fields.length === 0 && methods.length === 0) continue;
-
-        result.push("c", owner, "", "", clazz.javadoc ?? "");
-        addMembers(result, "f", owner, fields);
-        addMembers(result, "m", owner, methods);
-    }
-    return result;
-}
-
-function addMembers(
-    result: string[],
-    kind: "f" | "m",
+export function getStoredJavadoc(
+    kind: JavadocElementKind,
     owner: string,
-    members: [string, string][],
+    name: string,
+    descriptor: string,
+): string | null {
+    return requireBridge().getJavadoc(kind, owner, name, descriptor);
+}
+
+export function setStoredJavadoc(
+    kind: JavadocElementKind,
+    owner: string,
+    name: string,
+    descriptor: string,
+    comment: string | null,
 ): void {
-    for (const [key, comment] of members) {
-        const separator = key.indexOf("\0");
-        if (separator < 0) throw new Error(`Invalid member Javadoc key: ${key}`);
-        result.push(kind, owner, key.slice(0, separator), key.slice(separator + 1), comment);
-    }
+    requireBridge().setJavadoc(kind, owner, name, descriptor, comment);
 }
 
 async function writeBytes(handle: FileSystemFileHandle, bytes: Int8Array): Promise<void> {
@@ -115,5 +99,10 @@ async function getBridge(): Promise<JavadocMappingsBridge> {
         bridge = await import("../../java/build/generated/teavm/js/java.js") as unknown as JavadocMappingsBridge;
     }
 
+    return bridge;
+}
+
+function requireBridge(): JavadocMappingsBridge {
+    if (!bridge) throw new Error("Javadoc mappings are not loaded");
     return bridge;
 }
