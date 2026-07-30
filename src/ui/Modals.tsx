@@ -1,5 +1,4 @@
 import JavadocModal from "../javadoc/JavadocModal";
-import { ENABLE_JAVADOC_EDITOR } from "../javadoc/JavadocConfig";
 import ProgressModal from "./ProgressModal";
 import AboutModal from "./AboutModal";
 import SettingsModal from "./SettingsModal";
@@ -12,7 +11,7 @@ const Modals = () => {
         <>
             <IndexProgressNotification />
             <ProgressModal />
-            {ENABLE_JAVADOC_EDITOR && <JavadocModal />}
+            <JavadocModal />
             <AboutModal />
             <SettingsModal />
             <StructureModal />

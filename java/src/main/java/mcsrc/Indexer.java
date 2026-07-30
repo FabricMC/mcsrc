@@ -158,6 +158,22 @@ public class Indexer {
     }
 
     @JSExport
+    public static String[] readJavadocs(ArrayBuffer mappings) throws IOException {
+        byte[] bytes = new Int8Array(mappings).copyToJavaArray();
+        return JavadocMappings.read(bytes);
+    }
+
+    @JSExport
+    public static Int8Array writeJavadocs(String format, String[] entries) throws IOException {
+        return toInt8Array(JavadocMappings.write(format, entries));
+    }
+
+    @JSExport
+    public static Int8Array createJavadocs(String format) throws IOException {
+        return toInt8Array(JavadocMappings.write(format, new String[0]));
+    }
+
+    @JSExport
     public static void clearIndex() {
         references.clear();
         referenceSize = 0;
@@ -229,9 +245,12 @@ public class Indexer {
 
         reader.accept(new ClassRemapper(new LocalRenameVisitor(ASM_VERSION, writer), mappingTreeRemapper), ClassReader.SKIP_FRAMES);
 
-        var remappedBytes = writer.toByteArray();
-        var array = new Int8Array(remappedBytes.length);
-        array.set(remappedBytes);
+        return toInt8Array(writer.toByteArray());
+    }
+
+    private static Int8Array toInt8Array(byte[] bytes) {
+        var array = new Int8Array(bytes.length);
+        array.set(bytes);
         return array;
     }
 

@@ -7,6 +7,7 @@ import { capturingKeybind, rawKeydownEvent } from "../logic/Keybinds";
 import { BehaviorSubject } from "rxjs";
 import React, { useEffect, useState } from "react";
 import { modalOpen } from "./JarDecompilerModal";
+import JavadocFilePicker from "../javadoc/JavadocFilePicker";
 
 export const settingsModalOpen = new BehaviorSubject<boolean>(false);
 
@@ -56,6 +57,7 @@ const AdvancedTab = () => (
         >
             Decompile All
         </Button>
+        <JavadocFilePicker />
     </Flex>
 );
 

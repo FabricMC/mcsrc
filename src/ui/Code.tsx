@@ -12,7 +12,7 @@ import { getTokenLocation } from '../logic/Tokens';
 import { getNextJumpToken, nextReferenceNavigation } from '../logic/FindAllReferences';
 import { setupJavaBytecodeLanguage } from '../utils/JavaBytecode';
 import { applyJavadocCodeExtensions } from '../javadoc/JavadocCodeExtensions';
-import { ENABLE_JAVADOC_EDITOR } from '../javadoc/JavadocConfig';
+import { activeJavadocFile } from '../javadoc/Javadoc';
 import { selectedInheritanceClassName } from '../logic/Inheritance';
 import { createHoverProvider } from './CodeHoverProvider';
 import { findTokenAtPosition } from './CodeUtils';
@@ -50,6 +50,7 @@ const Code = () => {
     const selectedLine = useObservable(selectedLines);
     const nextReference = useObservable(nextReferenceNavigation);
     const tokenJump = useObservable(pendingTokenJump);
+    const javadocFile = useObservable(activeJavadocFile);
 
     const decorationsCollectionRef = useRef<editor.IEditorDecorationsCollection | null>(null);
     const lineHighlightRef = useRef<editor.IEditorDecorationsCollection | null>(null);
@@ -158,18 +159,16 @@ const Code = () => {
         };
     }, [monaco, decompileResult, classList, resetViewTrigger, messageApi]);
 
-    if (ENABLE_JAVADOC_EDITOR) {
-        useEffect(() => {
-            if (!monaco || !editorRef.current || !decompileResult) return;
+    useEffect(() => {
+        if (!monaco || !editorRef.current || !decompileResult || !javadocFile) return;
 
-            const extensions = applyJavadocCodeExtensions(monaco, editorRef.current, decompileResult);
+        const extensions = applyJavadocCodeExtensions(monaco, editorRef.current, decompileResult);
 
-            return () => {
-                extensions.dispose();
-            };
-            // oxlint-disable-next-line eslint-plugin-react-hooks/exhaustive-deps
-        }, [monaco, editorRef.current, decompileResult]);
-    }
+        return () => {
+            extensions.dispose();
+        };
+        // oxlint-disable-next-line eslint-plugin-react-hooks/exhaustive-deps
+    }, [monaco, editorRef.current, decompileResult, javadocFile]);
 
     // Scroll to top when source changes, or to specific line if specified
     useEffect(() => {

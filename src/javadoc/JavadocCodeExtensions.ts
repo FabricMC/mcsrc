@@ -4,8 +4,8 @@ import {
     type CancellationToken,
     type IDisposable,
 } from "monaco-editor";
-import { getTokenLocation, type Token, type TokenLocation } from "../logic/Tokens";
-import { activeJavadocToken, getJavadocForToken, javadocData, refreshJavadocDataForClass, type JavadocData, type JavadocString } from "./Javadoc";
+import { getTokenLocation, type Token } from "../logic/Tokens";
+import { activeJavadocToken, getJavadocForToken, javadocData } from "./Javadoc";
 import type { DecompileResult } from "../workers/decompile/types";
 
 type monaco = typeof import("monaco-editor");
@@ -29,7 +29,7 @@ export function applyJavadocCodeExtensions(monaco: monaco, editor: editor.IStand
                     }
 
                     const domNode = document.createElement('div');
-                    domNode.innerHTML = `<span style="color: #6A9955;">${formatMarkdownAsHtml(mdValue, token)}</span>`;
+                    renderJavadoc(domNode, mdValue, token);
 
                     const location = getTokenLocation(decompile, token);
                     const zoneId = accessor.addZone({
@@ -85,10 +85,6 @@ export function applyJavadocCodeExtensions(monaco: monaco, editor: editor.IStand
         }
     });
 
-    refreshJavadocDataForClass(decompile.className).catch(err => {
-        console.error("Failed to refresh Javadoc data for class:", err);
-    });
-
     return {
         dispose() {
             editJavadocCommand.dispose();
@@ -102,14 +98,14 @@ export function applyJavadocCodeExtensions(monaco: monaco, editor: editor.IStand
     };
 }
 
-function formatMarkdownAsHtml(md: string, token: Token): string {
-    // TODO maybe use a proper markdown parser/renderer here
-
+function renderJavadoc(domNode: HTMLDivElement, markdown: string, token: Token) {
     const nestingLevel = (token.className.match(/\$/g) || []).length + (token.type == 'method' || token.type == 'field' ? 1 : 0);
     const depth = nestingLevel * 6;
+    const indent = " ".repeat(depth) + "/// ";
 
-    const indent = "&nbsp;".repeat(depth) + "/// ";
-    return md.split("\n").map(line => indent + line).join("<br>");
+    domNode.style.color = "#6A9955";
+    domNode.style.whiteSpace = "pre";
+    domNode.textContent = markdown.split("\n").map(line => indent + line).join("\n");
 }
 
 

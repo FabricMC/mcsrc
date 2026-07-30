@@ -1,7 +1,7 @@
 [versions]
 asm = "9.9.1"
-teavm = "0.13.0"
-mapping-io = "0.8.0"
+teavm = "0.15.0"
+mapping-io = "0.9.1"
 
 [libraries]
 asm = { module = "org.ow2.asm:asm", version.ref = "asm" }
