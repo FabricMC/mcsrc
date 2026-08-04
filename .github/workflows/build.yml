@@ -24,6 +24,39 @@ jobs:
           name: java-libs
           path: java/build/libs/
 
+  desktop:
+    needs: build
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: ".nvmrc"
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.9.4
+      - run: ./gradlew build
+        working-directory: java
+      - run: npm ci
+      - run: make build-all
+      - name: Package desktop apps
+        run: |
+          tar -czf mcsrc-macos-arm64.tar.gz -C desktop-dist/macos mcsrc.app
+          tar -czf mcsrc-windows-x64.tar.gz -C desktop-dist/windows mcsrc
+          tar -czf mcsrc-linux-x64.tar.gz -C desktop-dist/linux mcsrc.AppImage
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mcsrc-macos-arm64
+          path: mcsrc-macos-arm64.tar.gz
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mcsrc-windows-x64
+          path: mcsrc-windows-x64.tar.gz
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mcsrc-linux-x64
+          path: mcsrc-linux-x64.tar.gz
+
   e2e-tests:
     needs: build
     strategy:
