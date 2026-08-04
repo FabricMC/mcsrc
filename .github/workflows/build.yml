@@ -25,7 +25,6 @@ jobs:
           path: java/build/libs/
 
   desktop:
-    needs: build
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
