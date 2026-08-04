@@ -38,23 +38,18 @@ jobs:
         working-directory: java
       - run: npm ci
       - run: make build-all
-      - name: Package desktop apps
-        run: |
-          tar -czf mcsrc-macos-arm64.tar.gz -C desktop-dist/macos mcsrc.app
-          tar -czf mcsrc-windows-x64.tar.gz -C desktop-dist/windows mcsrc
-          tar -czf mcsrc-linux-x64.tar.gz -C desktop-dist/linux mcsrc.AppImage
       - uses: actions/upload-artifact@v4
         with:
           name: mcsrc-macos-arm64
-          path: mcsrc-macos-arm64.tar.gz
+          path: desktop-dist/macos/mcsrc.app
       - uses: actions/upload-artifact@v4
         with:
           name: mcsrc-windows-x64
-          path: mcsrc-windows-x64.tar.gz
+          path: desktop-dist/windows/mcsrc
       - uses: actions/upload-artifact@v4
         with:
           name: mcsrc-linux-x64
-          path: mcsrc-linux-x64.tar.gz
+          path: desktop-dist/linux/mcsrc.AppImage
 
   e2e-tests:
     needs: build
