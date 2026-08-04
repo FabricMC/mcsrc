@@ -14,6 +14,7 @@ import { openCodeTab } from "../../logic/tabs";
 import { useObservable } from "../../utils/UseObservable";
 import { pendingDiffJump } from "./DiffNavigation";
 import { withoutClassExtension, type ClassFilePath } from "../../utils/Names";
+import {sortDiff} from "../../logic/Settings.ts";
 
 const statusColors: Record<ChangeState, string> = {
     modified: "gold",
@@ -51,8 +52,8 @@ const DiffViewFileList = () => {
 };
 
 const DiffChangedFiles = () => {
-    const entries = useMemo(() => combineLatest([getDiffChanges(), searchQuery]).pipe(
-        map(([changesMap, query]) => {
+    const entries = useMemo(() => combineLatest([getDiffChanges(), searchQuery, sortDiff.observable]).pipe(
+        map(([changesMap, query, sortByChange]) => {
             const files = query ? performSearch(query, [...changesMap.keys()]) : [...changesMap.keys()];
             const nextEntries: DiffEntry[] = [];
 
@@ -66,6 +67,8 @@ const DiffChangedFiles = () => {
                     statusInfo: info,
                 });
             }
+
+            nextEntries.sort((first, second) => sortDiffEntries(first, second, sortByChange))
 
             return nextEntries;
         })
@@ -104,6 +107,25 @@ const DiffChangedFiles = () => {
         </div>
     );
 };
+
+function sortDiffEntries(a: DiffEntry, b: DiffEntry, sortByChange: boolean): number {
+    if (sortByChange) {
+        if (a.statusInfo.state === b.statusInfo.state) {
+            return a.file.localeCompare(b.file);
+        }
+        return changeStateToValue(a.statusInfo.state) - changeStateToValue(b.statusInfo.state);
+    } else {
+        return a.file.localeCompare(b.file);
+    }
+}
+
+function changeStateToValue(changeState: ChangeState) : number {
+    switch (changeState) {
+        case "modified": return 0;
+        case "added": return 1;
+        case "deleted": return 2;
+    }
+}
 
 interface DiffFileRowProps {
     entry: DiffEntry;
