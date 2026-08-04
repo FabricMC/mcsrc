@@ -15,7 +15,6 @@ import org.objectweb.asm.commons.ClassRemapper;
 import org.objectweb.asm.commons.Remapper;
 import org.objectweb.asm.util.Textifier;
 import org.objectweb.asm.util.TraceClassVisitor;
-import org.teavm.jso.JSBody;
 import org.teavm.jso.JSExport;
 import org.teavm.jso.core.JSMap;
 import org.teavm.jso.core.JSString;
@@ -37,15 +36,17 @@ public class Indexer {
     private static Remapper mappingTreeRemapper;
 
     @JSExport
-    public static void index(ArrayBuffer arrayBuffer, boolean includeReferences) {
+    public static void index(ArrayBuffer arrayBuffer) {
         byte[] bytes = new Int8Array(arrayBuffer).copyToJavaArray();
         ClassReader classReader = new ClassReader(bytes);
         classReader.accept(new ClassIndexVisitor(ASM_VERSION), ClassReader.SKIP_CODE | ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);
+    }
 
-        if (includeReferences) {
-            // Use SKIP_FRAMES for faster parsing - we don't need stack map frames for indexing
-            classReader.accept(new ReferenceIndexVisitor(ASM_VERSION), ClassReader.SKIP_FRAMES);
-        }
+    @JSExport
+    public static void indexReferences(ArrayBuffer arrayBuffer) {
+        byte[] bytes = new Int8Array(arrayBuffer).copyToJavaArray();
+        ClassReader classReader = new ClassReader(bytes);
+        classReader.accept(new ReferenceIndexVisitor(ASM_VERSION), ClassReader.SKIP_FRAMES);
     }
 
     @JSExport
@@ -178,7 +179,7 @@ public class Indexer {
     }
 
     @JSExport
-    public static void loadRemapIndex(String[] classData, String[] memberData) {
+    public static void loadData(String[] classData, String[] memberData) {
         inheritanceData.clear();
         Indexer.memberData.clear();
 
@@ -316,6 +317,12 @@ public class Indexer {
             this.className = className;
             this.methods = new HashSet<>();
             this.fields = new HashSet<>();
+        }
+
+        public ClassMemberInfo(String className, Set<String> methods, Set<String> fields) {
+            this.className = className;
+            this.methods = methods;
+            this.fields = fields;
         }
 
         public void addMethod(Entry.Method method) {

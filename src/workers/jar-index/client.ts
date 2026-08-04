@@ -61,16 +61,17 @@ const batchSize = 25;
 export class JarIndex {
     readonly minecraftJar: MinecraftJar;
 
-    private _workers: ReturnType<typeof createWrorker>[] | undefined;
+    private _workers: ReturnType<typeof createWorker>[] | undefined;
     private get workers() {
         if (this._workers) return this._workers;
         const threads = Math.max(1, (navigator.hardwareConcurrency || 4) - 1);
-        this._workers = Array.from({ length: threads }, () => createWrorker());
+        this._workers = Array.from({ length: threads }, () => createWorker());
         console.log(`Created JarIndex with ${threads} workers`);
         return this._workers;
     }
 
     private indexPromise: Promise<void> | null = null;
+    private fullyIndexed = false;
     private classDataCache: ClassData[] | null = null;
 
     constructor(minecraftJar: MinecraftJar) {
@@ -89,13 +90,22 @@ export class JarIndex {
     }
 
     private async indexJar(includeReferences: boolean): Promise<void> {
-        if (!this.indexPromise) {
-            this.indexPromise = this.performIndexing(includeReferences);
+        if (includeReferences) {
+            if (this.indexPromise && this.fullyIndexed) {
+                return this.indexPromise;
+            } else {
+                let classData = await this.getClassData();
+                let memberData = await this.getMemberData();
+                this.fullyIndexed = true;
+                this.indexPromise = this.performIndexing((worker, classNames) => worker.c.indexReferences(classNames, classData, memberData));
+            }
+        } else if (!this.indexPromise) {
+            this.indexPromise = this.performIndexing((worker, classNames) => worker.c.indexBatch(classNames));
         }
         return this.indexPromise;
     }
 
-    private async performIndexing(includeReferences: boolean): Promise<void> {
+    private async performIndexing(indexFunc: (worker: ReturnType<typeof createWorker>, classNames: ClassFilePath[]) => Promise<void>): Promise<void> {
         try {
             const startTime = performance.now();
 
@@ -126,7 +136,7 @@ export class JarIndex {
                             return indexed;
                         }
 
-                        await worker.c.indexBatch(batch, includeReferences);
+                        await indexFunc(worker, batch);
                         completed += batch.length;
 
                         indexProgress.next(Math.round((completed / classNames.length) * 100));
@@ -163,7 +173,7 @@ export class JarIndex {
     }
 
     async getMemberData(): Promise<MemberData[]> {
-        await this.indexJar(true);
+        await this.indexJar(false);
 
         let results: Promise<MemberData[]>[] = [];
 
@@ -183,41 +193,32 @@ export class JarIndex {
             this.classDataCache = dbResult.classes;
             return this.classDataCache;
         }
-
-        try {
-            await this.indexJar(false);
-
-            let results: Promise<ClassDataString[]>[] = [];
-            for (const worker of this.workers) {
-                results.push(worker.c.getClassData());
-            }
-
-            const classDataStrings = await Promise.all(results).then(arrays => arrays.flat());
-            this.classDataCache = classDataStrings.map(parseClassData);
-
-            await db.classData.put({
-                name: this.minecraftJar.jar.name,
-                classes: this.classDataCache,
-            });
-
-            return this.classDataCache;
-        } finally {
-            this.destroy();
+        await this.indexJar(false);
+        let results: Promise<ClassDataString[]>[] = [];
+        for (const worker of this.workers) {
+            results.push(worker.c.getClassData());
         }
+        const classDataStrings = await Promise.all(results).then(arrays => arrays.flat());
+        this.classDataCache = classDataStrings.map(parseClassData);
+        await db.classData.put({
+            name: this.minecraftJar.jar.name,
+            classes: this.classDataCache,
+        });
+        return this.classDataCache;
     }
 }
 
-let bytecodeWorker: ReturnType<typeof createWrorker> | null = null;
+let bytecodeWorker: ReturnType<typeof createWorker> | null = null;
 
 export async function getBytecode(classData: ArrayBufferLike[]): Promise<string> {
     if (!bytecodeWorker) {
-        bytecodeWorker = createWrorker();
+        bytecodeWorker = createWorker();
     }
 
     return bytecodeWorker.c.getBytecode(classData);
 }
 
-function createWrorker() {
+function createWorker() {
     const worker = new Worker(new URL("./worker.ts", import.meta.url), { type: "module", name: "jar-indexer" });
     return {
         c: Comlink.wrap<JarIndexer>(worker),

@@ -148,7 +148,7 @@ export class RemapWorker {
         try {
             let time = performance.now();
             remapper.loadMappings(await mappingsBlob.arrayBuffer());
-            remapper.loadRemapIndex(remapIndex.classData, remapIndex.memberData);
+            remapper.loadData(remapIndex.classData, remapIndex.memberData);
             remapIndex.classData.length = 0;
             remapIndex.memberData.length = 0;
             stats.loadMappingsMs = performance.now() - time;
@@ -264,7 +264,7 @@ interface Remapper {
     getObfToDeobf(): Map<string, string>;
     getClassData(): string[];
     getMemberData(): string[];
-    loadRemapIndex(classData: string[], memberData: string[]): void;
+    loadData(classData: string[], memberData: string[]): void;
 }
 
 Comlink.expose(new RemapWorker());

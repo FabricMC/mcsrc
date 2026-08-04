@@ -2,6 +2,7 @@ import { load } from "../../../java/build/generated/teavm/wasm-gc/java.wasm-runt
 import indexerWasm from '../../../java/build/generated/teavm/wasm-gc/java.wasm?url';
 import { openJar, type Jar } from "../../utils/Jar.js";
 import type { ClassFilePath, ClassName } from "../../utils/Names.js";
+import type {ClassData} from "./client.ts";
 
 export type Class = ClassName;
 export type Method = `${ClassName}:${string}:${string}`;
@@ -49,7 +50,7 @@ export class JarIndexer {
         this.#jar = await openJar(name, blob);
     };
 
-    indexBatch = async (classNames: ClassFilePath[], includeReferences: boolean): Promise<void> => {
+    indexBatch = async (classNames: ClassFilePath[]): Promise<void> => {
         if (!this.#jar) {
             throw new Error("Jar not set in worker");
         }
@@ -67,9 +68,33 @@ export class JarIndexer {
         const indexer = await this.getIndexer();
 
         for (const arrayBuffer of arrayBufferPromises) {
-            indexer.index(await arrayBuffer, includeReferences);
+            indexer.index(await arrayBuffer);
         }
     };
+
+    indexReferences = async (classNames: ClassFilePath[], classData: ClassData[], memberData : MemberData[]): Promise<void> => {
+        if (!this.#jar) {
+            throw new Error("Jar not set in worker");
+        }
+
+        const currentJar = this.#jar; // Capture for closure
+        const arrayBufferPromises = classNames.map(async className => {
+            const entry = currentJar.entries[className];
+            if (!entry) {
+                throw new Error(`Class entry not found: ${className}`);
+            }
+            const data = await entry.blob();
+            return data.arrayBuffer();
+        });
+
+        const indexer = await this.getIndexer();
+
+        indexer.loadData(classData.map(item => `${item.className}|${item.superName}|${item.accessFlags}|${item.interfaces.join(",")}`), memberData.map(item => `${item.className}|${item.methods.join(",")}|${item.fields.join(",")}`));
+
+        for (const arrayBuffer of arrayBufferPromises) {
+            indexer.indexReferences(await arrayBuffer);
+        }
+    }
 
     getReference = async (key: ReferenceKey): Promise<[ReferenceString]> => {
         const indexer = await this.getIndexer();
@@ -106,10 +131,12 @@ export class JarIndexer {
 }
 
 interface Indexer {
-    index(data: ArrayBufferLike, includeReferences: boolean): void;
+    index(data: ArrayBufferLike): void;
+    indexReferences(data: ArrayBufferLike): void;
     getReference(key: ReferenceKey): [ReferenceString];
     getReferenceSize(): number;
     getBytecode(classData: ArrayBufferLike[]): string;
     getClassData(): ClassDataString[];
     getMemberData(): string[];
+    loadData(classData: string[], memberData: string[]): void;
 }
