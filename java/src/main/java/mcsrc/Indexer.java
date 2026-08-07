@@ -38,6 +38,10 @@ public class Indexer {
     @JSExport
     public static void index(ArrayBuffer arrayBuffer) {
         byte[] bytes = new Int8Array(arrayBuffer).copyToJavaArray();
+        index(bytes);
+    }
+
+    public static void index(byte[] bytes) {
         ClassReader classReader = new ClassReader(bytes);
         // Use SKIP_FRAMES for faster parsing - we don't need stack map frames for indexing
         classReader.accept(new ClassIndexVisitor(ASM_VERSION), ClassReader.SKIP_FRAMES);
@@ -46,6 +50,10 @@ public class Indexer {
     @JSExport
     public static void indexRemapData(ArrayBuffer arrayBuffer) {
         byte[] bytes = new Int8Array(arrayBuffer).copyToJavaArray();
+        indexRemapData(bytes);
+    }
+
+    public static void indexRemapData(byte[] bytes) {
         ClassReader classReader = new ClassReader(bytes);
         classReader.accept(new RemapDataIndexVisitor(ASM_VERSION), ClassReader.SKIP_CODE | ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);
     }
@@ -62,10 +70,13 @@ public class Indexer {
 
     @JSExport
     public static String getBytecode(ArrayBuffer[] classBuffers) {
+        return getBytecode(Arrays.stream(classBuffers).map(buffer -> new Int8Array(buffer).copyToJavaArray()).toArray(byte[][]::new));
+    }
+    
+    public static String getBytecode(byte[][] classBytes) {
         StringBuilder result = new StringBuilder();
 
-        for (ArrayBuffer classBuffer : classBuffers) {
-            byte[] bytes = new Int8Array(classBuffer).copyToJavaArray();
+        for (byte[] bytes : classBytes) {
             ClassReader classReader = new ClassReader(bytes);
             Textifier textifier = new Textifier();
 
@@ -143,7 +154,11 @@ public class Indexer {
         clearRemapperState();
 
         var mappingsArray = new Int8Array(mappings).copyToJavaArray();
-        var mappingsReader = new InputStreamReader(new ByteArrayInputStream(mappingsArray), StandardCharsets.UTF_8);
+        loadMappings(mappingsArray);
+    }
+
+    private static void loadMappings(byte[] mappings) {
+        var mappingsReader = new InputStreamReader(new ByteArrayInputStream(mappings), StandardCharsets.UTF_8);
 
         try {
             var tree = new MemoryMappingTree();
@@ -216,10 +231,29 @@ public class Indexer {
         return map;
     }
 
+    public static Map<String, String> getObfToDeobfNative() {
+        int obfId = mappingTree.getNamespaceId(MappingUtil.NS_TARGET_FALLBACK);
+        int deobfId = mappingTree.getNamespaceId(MappingUtil.NS_SOURCE_FALLBACK);
+        Map<String, String> map = new HashMap<>();
+        for (var mapping : mappingTree.getClasses()) {
+            String obfName = mapping.getName(obfId);
+            String deobfName = mapping.getName(deobfId);
+            map.put(obfName, deobfName);
+        }
+        return map;
+    }
+
     @JSExport
     public static Int8Array remapEntry(ArrayBuffer entry) {
         var classBytes = new Int8Array(entry).copyToJavaArray();
-        ClassReader reader = new ClassReader(classBytes);
+        var remappedBytes = remapEntry(classBytes);
+        var array = new Int8Array(remappedBytes.length);
+        array.set(remappedBytes);
+        return array;
+    }
+
+    public static byte[] remapEntry(byte[] entry) {
+        ClassReader reader = new ClassReader(entry);
         ClassWriter writer = new ClassWriter(0) {
             @Override
             protected String getCommonSuperClass(String type1, String type2) {
@@ -229,10 +263,7 @@ public class Indexer {
 
         reader.accept(new ClassRemapper(new LocalRenameVisitor(ASM_VERSION, writer), mappingTreeRemapper), ClassReader.SKIP_FRAMES);
 
-        var remappedBytes = writer.toByteArray();
-        var array = new Int8Array(remappedBytes.length);
-        array.set(remappedBytes);
-        return array;
+        return writer.toByteArray();
     }
 
     private static class ClassInheritanceInfo {
