@@ -33,7 +33,7 @@ jobs:
         include:
           - os: windows-latest
             browser: chromium
-          - os: ubuntu-26.04
+          - os: ubuntu-24.04
             browser: firefox
           - os: macos-latest
             browser: webkit

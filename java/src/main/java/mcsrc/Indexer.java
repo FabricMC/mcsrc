@@ -179,7 +179,7 @@ public class Indexer {
         memberData.clear();
     }
 
-    public static Map<String, String> getObfToDeobfNative() {
+    public static Map<String, String> getObfToDeobf() {
         int obfId = mappingTree.getNamespaceId(MappingUtil.NS_TARGET_FALLBACK);
         int deobfId = mappingTree.getNamespaceId(MappingUtil.NS_SOURCE_FALLBACK);
         Map<String, String> map = new HashMap<>();

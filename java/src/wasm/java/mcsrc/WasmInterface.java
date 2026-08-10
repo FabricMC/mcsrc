@@ -75,7 +75,7 @@ public final class WasmInterface {
     public static JSMap<JSString, JSString> getObfToDeobf() {
         var map = new JSMap<JSString, JSString>();
 
-        for (var entry : Indexer.getObfToDeobfNative().entrySet()) {
+        for (var entry : Indexer.getObfToDeobf().entrySet()) {
             map.set(JSString.valueOf(entry.getKey()), JSString.valueOf(entry.getValue()));
         }
 
