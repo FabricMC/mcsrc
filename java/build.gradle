@@ -84,7 +84,7 @@ teavm {
 publishing {
     publications {
         mavenJava(MavenPublication) {
-            artifactId = 'mcsrc'
+            artifactId = 'core'
             from components.java
         }
     }
