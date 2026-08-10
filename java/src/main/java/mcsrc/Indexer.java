@@ -15,11 +15,6 @@ import org.objectweb.asm.commons.ClassRemapper;
 import org.objectweb.asm.commons.Remapper;
 import org.objectweb.asm.util.Textifier;
 import org.objectweb.asm.util.TraceClassVisitor;
-import org.teavm.jso.JSExport;
-import org.teavm.jso.core.JSMap;
-import org.teavm.jso.core.JSString;
-import org.teavm.jso.typedarrays.ArrayBuffer;
-import org.teavm.jso.typedarrays.Int8Array;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
@@ -35,22 +30,10 @@ public class Indexer {
     private static MemoryMappingTree mappingTree;
     private static Remapper mappingTreeRemapper;
 
-    @JSExport
-    public static void index(ArrayBuffer arrayBuffer) {
-        byte[] bytes = new Int8Array(arrayBuffer).copyToJavaArray();
-        index(bytes);
-    }
-
     public static void index(byte[] bytes) {
         ClassReader classReader = new ClassReader(bytes);
         // Use SKIP_FRAMES for faster parsing - we don't need stack map frames for indexing
         classReader.accept(new ClassIndexVisitor(ASM_VERSION), ClassReader.SKIP_FRAMES);
-    }
-
-    @JSExport
-    public static void indexRemapData(ArrayBuffer arrayBuffer) {
-        byte[] bytes = new Int8Array(arrayBuffer).copyToJavaArray();
-        indexRemapData(bytes);
     }
 
     public static void indexRemapData(byte[] bytes) {
@@ -58,21 +41,14 @@ public class Indexer {
         classReader.accept(new RemapDataIndexVisitor(ASM_VERSION), ClassReader.SKIP_CODE | ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);
     }
 
-    @JSExport
     public static String[] getReference(String key) {
         return references.getOrDefault(key, Set.of()).toArray(String[]::new);
     }
 
-    @JSExport
     public static int getReferenceSize() {
         return referenceSize;
     }
 
-    @JSExport
-    public static String getBytecode(ArrayBuffer[] classBuffers) {
-        return getBytecode(Arrays.stream(classBuffers).map(buffer -> new Int8Array(buffer).copyToJavaArray()).toArray(byte[][]::new));
-    }
-    
     public static String getBytecode(byte[][] classBytes) {
         StringBuilder result = new StringBuilder();
 
@@ -122,7 +98,6 @@ public class Indexer {
         info.addField(field);
     }
 
-    @JSExport
     public static String[] getMemberData() {
         List<String> result = new ArrayList<>();
         for (ClassMemberInfo info : memberData.values()) {
@@ -135,7 +110,6 @@ public class Indexer {
         return result.toArray(new String[0]);
     }
     
-    @JSExport
     public static String[] getClassData() {
         List<String> result = new ArrayList<>();
         for (ClassInheritanceInfo info : inheritanceData.values()) {
@@ -149,15 +123,7 @@ public class Indexer {
         return result.toArray(new String[0]);
     }
 
-    @JSExport
-    public static void loadMappings(ArrayBuffer mappings) {
-        clearRemapperState();
-
-        var mappingsArray = new Int8Array(mappings).copyToJavaArray();
-        loadMappings(mappingsArray);
-    }
-
-    private static void loadMappings(byte[] mappings) {
+    public static void loadMappings(byte[] mappings) {
         var mappingsReader = new InputStreamReader(new ByteArrayInputStream(mappings), StandardCharsets.UTF_8);
 
         try {
@@ -172,7 +138,6 @@ public class Indexer {
         mappingTreeRemapper = new InheritanceAwareRemapper(mappingTree, MappingUtil.NS_TARGET_FALLBACK, MappingUtil.NS_SOURCE_FALLBACK);
     }
 
-    @JSExport
     public static void clearIndex() {
         references.clear();
         referenceSize = 0;
@@ -180,7 +145,6 @@ public class Indexer {
         memberData.clear();
     }
 
-    @JSExport
     public static void loadRemapIndex(String[] classData, String[] memberData) {
         inheritanceData.clear();
         Indexer.memberData.clear();
@@ -208,27 +172,11 @@ public class Indexer {
         }
     }
 
-    @JSExport
     public static void clearRemapperState() {
         mappingTree = null;
         mappingTreeRemapper = null;
         inheritanceData.clear();
         memberData.clear();
-    }
-
-    @JSExport
-    public static JSMap<JSString, JSString> getObfToDeobf() {
-        int obfId = mappingTree.getNamespaceId(MappingUtil.NS_TARGET_FALLBACK);
-        int deobfId = mappingTree.getNamespaceId(MappingUtil.NS_SOURCE_FALLBACK);
-        var map = new JSMap<JSString, JSString>();
-
-        for (var mapping : mappingTree.getClasses()) {
-            String obfName = mapping.getName(obfId);
-            String deobfName = mapping.getName(deobfId);
-            map.set(JSString.valueOf(obfName), JSString.valueOf(deobfName));
-        }
-
-        return map;
     }
 
     public static Map<String, String> getObfToDeobfNative() {
@@ -241,15 +189,6 @@ public class Indexer {
             map.put(obfName, deobfName);
         }
         return map;
-    }
-
-    @JSExport
-    public static Int8Array remapEntry(ArrayBuffer entry) {
-        var classBytes = new Int8Array(entry).copyToJavaArray();
-        var remappedBytes = remapEntry(classBytes);
-        var array = new Int8Array(remappedBytes.length);
-        array.set(remappedBytes);
-        return array;
     }
 
     public static byte[] remapEntry(byte[] entry) {
