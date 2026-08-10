@@ -3,6 +3,7 @@ import { agreedEula } from "./Settings";
 import { openJar, type Jar } from "../utils/Jar";
 import { selectedMinecraftVersion } from "./State";
 import { remapMinecraftJar } from "../workers/remap/client";
+import { getDefaultVersion } from "./VersionSelection";
 
 import EXPERIMENTAL_VERSIONS from "./experimental_versions.json";
 
@@ -10,7 +11,7 @@ const CACHE_NAME = 'mcsrc-v1';
 const VERSIONS_URL = "https://piston-meta.mojang.com/mc/game/version_manifest_v2.json";
 
 interface VersionsList {
-    versions: VersionListEntry[]
+    versions: VersionListEntry[];
 }
 
 interface VersionListEntry {
@@ -53,14 +54,12 @@ export const minecraftVersions = agreedEula.observable.pipe(
     filter(agreed => agreed),
     switchMap(() => from(fetchVersions())),
     tap(versions => {
-        // On inital load, if we dont have a version selected or the selected version is not valid, default to the latest version.
-        const currentVersion = selectedMinecraftVersion.value;
-        const isValid = currentVersion !== null && versions.some(v => v.id === currentVersion);
+        const defaultVersion = getDefaultVersion(
+            selectedMinecraftVersion.value,
+            versions
+        );
 
-        if (!isValid && versions.length > 0) {
-            // Select the latest stable release version if it exists, otherwise fall back to the latest version
-            const latestRelease = versions.find(v => v.type === "release");
-            const defaultVersion = latestRelease ? latestRelease.id : versions[0].id;
+        if (defaultVersion !== undefined) {
             selectedMinecraftVersion.next(defaultVersion);
         }
     }),
@@ -124,7 +123,7 @@ export function isUnobfuscated(version: VersionListEntry): boolean {
 }
 
 function isSupported(version: VersionListEntry): boolean {
-    if(isUnobfuscated(version)) return true;
+    if (isUnobfuscated(version)) return true;
     // This version was released after the first snapshot with official mappings,
     // but its mappings were never published.
     if (version.id === '1.14_combat-3') return false;
