@@ -1,5 +1,5 @@
-import { Modal, Progress } from "antd";
-import { downloadProgress, remapProgress } from "../logic/MinecraftApi";
+import { Button, Modal, Progress } from "antd";
+import { cancelDownload, downloadProgress, remapProgress } from "../logic/MinecraftApi";
 import { useObservable } from "../utils/UseObservable";
 
 const ProgressModal = () => {
@@ -16,6 +16,11 @@ const ProgressModal = () => {
             closable={false}
         >
             <Progress percent={progress ?? 0} />
+            {!isRemapping && (
+                <Button onClick={cancelDownload}>
+                    Cancel
+                </Button>
+            )}
         </Modal>
     );
 };
