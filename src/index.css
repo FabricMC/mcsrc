@@ -114,8 +114,24 @@ html, body, #root {
   overflow: auto;
 }
 
+.class-search-input .ant-input-group-addon {
+  padding: 0;
+}
+
 .ant-tabs-content {
     height: 100%;
+}
+
+.settings-tab-content {
+  padding: 16px 12px 4px;
+}
+
+.settings-form .ant-form-item {
+  margin-bottom: 16px;
+}
+
+.settings-form .ant-form-item:last-child {
+  margin-bottom: 0;
 }
 
 .diff-shell {

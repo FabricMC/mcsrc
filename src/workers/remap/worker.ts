@@ -1,6 +1,6 @@
 import * as Comlink from "comlink";
-import { load } from "../../../java/build/generated/teavm/wasm-gc/java.wasm-runtime.js";
-import indexerWasm from "../../../java/build/generated/teavm/wasm-gc/java.wasm?url";
+import { load } from "../../../java/build/generated/teavm/wasm-gc/mcsrc.wasm-runtime.js";
+import indexerWasm from "../../../java/build/generated/teavm/wasm-gc/mcsrc.wasm?url";
 import { openJar } from "../../utils/Jar";
 import type { ClassFilePath } from "../../utils/Names";
 import { crc32 } from "./crc32";
@@ -50,7 +50,7 @@ export class RemapWorker {
                 this.#remapper = teavm.exports as Remapper;
             } catch (e) {
                 console.warn("Failed to load WASM module (non-compliant browser?), falling back to JS implementation", e);
-                this.#remapper = await import("../../../java/build/generated/teavm/js/java.js") as unknown as Remapper;
+                this.#remapper = await import("../../../java/build/generated/teavm/js/mcsrc.js") as unknown as Remapper;
             }
         }
 

@@ -1,26 +1,71 @@
-import { Button, Modal, type CheckboxProps, Form, Tooltip, InputNumber, type InputNumberProps, Space } from "antd";
-import { SettingOutlined, SunOutlined, MoonOutlined, DesktopOutlined } from '@ant-design/icons';
+import { Button, Flex, Modal, type CheckboxProps, Form, Tooltip, InputNumber, type InputNumberProps, Space, Tabs } from "antd";
+import { SettingOutlined, SunOutlined, MoonOutlined, DesktopOutlined, JavaOutlined } from '@ant-design/icons';
 import { Checkbox } from 'antd';
 import { useObservable } from "../utils/UseObservable";
 import { BooleanSetting, enableTabs, displayLambdas, focusSearch, KeybindSetting, type KeybindValue, bytecode, showStructure, NumberSetting, preferWasmDecompiler, compactPackages, theme, autoJarIndex } from "../logic/Settings";
 import { capturingKeybind, rawKeydownEvent } from "../logic/Keybinds";
 import { BehaviorSubject } from "rxjs";
-import type React from "react";
+import React, { useEffect, useState } from "react";
+import { modalOpen } from "./JarDecompilerModal";
 
 export const settingsModalOpen = new BehaviorSubject<boolean>(false);
 
 export const SettingsModalButton = () => {
     return (
-        <Button type="default" onClick={() => settingsModalOpen.next(true)}>
-            <SettingOutlined />
-        </Button>
+        <Tooltip title="Settings">
+            <Button
+                aria-label="Settings"
+                icon={<SettingOutlined />}
+                type="default"
+                onClick={() => settingsModalOpen.next(true)}
+            />
+        </Tooltip>
     );
 };
 
-const SettingsModal = () => {
-    const isModalOpen = useObservable(settingsModalOpen);
+const SettingsTab = () => {
     const displayLambdasValue = useObservable(displayLambdas.observable);
     const bytecodeValue = useObservable(bytecode.observable);
+
+    return (
+        <div className="settings-tab-content">
+            <Form className="settings-form" layout="horizontal" labelCol={{ span: 9 }} wrapperCol={{ span: 16 }}>
+                <ThemeOption />
+                <BooleanOption setting={enableTabs} title="Enable Tabs" />
+                <BooleanOption setting={compactPackages} title="Compact Packages" tooltip="Collapse packages with one child into one." />
+                <BooleanOption setting={autoJarIndex} title="Auto Jar Index" tooltip="Automatically index class metadata for file icons." />
+                <BooleanOption setting={displayLambdas} title="Lambda Names" tooltip="Display lambda names as inline comments. Does not support permalinking." disabled={bytecodeValue} />
+                <BooleanOption setting={bytecode} title="Show Bytecode" tooltip="Show bytecode instructions alongside decompiled source. Does not support permalinking." disabled={displayLambdasValue} />
+                <BooleanOption setting={preferWasmDecompiler} title="Prefer WASM Decompiler" tooltip="WASM decompiler might be faster than JavaScript." />
+                <KeybindOption setting={focusSearch} title="Focus Search" captureId="focus_search" />
+                <KeybindOption setting={showStructure} title="Show Structure" captureId="show_structure" />
+            </Form>
+        </div>
+    );
+};
+
+const AdvancedTab = () => (
+    <Flex className="settings-tab-content" vertical align="flex-start" gap="small">
+        <Button
+            data-testid="jar-decompiler"
+            icon={<JavaOutlined />}
+            onClick={() => {
+                settingsModalOpen.next(false);
+                modalOpen.next(true);
+            }}
+        >
+            Decompile All
+        </Button>
+    </Flex>
+);
+
+const SettingsModal = () => {
+    const isModalOpen = useObservable(settingsModalOpen);
+    const [activeTab, setActiveTab] = useState("settings");
+
+    useEffect(() => {
+        if (isModalOpen) setActiveTab("settings");
+    }, [isModalOpen]);
 
     return (
         <Modal
@@ -29,17 +74,23 @@ const SettingsModal = () => {
             onCancel={() => settingsModalOpen.next(false)}
             footer={null}
         >
-            <Form layout="horizontal" labelCol={{ span: 9 }} wrapperCol={{ span: 16 }}>
-                <ThemeOption />
-                <BooleanOption setting={enableTabs} title={"Enable Tabs"} />
-                <BooleanOption setting={compactPackages} title={"Compact Packages"} tooltip="Collapse packages with one child into one." />
-                <BooleanOption setting={autoJarIndex} title={"Auto Jar Index"} tooltip="Automatically index class metadata for file icons." />
-                <BooleanOption setting={displayLambdas} title={"Lambda Names"} tooltip="Display lambda names as inline comments. Does not support permalinking." disabled={bytecodeValue} />
-                <BooleanOption setting={bytecode} title={"Show Bytecode"} tooltip="Show bytecode instructions alongside decompiled source. Does not support permalinking." disabled={displayLambdasValue} />
-                <BooleanOption setting={preferWasmDecompiler} title={"Prefer WASM Decompiler"} tooltip="WASM decompiler might be faster than JavaScript."/>
-                <KeybindOption setting={focusSearch} title={"Focus Search"} captureId="focus_search" />
-                <KeybindOption setting={showStructure} title={"Show Structure"} captureId="show_structure" />
-            </Form>
+            <Tabs
+                className="settings-tabs"
+                activeKey={activeTab}
+                onChange={setActiveTab}
+                items={[
+                    {
+                        key: "settings",
+                        label: "Settings",
+                        children: <SettingsTab />,
+                    },
+                    {
+                        key: "advanced",
+                        label: "Advanced",
+                        children: <AdvancedTab />,
+                    },
+                ]}
+            />
         </Modal>
     );
 };

@@ -15,6 +15,7 @@ import { autoJarIndex, compactPackages, displayLambdas } from '../logic/Settings
 import { setOptions } from '../workers/decompile/client';
 import { jarIndex, type ClassData } from '../workers/jar-index/client';
 import { ClassDataIcon, JavaIcon, PackageIcon } from './intellij-icons';
+import { DEFAULT_VERSION, vineflowerVersionToPermalinkVersion } from '../logic/vineflower/versions';
 import { classNameFromClassFilePath, dottedClassNameFromClassName, isClassFilePath, toClassName, withoutClassExtension, type ClassFilePath } from '../utils/Names';
 
 const classData: Observable<Map<string, ClassData> | null> = combineLatest([
@@ -157,7 +158,7 @@ const getMenuItems = (
     const packagePath = isFile ? dottedClassNameFromClassName(classNameFromClassFilePath(path)) : withoutClassExtension(path);
     const filename = path.split('/').pop() || '';
     const linkPath = withoutClassExtension(path);
-    const link = jar ? `https://mcsrc.dev/1/${jar.version}/${linkPath}` : '';
+    const link = jar ? `https://mcsrc.dev/${vineflowerVersionToPermalinkVersion(DEFAULT_VERSION)}/${jar.version}/${linkPath}` : '';
 
     const renderLabel = (title: string, value: string) => (
         <div style={{ display: 'flex', gap: '24px', justifyContent: 'space-between', alignItems: 'center', minWidth: '300px' }}>

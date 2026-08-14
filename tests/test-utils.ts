@@ -24,6 +24,11 @@ export async function selectMinecraftVersion(page: Page, version: string, select
     await listbox.getByRole('option').filter({ hasText: version }).click();
 }
 
+export async function waitForBlockingModalToClose(page: Page) {
+    const aboutModal = page.locator('.ant-modal-wrap').filter({ hasText: 'About mcsrc.dev' });
+    await expect(aboutModal).toBeHidden();
+}
+
 async function setupNetworkMocking(page: Page) {
     const testVersions = {
         versions: [
@@ -138,10 +143,17 @@ export async function setupTest(page: Page) {
         } else {
             await page.keyboard.press('Escape');
         }
+
+        await waitForBlockingModalToClose(page);
     });
-    await page.addInitScript(() => {
+    const isWebKit = page.context().browser()?.browserType().name() === 'webkit';
+    await page.addInitScript((preferWasm) => {
         localStorage.setItem('setting_eula', 'true');
         localStorage.setItem('setting_show_snapshot_versions', 'true');
         localStorage.setItem('setting_favorite_minecraft_versions', '[]');
-    });
+        if (!preferWasm) {
+            // Use JS runtime to avoid WASM compatibility issues in WebKit
+            localStorage.setItem('setting_prefer_wasm_decompiler', 'false');
+        }
+    }, !isWebKit);
 }

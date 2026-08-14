@@ -1,5 +1,4 @@
 import { Alert, Button, Flex, Form, message, Modal, Popconfirm, Progress } from "antd";
-import { JavaOutlined } from '@ant-design/icons';
 import { BehaviorSubject } from "rxjs";
 import { useObservable } from "../utils/UseObservable";
 import { BooleanOption, NumberOption } from "./SettingsModal";
@@ -7,14 +6,9 @@ import { decompilerSplits, decompilerThreads, displayLambdas, MAX_THREADS, prefe
 import { getDecompilerOptions } from "../logic/Decompiler";
 import { decompileEntireJar, deleteCache, setOptions, type DecompileEntireJarTask } from "../workers/decompile/client";
 import { minecraftJar } from "../logic/MinecraftApi";
+import { DEFAULT_VERSION } from "../logic/vineflower/versions";
 
-const modalOpen = new BehaviorSubject(false);
-
-export const JarDecompilerModalButton = () => (
-    <Button data-testid="jar-decompiler" variant="outlined" onClick={() => modalOpen.next(true)}>
-        <JavaOutlined />
-    </Button>
-);
+export const modalOpen = new BehaviorSubject(false);
 
 export const JarDecompilerModal = () => {
     const jar = useObservable(minecraftJar);
@@ -29,7 +23,7 @@ export const JarDecompilerModal = () => {
 
         await setOptions(getDecompilerOptions(displayLambdas.value));
 
-        const task = decompileEntireJar(jar.jar, {
+        const task = decompileEntireJar(jar.jar, DEFAULT_VERSION, {
             threads: decompilerThreads.value,
             splits: decompilerSplits.value,
             logger(progress, current, total) {
@@ -56,7 +50,7 @@ export const JarDecompilerModal = () => {
 
     const clearCache = () => {
         if (!jar) return;
-        void deleteCache().then(c => messageApi.open({ type: "success", content: `Deleted ${c} clasess from cache.` }));
+        void deleteCache().then(c => messageApi.open({ type: "success", content: `Deleted ${c} classes from cache.` }));
     };
 
     return (
@@ -85,7 +79,6 @@ export const JarDecompilerModal = () => {
                     </Popconfirm>
                 </Form.Item>
             </Form>
-
         </Modal>
     );
 };
