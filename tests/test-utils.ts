@@ -146,14 +146,9 @@ export async function setupTest(page: Page) {
 
         await waitForBlockingModalToClose(page);
     });
-    const isWebKit = page.context().browser()?.browserType().name() === 'webkit';
-    await page.addInitScript((preferWasm) => {
+    await page.addInitScript(() => {
         localStorage.setItem('setting_eula', 'true');
         localStorage.setItem('setting_show_snapshot_versions', 'true');
         localStorage.setItem('setting_favorite_minecraft_versions', '[]');
-        if (!preferWasm) {
-            // Use JS runtime to avoid WASM compatibility issues in WebKit
-            localStorage.setItem('setting_prefer_wasm_decompiler', 'false');
-        }
-    }, !isWebKit);
+    });
 }
