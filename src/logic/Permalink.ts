@@ -62,12 +62,16 @@ export const parsePathToState = (path: string): State | null => {
         const leftMinecraftVersion = decodeURIComponent(segments[2]);
         const rightMinecraftVersion = decodeURIComponent(segments[3]);
         const filePath = segments.slice(4).join('/');
+        const supportsLineNumbers = version === 2;
         return {
-            version: DEFAULT_STATE.version, // The diff format didnt change from /1/ to /2/, so we can just blindly upgrade all diff permalinks to the new decompiler.
+            version: DEFAULT_STATE.version, // Version 1 diff links have no line selection and can be safely upgraded.
             minecraftVersion: rightMinecraftVersion,
             file: filePath ? toClassFilePath(filePath) : undefined,
-            selectedLines: lineNumber ? { line: lineNumber, lineEnd: lineEnd || undefined } : null,
-            diff: { leftMinecraftVersion, selectionSide: diffSide }
+            selectedLines: supportsLineNumbers && lineNumber ? { line: lineNumber, lineEnd: lineEnd || undefined } : null,
+            diff: {
+                leftMinecraftVersion,
+                ...(supportsLineNumbers && diffSide ? { selectionSide: diffSide } : {})
+            }
         };
     }
 

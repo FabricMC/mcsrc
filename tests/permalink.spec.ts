@@ -38,7 +38,7 @@ test.describe('Permalinks and Line Highlighting', () => {
     });
 
     test('Permalink with line range highlights multiple lines (new format, diff mode)', async ({ page }) => {
-        await page.goto('/1/diff/26.1-mock-1/26.1-mock-2/net/minecraft/client/renderer/LevelRenderer#R87-90');
+        await page.goto('/2/diff/26.1-mock-1/26.1-mock-2/net/minecraft/client/renderer/LevelRenderer#R87-90');
 
         await waitForDecompiledContent(page, 'class LevelRenderer');
 
@@ -58,7 +58,7 @@ test.describe('Permalinks and Line Highlighting', () => {
     });
 
     test('Permalink with line range highlights multiple lines (old hash format, diff mode)', async ({ page }) => {
-        await page.goto('/#1/diff/26.1-mock-1/26.1-mock-2/net/minecraft/client/renderer/LevelRenderer#R87-90');
+        await page.goto('/#2/diff/26.1-mock-1/26.1-mock-2/net/minecraft/client/renderer/LevelRenderer#R87-90');
 
         await waitForDecompiledContent(page, 'class LevelRenderer');
 

@@ -233,9 +233,9 @@ describe('Permalink', () => {
             });
         });
 
-        describe('Diff Mode Line Number Parsing', () => {
+        describe('Version 2 Diff Mode Line Number Parsing', () => {
             it('should parse single line number with #L', () => {
-                const state = parsePathToState('1/diff/1.21/1.21.4/net/minecraft/ChatFormatting#L123')!;
+                const state = parsePathToState('2/diff/1.21/1.21.4/net/minecraft/ChatFormatting#L123')!;
 
                 expect(state.selectedLines).toEqual({
                     line: 123,
@@ -245,7 +245,7 @@ describe('Permalink', () => {
             });
 
             it('should parse line range with #L', () => {
-                const state = parsePathToState('1/diff/1.21/1.21.4/net/minecraft/ChatFormatting#L10-20')!;
+                const state = parsePathToState('2/diff/1.21/1.21.4/net/minecraft/ChatFormatting#L10-20')!;
 
                 expect(state.selectedLines).toEqual({
                     line: 10,
@@ -255,7 +255,7 @@ describe('Permalink', () => {
             });
 
             it('should parse single line number with #R', () => {
-                const state = parsePathToState('1/diff/1.21/1.21.4/net/minecraft/ChatFormatting#R123')!;
+                const state = parsePathToState('2/diff/1.21/1.21.4/net/minecraft/ChatFormatting#R123')!;
 
                 expect(state.selectedLines).toEqual({
                     line: 123,
@@ -265,7 +265,7 @@ describe('Permalink', () => {
             });
 
             it('should parse line range with #R', () => {
-                const state = parsePathToState('1/diff/1.21/1.21.4/net/minecraft/ChatFormatting#R10-20')!;
+                const state = parsePathToState('2/diff/1.21/1.21.4/net/minecraft/ChatFormatting#R10-20')!;
 
                 expect(state.selectedLines).toEqual({
                     line: 10,
@@ -275,7 +275,7 @@ describe('Permalink', () => {
             });
 
             it('should handle URL-encoded line marker (%23) with L', () => {
-                const state = parsePathToState('1/diff/1.21/1.21.4/net/minecraft/ChatFormatting%23L50')!;
+                const state = parsePathToState('2/diff/1.21/1.21.4/net/minecraft/ChatFormatting%23L50')!;
 
                 expect(state.selectedLines).toEqual({
                     line: 50,
@@ -285,7 +285,7 @@ describe('Permalink', () => {
             });
 
             it('should handle URL-encoded line marker (%23) with R', () => {
-                const state = parsePathToState('1/diff/1.21/1.21.4/net/minecraft/ChatFormatting%23R50')!;
+                const state = parsePathToState('2/diff/1.21/1.21.4/net/minecraft/ChatFormatting%23R50')!;
 
                 expect(state.selectedLines).toEqual({
                     line: 50,
@@ -295,7 +295,7 @@ describe('Permalink', () => {
             });
 
             it('should handle URL-encoded line range (%23) with L', () => {
-                const state = parsePathToState('1/diff/1.21/1.21.4/net/minecraft/ChatFormatting%23L10-20')!;
+                const state = parsePathToState('2/diff/1.21/1.21.4/net/minecraft/ChatFormatting%23L10-20')!;
 
                 expect(state.selectedLines).toEqual({
                     line: 10,
@@ -305,7 +305,7 @@ describe('Permalink', () => {
             });
 
             it('should handle URL-encoded line range (%23) with R', () => {
-                const state = parsePathToState('1/diff/1.21/1.21.4/net/minecraft/ChatFormatting%23R10-20')!;
+                const state = parsePathToState('2/diff/1.21/1.21.4/net/minecraft/ChatFormatting%23R10-20')!;
 
                 expect(state.selectedLines).toEqual({
                     line: 10,
@@ -315,7 +315,7 @@ describe('Permalink', () => {
             });
 
             it('should handle line number at end of complex path', () => {
-                const state = parsePathToState('1/diff/1.21/1.21.4/net/minecraft/ChatFormatting/ChatFormatting#L123')!;
+                const state = parsePathToState('2/diff/1.21/1.21.4/net/minecraft/ChatFormatting/ChatFormatting#L123')!;
 
                 expect(state.selectedLines).toEqual({
                     line: 123,
@@ -325,28 +325,36 @@ describe('Permalink', () => {
             });
 
             it('should return null selectedLines when no line number present', () => {
-                const state = parsePathToState('1/diff/1.21/1.21.4/net/minecraft/ChatFormatting')!;
+                const state = parsePathToState('2/diff/1.21/1.21.4/net/minecraft/ChatFormatting')!;
                 expect(state.selectedLines).toBe(null);
                 expect(state.diff!.selectionSide).toBeUndefined();
             });
 
             it('should return null selectedLines when line number is malformed', () => {
-                const state = parsePathToState('1/diff/1.21/1.21.4/net/minecraft/ChatFormatting#Labc')!;
+                const state = parsePathToState('2/diff/1.21/1.21.4/net/minecraft/ChatFormatting#Labc')!;
                 expect(state.selectedLines).toBe(null);
                 expect(state.diff!.selectionSide).toBeUndefined();
             });
 
             it('should return null selectedLines when line number is not at the end', () => {
-                const state = parsePathToState('1/diff/1.21/1.21.4/net/minecraft/ChatFormatting#L5something')!;
+                const state = parsePathToState('2/diff/1.21/1.21.4/net/minecraft/ChatFormatting#L5something')!;
                 expect(state.selectedLines).toBe(null);
                 expect(state.diff!.selectionSide).toBeUndefined();
             });
 
             it('should return null selectedLines when using #LR', () => {
-                const state = parsePathToState('1/diff/1.21/1.21.4/net/minecraft/ChatFormatting#LR12')!;
+                const state = parsePathToState('2/diff/1.21/1.21.4/net/minecraft/ChatFormatting#LR12')!;
                 expect(state.selectedLines).toBe(null);
                 expect(state.diff!.selectionSide).toBeUndefined();
             });
+        });
+
+        it.each(['L', 'R'])('should ignore #%s line numbers in version 1 diff permalinks', side => {
+            const state = parsePathToState(`1/diff/1.21/1.21.4/net/minecraft/ChatFormatting#${side}12`)!;
+
+            expect(state.file).toBe('net/minecraft/ChatFormatting.class');
+            expect(state.selectedLines).toBe(null);
+            expect(state.diff).toEqual({ leftMinecraftVersion: '1.21' });
         });
 
         describe('Version 2 URLs (/2/)', () => {
@@ -401,7 +409,7 @@ describe('Permalink', () => {
             });
 
             it('should parse a real-world diff permalink', () => {
-                const state = parsePathToState('1/diff/1.21.4/1.21.5/net/minecraft/server/MinecraftServer#R250-260')!;
+                const state = parsePathToState('2/diff/1.21.4/1.21.5/net/minecraft/server/MinecraftServer#R250-260')!;
 
                 expect(state.version).toBe(2);
                 expect(state.minecraftVersion).toBe('1.21.5');
