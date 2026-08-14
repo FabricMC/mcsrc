@@ -1,5 +1,5 @@
-import { load } from "../../../java/build/generated/teavm/wasm-gc/java.wasm-runtime.js";
-import indexerWasm from '../../../java/build/generated/teavm/wasm-gc/java.wasm?url';
+import { load } from "../../../java/build/generated/teavm/wasm-gc/mcsrc.wasm-runtime.js";
+import indexerWasm from '../../../java/build/generated/teavm/wasm-gc/mcsrc.wasm?url';
 import { openJar, type Jar } from "../../utils/Jar.js";
 import type { ClassFilePath, ClassName } from "../../utils/Names.js";
 
@@ -34,7 +34,7 @@ export class JarIndexer {
                 this.#indexerFunc = teavm.exports as Indexer;
             } catch (e) {
                 console.warn("Failed to load WASM module (non-compliant browser?), falling back to JS implementation", e);
-                this.#indexerFunc = await import("../../../java/build/generated/teavm/js/java.js") as unknown as Indexer;
+                this.#indexerFunc = await import("../../../java/build/generated/teavm/js/mcsrc.js") as unknown as Indexer;
             }
         }
         return this.#indexerFunc;

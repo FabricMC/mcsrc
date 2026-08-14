@@ -1,12 +1,10 @@
 import { Modal, Button, message } from "antd";
 import { activeJavadocToken, getJavadocForToken, javadocData, setTokenJavadoc } from "./Javadoc";
 import { useObservable } from "../utils/UseObservable";
-import { IS_JAVADOC_EDITOR } from "../site";
 import type { Token } from "../logic/Tokens";
 import JavadocMarkdownEditor from "./JavadocMarkdownEditor";
-import { useMemo, useState } from "react";
-import { javadocApi, type UpdateTarget } from "./api/JavadocApi";
-import { selectedMinecraftVersion } from "../logic/State";
+import { useEffect, useMemo, useState } from "react";
+import { writeJavadoc } from "./JavadocStorage";
 
 const ModalBody = ({ token, onValueChange }: { token: Token; onValueChange: (value: string | undefined) => void; }) => {
     const initialValue = useMemo(() => getJavadocForToken(token, javadocData.value) || "", [token]);
@@ -31,23 +29,30 @@ const ModalBody = ({ token, onValueChange }: { token: Token; onValueChange: (val
                 ) : null}
             </div>
             <div style={{ height: "440px", width: "100%", boxSizing: "border-box" }}>
-                <JavadocMarkdownEditor value={initialValue} onChange={onValueChange} />
+                <JavadocMarkdownEditor key={getTokenKey(token)} value={initialValue} onChange={onValueChange} />
             </div>
         </div>
     );
 };
 
-const JavadocModal = () => {
-    if (!IS_JAVADOC_EDITOR) {
-        return (<></>);
+function getTokenKey(token: Token): string {
+    if (token.type === "method" || token.type === "field") {
+        return `${token.type}:${token.className}:${token.name}:${token.descriptor}`;
     }
 
+    return `${token.type}:${token.className}`;
+}
+
+const JavadocModal = () => {
     const token = useObservable(activeJavadocToken);
-    const minecraftVersion = useObservable(selectedMinecraftVersion);
     const [currentValue, setCurrentValue] = useState<string | undefined>();
     const [loading, setLoading] = useState(false);
 
     const [messageApi, contextHolder] = message.useMessage();
+
+    useEffect(() => {
+        setCurrentValue(undefined);
+    }, [token]);
 
     const handleSave = async () => {
         if (!token) {
@@ -55,33 +60,12 @@ const JavadocModal = () => {
             return;
         }
 
-        if (!minecraftVersion) {
-            messageApi.error("No Minecraft version selected.");
-            return;
-        }
-
-        var target: UpdateTarget | null = null;
-        if (token.type == 'method' || token.type == 'field') {
-            target = {
-                type: token.type,
-                name: token.name,
-                descriptor: token.descriptor
-            };
-        }
-
         setLoading(true);
         try {
-            await javadocApi.updateJavadoc(minecraftVersion, {
-                className: token.className,
-                target,
-                documentation: currentValue || ""
-            });
-
+            const documentation = currentValue ?? getJavadocForToken(token, javadocData.value) ?? "";
+            await writeJavadoc(token, documentation);
+            setTokenJavadoc(token, documentation);
             messageApi.success("Javadoc saved successfully.");
-
-            // Update the local in-memory Javadoc data
-            setTokenJavadoc(token, currentValue);
-
             activeJavadocToken.next(null);
         } catch (error) {
             messageApi.error("Failed to save javadoc.");
@@ -96,20 +80,23 @@ const JavadocModal = () => {
     };
 
     return (
-        <Modal
-            title="Javadoc"
-            open={token !== null}
-            onCancel={handleCancel}
-            footer={
-                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0 10px' }}>
-                    <Button onClick={handleCancel} disabled={loading}>Cancel</Button>
-                    <Button type="primary" onClick={handleSave} loading={loading}>Save</Button>
-                </div>
-            }
-            width={750}
-        >
-            {token && <ModalBody token={token} onValueChange={setCurrentValue} />}
-        </Modal>
+        <>
+            {contextHolder}
+            <Modal
+                title="Javadoc"
+                open={token !== null}
+                onCancel={handleCancel}
+                footer={
+                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0 10px' }}>
+                        <Button onClick={handleCancel} disabled={loading}>Cancel</Button>
+                        <Button type="primary" onClick={handleSave} loading={loading}>Save</Button>
+                    </div>
+                }
+                width={750}
+            >
+                {token && <ModalBody token={token} onValueChange={setCurrentValue} />}
+            </Modal>
+        </>
     );
 };
 

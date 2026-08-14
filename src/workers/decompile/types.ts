@@ -1,13 +1,16 @@
 import type { Token } from "../../logic/Tokens";
 import type { Jar } from "../../utils/Jar";
+import type { Version } from "../../logic/vineflower/versions";
 import { classNameFromClassFilePath, isClassFilePath, toClassFilePath, type ClassName } from "../../utils/Names";
 
 export type DecompileResult = {
     className: ClassName;
     checksum: number;
+    jarName: string;
     source: string;
     tokens: Token[];
     language: 'java' | 'bytecode';
+    version: Version;
 };
 
 export type DecompileOption = { key: string, value: string; };

@@ -2,6 +2,7 @@ import { BehaviorSubject } from "rxjs";
 import { pairwise } from "rxjs/operators";
 import { Tab, CodeTab } from "./tabs";
 import { getInitialState } from "./Permalink";
+import { DEFAULT_VERSION, getVersionFromPermalink, type Version } from "./vineflower/versions";
 import type { ClassFilePath } from "../utils/Names";
 import type { ReferenceKey } from "../workers/jar-index/types";
 
@@ -20,6 +21,7 @@ export const tabHistory = new BehaviorSubject<string[]>(initialState.file ? [ini
 export type SearchType = "classes" | "methods" | "fields";
 export const searchType = new BehaviorSubject<SearchType>("classes");
 export const searchQuery = new BehaviorSubject("");
+export const vineflowerVersion = new BehaviorSubject<Version>(getVersionFromPermalink(initialState.version));
 export const referencesQuery = new BehaviorSubject<ReferenceKey | "">("");
 
 export interface SelectedLines {
@@ -32,8 +34,10 @@ export const diffView = new BehaviorSubject<boolean>(!!initialState.diff);
 export const diffLeftSelectedMinecraftVersion = new BehaviorSubject<string | null>(initialState.diff?.leftMinecraftVersion ?? null);
 
 // Reset selected lines when file changes (skip initial emission to preserve permalink selection)
+// Also reset the permalink version back to the latest
 selectedFile.pipe(pairwise()).subscribe(([previousFile, currentFile]) => {
     if (previousFile !== currentFile) {
         selectedLines.next(null);
+        vineflowerVersion.next(DEFAULT_VERSION);
     }
 });

@@ -1,0 +1,292 @@
+{
+  "versions": [
+    {
+      "id": "1.19_deep_dark_experimental_snapshot-1",
+      "type": "pending",
+      "url": "https://maven.fabricmc.net/net/minecraft/1_19_deep_dark_experimental_snapshot-1.json",
+      "time": "2022-02-17T13:55:59+00:00",
+      "releaseTime": "2022-02-17T13:55:59+00:00",
+      "sha1": "c5b59acb75db612cf446b4ed4bd59b01e10092d1",
+      "complianceLevel": 1
+    },
+    {
+      "id": "1.18_experimental-snapshot-7",
+      "type": "pending",
+      "url": "https://maven.fabricmc.net/net/minecraft/1_18_experimental-snapshot-7.json",
+      "time": "2021-09-08T12:33:23+00:00",
+      "releaseTime": "2021-09-08T12:33:23+00:00",
+      "sha1": "14611a3cefbf20d4f3650d77b96cb5fc34583b54",
+      "complianceLevel": 1
+    },
+    {
+      "id": "1.18_experimental-snapshot-6",
+      "type": "pending",
+      "url": "https://maven.fabricmc.net/net/minecraft/1_18_experimental-snapshot-6.json",
+      "time": "2021-09-01T12:53:14+00:00",
+      "releaseTime": "2021-09-01T12:53:14+00:00",
+      "sha1": "6db9abc0add141e855ae8d5ff02cb3e6c77d4bf1",
+      "complianceLevel": 1
+    },
+    {
+      "id": "1.18_experimental-snapshot-5",
+      "type": "pending",
+      "url": "https://maven.fabricmc.net/net/minecraft/1_18_experimental-snapshot-5.json",
+      "time": "2021-08-25T14:41:57+00:00",
+      "releaseTime": "2021-08-25T14:41:57+00:00",
+      "sha1": "6c72791d6d60416b59735ff49939532786ecd622",
+      "complianceLevel": 1
+    },
+    {
+      "id": "1.18_experimental-snapshot-4",
+      "type": "pending",
+      "url": "https://maven.fabricmc.net/net/minecraft/1_18_experimental-snapshot-4.json",
+      "time": "2021-08-17T16:10:25+00:00",
+      "releaseTime": "2021-08-17T16:10:25+00:00",
+      "sha1": "47f19021e869e24f273d38610e46c6fa04639a44",
+      "complianceLevel": 1
+    },
+    {
+      "id": "1.18_experimental-snapshot-3",
+      "type": "pending",
+      "url": "https://maven.fabricmc.net/net/minecraft/1_18_experimental-snapshot-3.json",
+      "time": "2021-08-10T12:42:45+00:00",
+      "releaseTime": "2021-08-10T12:42:45+00:00",
+      "sha1": "d03637684dfe3653e8d617e86f81fffb86d5d4c5",
+      "complianceLevel": 1
+    },
+    {
+      "id": "1.18_experimental-snapshot-2",
+      "type": "pending",
+      "url": "https://maven.fabricmc.net/net/minecraft/1_18_experimental-snapshot-2.json",
+      "time": "2021-07-20T13:35:08+00:00",
+      "releaseTime": "2021-07-20T13:35:08+00:00",
+      "sha1": "a535296b2b992603fa9c51b07e4e7647cf80145e",
+      "complianceLevel": 1
+    },
+    {
+      "id": "1.18_experimental-snapshot-1",
+      "type": "pending",
+      "url": "https://maven.fabricmc.net/net/minecraft/1_18_experimental-snapshot-1.json",
+      "time": "2021-07-13T12:54:19+00:00",
+      "releaseTime": "2021-07-13T12:54:19+00:00",
+      "sha1": "8c6436f0a28aeabfa9c761fb95578ba584b4872c",
+      "complianceLevel": 1
+    },
+    {
+      "id": "1.16_combat-6",
+      "type": "pending",
+      "url": "https://maven.fabricmc.net/net/minecraft/1_16_combat-6.json",
+      "time": "2020-08-26T06:24:28+00:00",
+      "releaseTime": "2020-08-26T06:24:28+00:00",
+      "sha1": "13538e25d9c817f2f4ab112eaeae293ed3d53d6c",
+      "complianceLevel": 0
+    },
+    {
+      "id": "1.16_combat-5",
+      "type": "pending",
+      "url": "https://maven.fabricmc.net/net/minecraft/1_16_combat-5.json",
+      "time": "2020-08-21T09:23:13+00:00",
+      "releaseTime": "2020-08-21T09:23:13+00:00",
+      "sha1": "a93a5b8801c917906325384047227961a98e9389",
+      "complianceLevel": 0
+    },
+    {
+      "id": "1.16_combat-3",
+      "type": "pending",
+      "url": "https://maven.fabricmc.net/net/minecraft/1_16_combat-3.json",
+      "time": "2020-08-14T09:02:15+00:00",
+      "releaseTime": "2020-08-14T09:02:15+00:00",
+      "sha1": "334f2344329e8e8a0f63a89e2090677a7dae170b",
+      "complianceLevel": 0
+    },
+    {
+      "id": "1.16_combat-2",
+      "type": "pending",
+      "url": "https://maven.fabricmc.net/net/minecraft/1_16_combat-2.json",
+      "time": "2020-08-13T11:56:30+00:00",
+      "releaseTime": "2020-08-13T11:56:30+00:00",
+      "sha1": "5814d378438bdb1762d59c827c1a07d7d3b0d99e",
+      "complianceLevel": 0
+    },
+    {
+      "id": "1.16_combat-1",
+      "type": "pending",
+      "url": "https://maven.fabricmc.net/net/minecraft/1_16_combat-1.json",
+      "time": "2020-08-12T14:07:25+00:00",
+      "releaseTime": "2020-08-12T14:07:25+00:00",
+      "sha1": "ff9274b717482d7ac0ff69e21befb246bf1475fe",
+      "complianceLevel": 0
+    },
+    {
+      "id": "1.16_combat-0",
+      "type": "pending",
+      "url": "https://maven.fabricmc.net/net/minecraft/1_16_combat-0.json",
+      "time": "2020-08-07T10:44:47+00:00",
+      "releaseTime": "2020-08-07T10:44:47+00:00",
+      "sha1": "0b9a1b9fb5c3f4a1f9e87c294992328dab82c919",
+      "complianceLevel": 0
+    },
+    {
+      "id": "1.15_combat-6",
+      "type": "pending",
+      "url": "https://maven.fabricmc.net/net/minecraft/1_15_combat-6.json",
+      "time": "2020-01-15T09:46:35+00:00",
+      "releaseTime": "2020-01-15T09:46:35+00:00",
+      "sha1": "2c1f065fef82d9ab89db539e32a294e54c64ff1a",
+      "complianceLevel": 0
+    },
+    {
+      "id": "1.15_combat-1",
+      "type": "pending",
+      "url": "https://maven.fabricmc.net/net/minecraft/1_15_combat-1.json",
+      "time": "2019-11-29T15:41:39+00:00",
+      "releaseTime": "2019-11-29T15:41:39+00:00",
+      "sha1": "1ef4d534cb701e724c90c09ed13860a9fc2a66ae",
+      "complianceLevel": 0
+    },
+    {
+      "id": "1.14_combat-3",
+      "type": "pending",
+      "url": "https://maven.fabricmc.net/net/minecraft/1_14_combat-3.json",
+      "time": "2019-10-31T14:31:38+00:00",
+      "releaseTime": "2019-10-31T14:31:38+00:00",
+      "sha1": "787894b3d4b2891e79525bea730fdd39c666a4f8",
+      "complianceLevel": 0
+    },
+    {
+      "id": "1.14_combat-0",
+      "type": "pending",
+      "url": "https://maven.fabricmc.net/net/minecraft/1_14_combat-0.json",
+      "time": "2019-08-13T07:33:42+00:00",
+      "releaseTime": "2019-08-13T07:33:42+00:00",
+      "sha1": "a00fd763c4dc6a162cd543f261df1b2d50643d54",
+      "complianceLevel": 0
+    },
+    {
+      "id": "1.14_combat-212796",
+      "type": "pending",
+      "url": "https://maven.fabricmc.net/net/minecraft/1_14_combat-212796.json",
+      "time": "2019-06-20T13:23:44+00:00",
+      "releaseTime": "2019-06-20T13:23:44+00:00",
+      "sha1": "92cdadc68dab490d2d8b287b5374a01be05a8b06",
+      "complianceLevel": 0
+    },
+    {
+      "id": "23w13a_or_b_original",
+      "type": "removed",
+      "url": "https://maven.fabricmc.net/net/minecraft/23w13a_or_b_original.json",
+      "time": "2023-04-01T07:24:50+00:00",
+      "releaseTime": "2023-04-01T07:24:50+00:00",
+      "sha1": "469f0d1416f2b25a8829d7991c11be3411813bf1",
+      "complianceLevel": 1
+    },
+    {
+      "id": "24w14potato_original",
+      "type": "removed",
+      "url": "https://maven.fabricmc.net/net/minecraft/24w14potato_original.json",
+      "time": "2024-04-01T08:41:32+00:00",
+      "releaseTime": "2024-04-01T08:41:32+00:00",
+      "sha1": "4e54c25e6eafdf0a2f1f6e86fb1b8c1d239dd8d5",
+      "complianceLevel": 1
+    },
+    {
+      "id": "25w45a_unobfuscated",
+      "type": "unobfuscated",
+      "url": "https://maven.fabricmc.net/net/minecraft/25w45a_unobfuscated.json",
+      "time": "2025-11-04T14:07:08+00:00",
+      "releaseTime": "2025-11-04T14:07:08+00:00",
+      "sha1": "7a3c149f148b6aa5ac3af48c4f701adea7e5b615",
+      "complianceLevel": 1
+    },
+    {
+      "id": "25w46a_unobfuscated",
+      "type": "unobfuscated",
+      "url": "https://maven.fabricmc.net/net/minecraft/25w46a_unobfuscated.json",
+      "time": "2025-11-11T13:20:54+00:00",
+      "releaseTime": "2025-11-11T13:20:54+00:00",
+      "sha1": "314ade2afeada364047798e163ef8e82427c69e1",
+      "complianceLevel": 1
+    },
+    {
+      "id": "1.21.11-pre1_unobfuscated",
+      "type": "unobfuscated",
+      "url": "https://maven.fabricmc.net/net/minecraft/1_21_11-pre1_unobfuscated.json",
+      "time": "2025-11-19T08:30:46+00:00",
+      "releaseTime": "2025-11-19T08:30:46+00:00",
+      "sha1": "9c267f8dda2728bae55201a753cdd07b584709f1",
+      "complianceLevel": 1
+    },
+    {
+      "id": "1.21.11-pre2_unobfuscated",
+      "type": "unobfuscated",
+      "url": "https://maven.fabricmc.net/net/minecraft/1_21_11-pre2_unobfuscated.json",
+      "time": "2025-11-21T12:07:21+00:00",
+      "releaseTime": "2025-11-21T12:07:21+00:00",
+      "sha1": "2955ce0af0512fdfe53ff0740b017344acf6f397",
+      "complianceLevel": 1
+    },
+    {
+      "id": "1.21.11-pre3_unobfuscated",
+      "type": "unobfuscated",
+      "url": "https://maven.fabricmc.net/net/minecraft/1_21_11-pre3_unobfuscated.json",
+      "time": "2025-11-25T14:14:30+00:00",
+      "releaseTime": "2025-11-25T14:14:30+00:00",
+      "sha1": "579bf3428f72b5ea04883d202e4831bfdcb2aa8d",
+      "complianceLevel": 1
+    },
+    {
+      "id": "1.21.11-pre4_unobfuscated",
+      "type": "unobfuscated",
+      "url": "https://maven.fabricmc.net/net/minecraft/1_21_11-pre4_unobfuscated.json",
+      "time": "2025-12-01T13:40:12+00:00",
+      "releaseTime": "2025-12-01T13:40:12+00:00",
+      "sha1": "410ce37a2506adcfd54ef7d89168cfbe89cac4cb",
+      "complianceLevel": 1
+    },
+    {
+      "id": "1.21.11-pre5_unobfuscated",
+      "type": "unobfuscated",
+      "url": "https://maven.fabricmc.net/net/minecraft/1_21_11-pre5_unobfuscated.json",
+      "time": "2025-12-03T13:34:06+00:00",
+      "releaseTime": "2025-12-03T13:34:06+00:00",
+      "sha1": "1028441ca6d288bbf2103e773196bf524f7260fd",
+      "complianceLevel": 1
+    },
+    {
+      "id": "1.21.11-rc1_unobfuscated",
+      "type": "unobfuscated",
+      "url": "https://maven.fabricmc.net/net/minecraft/1_21_11-rc1_unobfuscated.json",
+      "time": "2025-12-04T15:56:55+00:00",
+      "releaseTime": "2025-12-04T15:56:55+00:00",
+      "sha1": "5d3ee0ef1f0251cf7e073354ca9e085a884a643d",
+      "complianceLevel": 1
+    },
+    {
+      "id": "1.21.11-rc2_unobfuscated",
+      "type": "unobfuscated",
+      "url": "https://maven.fabricmc.net/net/minecraft/1_21_11-rc2_unobfuscated.json",
+      "time": "2025-12-05T11:57:45+00:00",
+      "releaseTime": "2025-12-05T11:57:45+00:00",
+      "sha1": "9282a3fb154d2a425086c62c11827281308bf93b",
+      "complianceLevel": 1
+    },
+    {
+      "id": "1.21.11-rc3_unobfuscated",
+      "type": "unobfuscated",
+      "url": "https://maven.fabricmc.net/net/minecraft/1_21_11-rc3_unobfuscated.json",
+      "time": "2025-12-08T13:59:34+00:00",
+      "releaseTime": "2025-12-08T13:59:34+00:00",
+      "sha1": "ce3f7ac6d0e9d23ea4e5f0354b91ff15039d9931",
+      "complianceLevel": 1
+    },
+    {
+      "id": "1.21.11_unobfuscated",
+      "type": "unobfuscated",
+      "url": "https://maven.fabricmc.net/net/minecraft/1_21_11_unobfuscated.json",
+      "time": "2025-12-09T12:43:15+00:00",
+      "releaseTime": "2025-12-09T12:43:15+00:00",
+      "sha1": "327be7759157b04495c591dbb721875e341877af",
+      "complianceLevel": 1
+    }
+  ]
+}

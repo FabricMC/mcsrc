@@ -1,7 +1,6 @@
 import { Button, Divider, Flex, Tooltip } from "antd";
 import { SwapOutlined } from "@ant-design/icons";
 import { SettingsModalButton } from "./SettingsModal";
-import { JarDecompilerModalButton } from "./JarDecompilerModal";
 import VersionSelector from "./VersionSelector";
 import { diffView } from "../logic/State";
 
@@ -32,9 +31,6 @@ const HeaderBody = () => {
                     Compare
                 </Button>
             </Tooltip>
-            <div style={{ flex: "0 0 auto" }}>
-                <JarDecompilerModalButton />
-            </div>
             <div style={{ flex: "0 0 auto" }}>
                 <SettingsModalButton />
             </div>

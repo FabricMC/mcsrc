@@ -3,17 +3,19 @@ package mcsrc;
 import org.objectweb.asm.*;
 
 // Based on code from Enigma
-public class ClassIndexVisitor extends ClassVisitor {
+final class ClassIndexVisitor extends ClassVisitor {
+	private final Indexer indexer;
 	private String name;
 
-	public ClassIndexVisitor(int api) {
-		super(api);
+	ClassIndexVisitor(Indexer indexer) {
+		super(Opcodes.ASM9);
+		this.indexer = indexer;
     }
 
 	@Override
 	public void visit(int version, int access, String name, String signature, String superName, String[] interfaces) {
 		this.name = name;
-		Indexer.addClassData(name, superName, interfaces, access);
+		indexer.addClass(name, superName, interfaces, access);
 	}
 
 	@Override
@@ -113,7 +115,7 @@ public class ClassIndexVisitor extends ClassVisitor {
 	}
 
 	public void indexMethod(Entry.Method methodEntry) {
-		Indexer.addMemberData(methodEntry.owner(), methodEntry);
+		indexer.addMethod(methodEntry);
 		indexMethodDescriptor(methodEntry, methodEntry.desc());
 	}
 
@@ -132,38 +134,37 @@ public class ClassIndexVisitor extends ClassVisitor {
 		}
 
 		if (type.getSort() == Type.OBJECT) {
-			Indexer.addReference(type.getInternalName(), method.reference());
+			indexer.addReference(type.getInternalName(), method.reference());
 		}
 	}
 
 	public void indexField(Entry.Field field) {
 		Type type = Type.getType(field.desc());
 
-		Indexer.addMemberData(field.owner(), field);
+		indexer.addField(field);
 
 		if (type.getSort() == Type.ARRAY) {
-			indexField(new Entry.Field(field.owner(), field.name(), type.getElementType().getDescriptor()));
-			return;
+			type = type.getElementType();
 		}
 
 		if (type.getSort() == Type.OBJECT) {
-			Indexer.addReference(type.getInternalName(), field.reference());
+			indexer.addReference(type.getInternalName(), field.reference());
 		}
 	}
 
 	public void indexClassReference(Entry.Method callerEntry, Entry.Class referencedEntry) {
-		Indexer.addReference(referencedEntry.name(), callerEntry.reference());
+		indexer.addReference(referencedEntry.name(), callerEntry.reference());
 	}
 
 	public void indexMethodReference(Entry.Method callerEntry, Entry.Method referencedEntry) {
-		Indexer.addReference(referencedEntry.str(), callerEntry.reference());
+		indexer.addReference(referencedEntry.str(), callerEntry.reference());
 
 		if (referencedEntry.name().equals("<init>")) {
-			Indexer.addReference(referencedEntry.owner(), callerEntry.reference());
+			indexer.addReference(referencedEntry.owner(), callerEntry.reference());
 		}
 	}
 
 	public void indexFieldReference(Entry.Method callerEntry, Entry.Field referencedEntry) {
-		Indexer.addReference(referencedEntry.str(), callerEntry.reference());
+		indexer.addReference(referencedEntry.str(), callerEntry.reference());
 	}
 }

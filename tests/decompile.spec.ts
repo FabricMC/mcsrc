@@ -17,17 +17,15 @@ test.describe('Decompilation', () => {
         await page.getByText('ChatFormatting', { exact: true }).click();
         await waitForDecompiledContent(page, 'enum ChatFormatting');
 
-        const modalButton = page.getByTestId('jar-decompiler').first();
-        await modalButton.waitFor();
-        await modalButton.click();
+        await page.getByRole('button', { name: 'Settings' }).click();
+        await page.getByRole('tab', { name: 'Advanced' }).click();
+        await page.getByTestId('jar-decompiler').click();
 
         const splitsInput = page.getByTestId('jar-decompiler-splits').first();
         await splitsInput.waitFor();
         await splitsInput.fill('1');
 
-        const okButton = page.getByTestId('jar-decompiler-ok').first();
-        await okButton.waitFor();
-        await okButton.click();
+        await page.getByTestId('jar-decompiler-ok').click();
 
         const result = page.getByTestId('jar-decompiler-result').first();
         await result.waitFor();

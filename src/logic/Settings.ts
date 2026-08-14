@@ -163,6 +163,7 @@ export const autoJarIndex = new BooleanSetting('auto_jar_index', true);
 export const displayLambdas = new BooleanSetting('display_lambdas', false);
 export const bytecode = new BooleanSetting('bytecode', false);
 export const unifiedDiff = new BooleanSetting('unified_diff', false);
+export const sortDiff = new BooleanSetting('sortDiff', true);
 export const favoriteMinecraftVersions = new StringArraySetting('favorite_minecraft_versions', []);
 export const showSnapshotVersions = new BooleanSetting('show_snapshot_versions', true);
 export const focusSearch = new KeybindSetting('focus_search', 'Ctrl+ ');
