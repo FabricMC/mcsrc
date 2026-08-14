@@ -48,7 +48,7 @@ test.describe('Permalinks and Line Highlighting', () => {
     });
 
     test('Permalink with line range highlights multiple lines (old hash format, normal mode)', async ({ page }) => {
-        await page.goto('/#1/26.1-snapshot-1/net/minecraft/SystemReport#L87-90');
+        await page.goto('/#2/26.1-snapshot-1/net/minecraft/SystemReport#L87-90');
 
         await waitForDecompiledContent(page, 'class SystemReport');
 
@@ -107,7 +107,7 @@ test.describe('Permalinks and Line Highlighting', () => {
     });
 
     test('Shift-clicking line number creates line range (diff mode)', async ({ page }) => {
-        await page.goto('/1/diff/26.1-mock-1/26.1-mock-2/net/minecraft/client/renderer/LevelRenderer');
+        await page.goto('/2/diff/26.1-mock-1/26.1-mock-2/net/minecraft/client/renderer/LevelRenderer');
 
         // 0 - diff editor, 1 - left editor, 2 - right editor
         const editor = page.locator('.monaco-editor').nth(2);
