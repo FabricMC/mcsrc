@@ -66,7 +66,7 @@ test.describe('Copy Actions in Code Context Actions', () => {
         await expect(page.getByText('Copied Permalink')).toBeVisible();
 
         const clipboardText = await page.evaluate(() => (window as any).__clipboardText);
-        const expected = '$(server_origin)/1/diff/26.1-mock-1/26.1-mock-2/net/minecraft/client/renderer/LevelRenderer#L3'
+        const expected = '$(server_origin)/2/diff/26.1-mock-1/26.1-mock-2/net/minecraft/client/renderer/LevelRenderer#L3'
             .replace('$(server_origin)', (new URL(page.url())).origin);
         expect(clipboardText).toEqual(expected);
     });
