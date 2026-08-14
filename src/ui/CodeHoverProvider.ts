@@ -142,7 +142,7 @@ export function createHoverProvider(
 ) {
     return {
         provideHover(model: editor.ITextModel, position: IPosition) {
-            const token = findTokenAtPosition(editorRef.current!, decompileResultRef.current, classListRef.current, false);
+            const token = findTokenAtPosition(editorRef.current!, decompileResultRef.current, classListRef.current, position, false);
 
             // Check for tokens first (classes, methods, fields, etc.)
             if (token) {
