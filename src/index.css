@@ -52,19 +52,16 @@ html, body, #root {
 
 .class-token-decoration-pointer {
   color: var(--token-class) !important;
-  cursor: pointer;
 }
 
 .field-token-decoration-pointer,
 .parameter-token-decoration-pointer,
 .local-token-decoration-pointer {
   color: var(--token-field) !important;
-  cursor: pointer;
 }
 
 .method-token-decoration-pointer {
   color: var(--token-method) !important;
-  cursor: pointer;
 }
 
 /* Control comment marker and content color, eg "/*" */
