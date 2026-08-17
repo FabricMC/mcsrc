@@ -411,6 +411,11 @@ const Code = () => {
                         const validToken = token != null && (token.type == "class" || token.type == "method" || token.type == "field");
                         isDefinitionContextKey.set(validToken);
                     });
+
+                    // We don't want the default model
+                    const model = codeEditor.getModel();
+                    codeEditor.setModel(null);
+                    model?.dispose();
                 }} />
         </Spin>
     );

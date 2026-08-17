@@ -257,6 +257,10 @@ const DiffCode = () => {
                     setDiffEditor(editor);
 
                     handleOnEditorMount(editor);
+
+                    // We don't want the default model
+                    // But Diff Editor itself handles the model
+                    // We can do nothing
                 }}
                 options={{
                     readOnly: true,
