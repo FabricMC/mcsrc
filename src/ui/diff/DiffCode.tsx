@@ -18,7 +18,7 @@ import {
 } from './DiffNavigation';
 import { classNameFromClassFilePath } from '../../utils/Names';
 import { createCopyPermalinkAction } from './DiffCodeContextActions.ts';
-import { concat, of, switchMap, take, skip, combineLatest } from 'rxjs';
+import { concat, of, switchMap, take, skip, combineLatest, debounceTime } from 'rxjs';
 
 const IS_ANDROID_CHROME = /Android/.test(navigator.userAgent) && /Chrome/.test(navigator.userAgent);
 
@@ -49,7 +49,7 @@ const DiffCode = () => {
                         )
                     )
                 )
-            ),
+            ).pipe(debounceTime(300)),
             []
         )
     );

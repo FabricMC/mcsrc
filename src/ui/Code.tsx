@@ -36,7 +36,7 @@ import {
 import { bytecode } from '../logic/Settings';
 import { selectedFile, diffView, openTabs, selectedLines, tabHistory, referencesQuery, mobileDrawerOpen } from '../logic/State';
 import { toClassFilePath } from '../utils/Names';
-import { concat, distinctUntilChanged, of, skip, switchMap, take } from 'rxjs';
+import { concat, debounceTime, distinctUntilChanged, of, skip, switchMap, take } from 'rxjs';
 
 const IS_ANDROID_CHROME = /Android/.test(navigator.userAgent) && /Chrome/.test(navigator.userAgent);
 
@@ -66,7 +66,7 @@ const Code = () => {
                         )
                     )
                 )
-            ),
+            ).pipe(debounceTime(300)),
             []
         )
     );
