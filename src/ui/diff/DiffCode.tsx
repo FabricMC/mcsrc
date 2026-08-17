@@ -2,7 +2,7 @@ import { DiffEditor, useMonaco } from '@monaco-editor/react';
 import { useObservable } from '../../utils/UseObservable';
 import { getLeftDiff, getRightDiff } from '../../logic/Diff';
 import { updateLineChanges } from '../../logic/LineChanges';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { editor, Range } from 'monaco-editor';
 import { message, Spin } from "antd";
 import { LoadingOutlined } from '@ant-design/icons';
@@ -18,6 +18,7 @@ import {
 } from './DiffNavigation';
 import { classNameFromClassFilePath } from '../../utils/Names';
 import { createCopyPermalinkAction } from './DiffCodeContextActions.ts';
+import { concat, of, switchMap, take, skip, combineLatest } from 'rxjs';
 
 const IS_ANDROID_CHROME = /Android/.test(navigator.userAgent) && /Chrome/.test(navigator.userAgent);
 
@@ -29,7 +30,29 @@ const DiffCode = () => {
     const [originalEditor, setOriginalEditor] = useState<editor.IStandaloneCodeEditor | null>(null);
     const [modifiedEditor, setModifiedEditor] = useState<editor.IStandaloneCodeEditor | null>(null);
     const [editorsReady, setEditorsReady] = useState(false);
-    const loading = useObservable(isDecompiling);
+    const loading = useObservable(
+        useMemo(
+            () => concat(
+                of(true),
+                isDecompiling.pipe(
+                    switchMap(value =>
+                        combineLatest([getLeftDiff().result, getRightDiff().result]).pipe(
+                            take(1),
+                            switchMap(([left, right]) => {
+                                const shouldSkip = left?.source === "" || right?.source === "";
+                                return shouldSkip
+                                    ? of(value).pipe(skip(1))
+                                    : of(value);
+                                // Skip the first value of decompiling because the decompiler has not started yet
+                                // But when hot reloading, the source is already ready, so do not skip
+                            })
+                        )
+                    )
+                )
+            ),
+            []
+        )
+    );
     const currentPath = useObservable(selectedFile);
     const isUnified = useObservable(unifiedDiff.observable);
     const darkMode = useObservable(isDarkMode);

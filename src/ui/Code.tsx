@@ -1,7 +1,7 @@
 import Editor, { useMonaco } from '@monaco-editor/react';
 import { useObservable } from '../utils/UseObservable';
 import { currentResult, isDecompiling } from '../logic/Decompiler';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { editor, Range } from "monaco-editor";
 import { isDarkMode, isThin } from '../logic/Browser';
 import { classesList } from '../logic/JarFile';
@@ -36,6 +36,7 @@ import {
 import { bytecode } from '../logic/Settings';
 import { selectedFile, diffView, openTabs, selectedLines, tabHistory, referencesQuery, mobileDrawerOpen } from '../logic/State';
 import { toClassFilePath } from '../utils/Names';
+import { concat, distinctUntilChanged, of, skip, switchMap, take } from 'rxjs';
 
 const IS_ANDROID_CHROME = /Android/.test(navigator.userAgent) && /Chrome/.test(navigator.userAgent);
 
@@ -47,7 +48,28 @@ const Code = () => {
     const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
     const hideMinimap = useObservable(isThin);
     const darkMode = useObservable(isDarkMode);
-    const decompiling = useObservable(isDecompiling);
+    const decompiling = useObservable(
+        useMemo(
+            () => concat(
+                of(true),
+                isDecompiling.pipe(
+                    switchMap(value =>
+                        currentResult.pipe(
+                            take(1),
+                            switchMap(result =>
+                                result?.source === ""
+                                    ? of(value).pipe(skip(1))
+                                    : of(value)
+                                // Skip the first value of decompiling because the decompiler has not started yet
+                                // But when hot reloading, the source is already ready, so do not skip
+                            )
+                        )
+                    )
+                )
+            ),
+            []
+        )
+    );
     const selectedLine = useObservable(selectedLines);
     const nextReference = useObservable(nextReferenceNavigation);
     const tokenJump = useObservable(pendingTokenJump);
