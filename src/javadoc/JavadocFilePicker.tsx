@@ -123,6 +123,7 @@ function createPickerOptions(format: JavadocFormat): SaveFilePickerOptions {
     const extension = tiny ? ".tiny" : ".mapping";
 
     return {
+        excludeAcceptAllOption: true,
         suggestedName: tiny ? "javadocs.tiny" : "javadocs.mapping",
         types: [{
             description: tiny ? "Tiny v2 mappings" : "Enigma mappings",

@@ -28,12 +28,12 @@ export function applyJavadocCodeExtensions(monaco: monaco, editor: editor.IStand
                     }
 
                     const domNode = document.createElement('div');
-                    renderJavadoc(domNode, mdValue, token);
+                    const lineCount = renderJavadoc(domNode, mdValue, token);
 
                     const location = getTokenLocation(decompile, token);
                     const zoneId = accessor.addZone({
                         afterLineNumber: location.line - 1,
-                        heightInPx: cacluateHeightInPx(domNode),
+                        heightInPx: lineCount * editor.getOption(monaco.editor.EditorOption.lineHeight),
                         domNode: domNode
                     });
 
@@ -99,25 +99,14 @@ export function applyJavadocCodeExtensions(monaco: monaco, editor: editor.IStand
     };
 }
 
-function renderJavadoc(domNode: HTMLDivElement, markdown: string, token: Token) {
+function renderJavadoc(domNode: HTMLDivElement, markdown: string, token: Token): number {
     const nestingLevel = (token.className.match(/\$/g) || []).length + (token.type == 'method' || token.type == 'field' ? 1 : 0);
     const depth = nestingLevel * 6;
     const indent = " ".repeat(depth) + "/// ";
+    const lines = markdown.split("\n");
 
     domNode.style.color = "#6A9955";
     domNode.style.whiteSpace = "pre";
-    domNode.textContent = markdown.split("\n").map(line => indent + line).join("\n");
-}
-
-
-function cacluateHeightInPx(domNode: HTMLDivElement): number {
-    domNode.style.position = 'absolute';
-    domNode.style.visibility = 'hidden';
-    document.body.appendChild(domNode);
-    const heightInPx = domNode.offsetHeight * 1.2; // Magic number seems to fix it
-    document.body.removeChild(domNode);
-    domNode.style.position = '';
-    domNode.style.visibility = '';
-
-    return heightInPx;
+    domNode.textContent = lines.map(line => indent + line).join("\n");
+    return lines.length;
 }

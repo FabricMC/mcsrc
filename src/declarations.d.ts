@@ -13,6 +13,7 @@ interface OpenFilePickerOptions {
 }
 
 interface SaveFilePickerOptions {
+    excludeAcceptAllOption?: boolean;
     suggestedName?: string;
     types?: FilePickerAcceptType[];
 }

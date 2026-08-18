@@ -2,7 +2,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const bridge = vi.hoisted(() => ({
     readJavadocs: vi.fn(),
-    readJavadocDirectory: vi.fn(),
+    beginJavadocDirectory: vi.fn(),
+    readJavadocDirectoryFile: vi.fn(),
+    finishJavadocDirectory: vi.fn(),
+    abortJavadocDirectory: vi.fn(),
     writeJavadocs: vi.fn(),
     writeJavadocClass: vi.fn(),
     createJavadocs: vi.fn(),
@@ -117,10 +120,13 @@ class FakeDirectory {
 describe("JavadocStorage", () => {
     beforeEach(() => {
         vi.clearAllMocks();
+        bridge.readJavadocDirectoryFile.mockImplementation(
+            (_data: ArrayBuffer, path: string) => path.slice(0, -".mapping".length),
+        );
     });
 
     it("opens an empty Enigma file as a new mapping tree", async () => {
-        const source = await readJavadocFile(new FakeFile("docs.mapping").asHandle());
+        const source = await readJavadocFile(new FakeFile("docs-without-an-extension").asHandle());
 
         expect(source.format).toBe("enigma");
         expect(bridge.resetJavadocs).toHaveBeenCalledOnce();
@@ -134,24 +140,40 @@ describe("JavadocStorage", () => {
             .add(new FakeFile("notes.txt", "ignored"));
         const secondPackage = new FakeDirectory("b").add(new FakeFile("B.mapping", "CLASS b/B\n"));
         root.add(firstPackage).add(secondPackage);
-        bridge.readJavadocDirectory.mockReturnValue(["a/A", "b/B"]);
-
         const source = await readJavadocDirectory(root.asHandle());
 
-        expect(bridge.readJavadocDirectory).toHaveBeenCalledOnce();
-        expect(bridge.readJavadocDirectory.mock.calls[0][1]).toEqual(["a/A.mapping", "b/B.mapping"]);
+        expect(bridge.beginJavadocDirectory).toHaveBeenCalledOnce();
+        expect(bridge.readJavadocDirectoryFile.mock.calls.map(call => call[1])).toEqual([
+            "a/A.mapping",
+            "b/B.mapping",
+        ]);
+        expect(bridge.finishJavadocDirectory).toHaveBeenCalledOnce();
+        expect(bridge.abortJavadocDirectory).not.toHaveBeenCalled();
         expect(source.files.get("a/A")).toEqual(["a", "A.mapping"]);
         expect(source.files.get("b/B")).toEqual(["b", "B.mapping"]);
     });
 
     it("opens an empty directory", async () => {
         const root = new FakeDirectory("mappings");
-        bridge.readJavadocDirectory.mockReturnValue([]);
-
         const source = await readJavadocDirectory(root.asHandle());
 
-        expect(bridge.readJavadocDirectory).toHaveBeenCalledWith([], []);
+        expect(bridge.beginJavadocDirectory).toHaveBeenCalledOnce();
+        expect(bridge.readJavadocDirectoryFile).not.toHaveBeenCalled();
+        expect(bridge.finishJavadocDirectory).toHaveBeenCalledOnce();
         expect(source.files.size).toBe(0);
+    });
+
+    it("aborts a staged directory import when a file is invalid", async () => {
+        const root = new FakeDirectory("mappings")
+            .add(new FakeFile("Owner.mapping", "invalid"));
+        bridge.readJavadocDirectoryFile.mockImplementation(() => {
+            throw new Error("Invalid mapping");
+        });
+
+        await expect(readJavadocDirectory(root.asHandle())).rejects.toThrow("Invalid mapping");
+
+        expect(bridge.abortJavadocDirectory).toHaveBeenCalledOnce();
+        expect(bridge.finishJavadocDirectory).not.toHaveBeenCalled();
     });
 
     it("rewrites only the changed class at its existing path", async () => {

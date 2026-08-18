@@ -28,6 +28,8 @@ public final class JavadocMappings {
 
     private static final String OFFICIAL_NAMESPACE = "official";
     private static MemoryMappingTree tree;
+    private static MemoryMappingTree pendingDirectoryTree;
+    private static Set<String> pendingDirectoryOwners;
 
     private JavadocMappings() {
     }
@@ -57,49 +59,80 @@ public final class JavadocMappings {
     public static String[] readDirectory(byte[][] files, String[] paths) throws IOException {
         if (files.length != paths.length) throw new IllegalArgumentException("File and path counts differ");
 
-        MemoryMappingTree nextTree = newEnigmaTree();
         String[] owners = new String[files.length];
-        Set<String> seenOwners = new HashSet<>();
+        beginDirectory();
 
-        for (int i = 0; i < files.length; i++) {
-            MemoryMappingTree fileTree = new MemoryMappingTree();
-
-            try {
-                EnigmaFileReader.read(new StringReader(new String(files[i], StandardCharsets.UTF_8)), fileTree);
-            } catch (IOException | RuntimeException e) {
-                throw new IOException("Invalid Enigma mapping file " + paths[i] + ": " + e.getMessage(), e);
+        try {
+            for (int i = 0; i < files.length; i++) {
+                owners[i] = readDirectoryFile(files[i], paths[i]);
             }
 
-            String owner = null;
+            finishDirectory();
+        } catch (IOException | RuntimeException e) {
+            abortDirectory();
+            throw e;
+        }
 
-            for (MappingTree.ClassMapping clazz : fileTree.getClasses()) {
-                String classOwner = outerClassName(clazz.getSrcName());
+        return owners;
+    }
 
-                if (owner == null) {
-                    owner = classOwner;
-                } else if (!owner.equals(classOwner)) {
-                    throw new IOException("Enigma mapping file " + paths[i] + " contains multiple outer classes");
-                }
-            }
+    public static void beginDirectory() {
+        pendingDirectoryTree = newEnigmaTree();
+        pendingDirectoryOwners = new HashSet<>();
+    }
 
-            if (owner == null) throw new IOException("Enigma mapping file " + paths[i] + " is empty");
-            if (!seenOwners.add(owner)) throw new IOException("Duplicate Enigma mapping for " + owner);
+    public static String readDirectoryFile(byte[] file, String path) throws IOException {
+        if (pendingDirectoryTree == null || pendingDirectoryOwners == null) {
+            throw new IllegalStateException("No Enigma directory import is active");
+        }
 
-            String expectedPath = owner + ".mapping";
+        MemoryMappingTree fileTree = new MemoryMappingTree();
 
-            if (!expectedPath.equals(paths[i])) {
-                throw new IOException("Enigma mapping path " + paths[i]
-                        + " does not match class " + owner + " (expected " + expectedPath + ")");
-            }
+        try {
+            EnigmaFileReader.read(new StringReader(new String(file, StandardCharsets.UTF_8)), fileTree);
+        } catch (IOException | RuntimeException e) {
+            throw new IOException("Invalid Enigma mapping file " + path + ": " + e.getMessage(), e);
+        }
 
-            owners[i] = owner;
-            for (MappingTree.ClassMapping clazz : fileTree.getClasses()) {
-                nextTree.addClass(clazz);
+        String owner = null;
+
+        for (MappingTree.ClassMapping clazz : fileTree.getClasses()) {
+            String classOwner = outerClassName(clazz.getSrcName());
+
+            if (owner == null) {
+                owner = classOwner;
+            } else if (!owner.equals(classOwner)) {
+                throw new IOException("Enigma mapping file " + path + " contains multiple outer classes");
             }
         }
 
-        tree = nextTree;
-        return owners;
+        if (owner == null) throw new IOException("Enigma mapping file " + path + " is empty");
+        if (!pendingDirectoryOwners.add(owner)) throw new IOException("Duplicate Enigma mapping for " + owner);
+
+        String expectedPath = owner + ".mapping";
+
+        if (!expectedPath.equals(path)) {
+            throw new IOException("Enigma mapping path " + path
+                    + " does not match class " + owner + " (expected " + expectedPath + ")");
+        }
+
+        for (MappingTree.ClassMapping clazz : fileTree.getClasses()) {
+            pendingDirectoryTree.addClass(clazz);
+        }
+
+        return owner;
+    }
+
+    public static void finishDirectory() {
+        if (pendingDirectoryTree == null) throw new IllegalStateException("No Enigma directory import is active");
+
+        tree = pendingDirectoryTree;
+        abortDirectory();
+    }
+
+    public static void abortDirectory() {
+        pendingDirectoryTree = null;
+        pendingDirectoryOwners = null;
     }
 
     public static byte[] create(String format) throws IOException {

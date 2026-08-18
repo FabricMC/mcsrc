@@ -2,7 +2,12 @@ import { load } from "../../java/build/generated/teavm/wasm-gc/mcsrc.wasm-runtim
 import mappingsWasm from "../../java/build/generated/teavm/wasm-gc/mcsrc.wasm?url";
 
 export type JavadocFormat = "tiny2" | "enigma";
-export type JavadocElementKind = 0 | 1 | 2;
+export const JavadocElementKind = {
+    Class: 0,
+    Field: 1,
+    Method: 2,
+} as const;
+export type JavadocElementKind = typeof JavadocElementKind[keyof typeof JavadocElementKind];
 
 export interface JavadocFileSource {
     kind: "file";
@@ -20,7 +25,10 @@ export type JavadocSource = JavadocFileSource | JavadocDirectorySource;
 
 interface JavadocMappingsBridge {
     readJavadocs(data: ArrayBuffer): string;
-    readJavadocDirectory(data: ArrayBuffer[], paths: string[]): string[];
+    beginJavadocDirectory(): void;
+    readJavadocDirectoryFile(data: ArrayBuffer, path: string): string;
+    finishJavadocDirectory(): void;
+    abortJavadocDirectory(): void;
     writeJavadocs(format: JavadocFormat): Int8Array;
     writeJavadocClass(owner: string): Int8Array;
     createJavadocs(format: JavadocFormat): Int8Array;
@@ -47,7 +55,7 @@ export async function readJavadocFile(handle: FileSystemFileHandle): Promise<Jav
     const data = await selectedFile.arrayBuffer();
     const mappingsBridge = await getBridge();
 
-    if (data.byteLength === 0 && handle.name.toLowerCase().endsWith(".mapping")) {
+    if (data.byteLength === 0 && !handle.name.toLowerCase().endsWith(".tiny")) {
         mappingsBridge.resetJavadocs();
         return { kind: "file", handle, format: "enigma" };
     }
@@ -62,16 +70,23 @@ export async function readJavadocFile(handle: FileSystemFileHandle): Promise<Jav
 
 export async function readJavadocDirectory(handle: FileSystemDirectoryHandle): Promise<JavadocDirectorySource> {
     const mappingFiles = await collectMappingFiles(handle);
-    const buffers = await Promise.all(mappingFiles.map(async file => (await file.handle.getFile()).arrayBuffer()));
-    const paths = mappingFiles.map(file => file.path.join("/"));
-    const owners = (await getBridge()).readJavadocDirectory(buffers, paths);
+    const mappingsBridge = await getBridge();
     const files = new Map<string, string[]>();
+    mappingsBridge.beginJavadocDirectory();
 
-    if (owners.length !== mappingFiles.length) {
-        throw new Error("Invalid Enigma directory index");
+    try {
+        for (const mappingFile of mappingFiles) {
+            const data = await (await mappingFile.handle.getFile()).arrayBuffer();
+            const owner = mappingsBridge.readJavadocDirectoryFile(data, mappingFile.path.join("/"));
+            files.set(owner, mappingFile.path);
+        }
+
+        mappingsBridge.finishJavadocDirectory();
+    } catch (error) {
+        mappingsBridge.abortJavadocDirectory();
+        throw error;
     }
 
-    owners.forEach((owner, index) => files.set(owner, mappingFiles[index].path));
     return { kind: "directory", handle, files };
 }
 

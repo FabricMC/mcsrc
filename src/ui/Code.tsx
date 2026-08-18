@@ -165,7 +165,7 @@ const Code = () => {
     }, [monaco, decompileResult, classList, resetViewTrigger, messageApi]);
 
     useEffect(() => {
-        if (!monaco || !editorRef.current || !decompileResult || !javadocFile) return;
+        if (!monaco || !editorRef.current || decompileResult?.language !== "java" || !javadocFile) return;
 
         const extensions = applyJavadocCodeExtensions(monaco, editorRef.current, decompileResult);
 

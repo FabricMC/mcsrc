@@ -28,6 +28,7 @@ export const SettingsModalButton = () => {
 const SettingsTab = () => {
     const displayLambdasValue = useObservable(displayLambdas.observable);
     const bytecodeValue = useObservable(bytecode.observable);
+    const javadocMode = useObservable(activeJavadocFile) !== null;
 
     return (
         <div className="settings-tab-content">
@@ -37,7 +38,14 @@ const SettingsTab = () => {
                 <BooleanOption setting={compactPackages} title="Compact Packages" tooltip="Collapse packages with one child into one." />
                 <BooleanOption setting={autoJarIndex} title="Auto Jar Index" tooltip="Automatically index class metadata for file icons." />
                 <BooleanOption setting={displayLambdas} title="Lambda Names" tooltip="Display lambda names as inline comments. Does not support permalinking." disabled={bytecodeValue} />
-                <BooleanOption setting={bytecode} title="Show Bytecode" tooltip="Show bytecode instructions alongside decompiled source. Does not support permalinking." disabled={displayLambdasValue} />
+                <BooleanOption
+                    setting={bytecode}
+                    title="Show Bytecode"
+                    tooltip={javadocMode
+                        ? "Bytecode is unavailable in Javadoc mode."
+                        : "Show bytecode instructions alongside decompiled source. Does not support permalinking."}
+                    disabled={displayLambdasValue || javadocMode}
+                />
                 <BooleanOption setting={preferWasmDecompiler} title="Prefer WASM Decompiler" tooltip="WASM decompiler might be faster than JavaScript." />
                 <KeybindOption setting={focusSearch} title="Focus Search" captureId="focus_search" />
                 <KeybindOption setting={showStructure} title="Show Structure" captureId="show_structure" />

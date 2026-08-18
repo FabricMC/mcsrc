@@ -1,10 +1,11 @@
 import { BehaviorSubject, map, type Observable } from "rxjs";
+import { bytecode } from "../logic/Settings";
 import type { Token } from "../logic/Tokens";
 import {
     getStoredJavadoc,
+    JavadocElementKind,
     setStoredJavadoc,
     writeJavadocSource,
-    type JavadocElementKind,
     type JavadocSource,
 } from "./JavadocStorage";
 
@@ -15,6 +16,7 @@ export const activeJavadocToken = new BehaviorSubject<Token | null>(null);
 export const javadocRevision = new BehaviorSubject(0);
 
 export function activateJavadocFile(file: JavadocSource) {
+    bytecode.value = false;
     activeJavadocFile.next(file);
     publishJavadocChange();
 }
@@ -65,11 +67,11 @@ function getJavadocTarget(token: Token): [
 ] | null {
     switch (token.type) {
         case "class":
-            return [0, token.className, "", ""];
+            return [JavadocElementKind.Class, token.className, "", ""];
         case "field":
-            return [1, token.className, token.name, token.descriptor];
+            return [JavadocElementKind.Field, token.className, token.name, token.descriptor];
         case "method":
-            return [2, token.className, token.name, token.descriptor];
+            return [JavadocElementKind.Method, token.className, token.name, token.descriptor];
         default:
             return null;
     }

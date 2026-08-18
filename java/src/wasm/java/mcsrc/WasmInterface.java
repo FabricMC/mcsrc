@@ -110,11 +110,23 @@ public final class WasmInterface {
     }
 
     @JSExport
-    public static String[] readJavadocDirectory(ArrayBuffer[] mappings, String[] paths) throws IOException {
-        byte[][] files = Arrays.stream(mappings)
-                .map(WasmInterface::toBytes)
-                .toArray(byte[][]::new);
-        return JavadocMappings.readDirectory(files, paths);
+    public static void beginJavadocDirectory() {
+        JavadocMappings.beginDirectory();
+    }
+
+    @JSExport
+    public static String readJavadocDirectoryFile(ArrayBuffer mappings, String path) throws IOException {
+        return JavadocMappings.readDirectoryFile(toBytes(mappings), path);
+    }
+
+    @JSExport
+    public static void finishJavadocDirectory() {
+        JavadocMappings.finishDirectory();
+    }
+
+    @JSExport
+    public static void abortJavadocDirectory() {
+        JavadocMappings.abortDirectory();
     }
 
     @JSExport

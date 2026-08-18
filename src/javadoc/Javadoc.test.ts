@@ -3,18 +3,22 @@ import type { Token } from "../logic/Tokens";
 
 const storage = vi.hoisted(() => ({
     current: null as string | null,
+    JavadocElementKind: { Class: 0, Field: 1, Method: 2 },
     getStoredJavadoc: vi.fn(() => storage.current),
     setStoredJavadoc: vi.fn((_kind, _owner, _name, _descriptor, comment: string | null) => {
         storage.current = comment;
     }),
     writeJavadocSource: vi.fn(),
 }));
+const settings = vi.hoisted(() => ({ bytecode: { value: true } }));
 
 vi.mock("./JavadocStorage", () => storage);
+vi.mock("../logic/Settings", () => settings);
 
 import {
     activeJavadocFile,
     activeJavadocToken,
+    activateJavadocFile,
     deactivateJavadocFile,
     javadocRevision,
     saveTokenJavadoc,
@@ -62,5 +66,19 @@ describe("saveTokenJavadoc", () => {
 
         expect(activeJavadocFile.value).toBeNull();
         expect(activeJavadocToken.value).toBeNull();
+    });
+
+    it("leaves bytecode mode when Javadoc mappings are activated", () => {
+        settings.bytecode.value = true;
+        const file = {
+            kind: "file",
+            handle: { name: "docs.mapping" } as FileSystemFileHandle,
+            format: "enigma",
+        } as const;
+
+        activateJavadocFile(file);
+
+        expect(settings.bytecode.value).toBe(false);
+        expect(activeJavadocFile.value).toBe(file);
     });
 });
