@@ -43,7 +43,7 @@ function VersionSelector({
     const dividerIndex = filteredVersions.findIndex(version => !favoriteSet.has(version.id));
     const showFavoritesDivider = dividerIndex > 0;
 
-    const selectedVersionId = currentVersion || versions?.[0]?.id;
+    const selectedVersionId = currentVersion || "Select version";
 
     const toggleFavorite = (version: string) => {
         favoriteMinecraftVersions.value = favoriteVersions.includes(version)
