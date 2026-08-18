@@ -1,5 +1,6 @@
 package mcsrc;
 
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -100,9 +101,62 @@ public final class WasmInterface {
     @JSExport
     public static Int8Array remapEntry(ArrayBuffer entry) {
         byte[] remappedBytes = requireRemapper().remap(toBytes(entry));
-        var result = new Int8Array(remappedBytes.length);
-        result.set(remappedBytes);
-        return result;
+        return toInt8Array(remappedBytes);
+    }
+
+    @JSExport
+    public static String readJavadocs(ArrayBuffer mappings) throws IOException {
+        return JavadocMappings.read(toBytes(mappings));
+    }
+
+    @JSExport
+    public static void beginJavadocDirectory() {
+        JavadocMappings.beginDirectory();
+    }
+
+    @JSExport
+    public static String readJavadocDirectoryFile(ArrayBuffer mappings, String path) throws IOException {
+        return JavadocMappings.readDirectoryFile(toBytes(mappings), path);
+    }
+
+    @JSExport
+    public static void finishJavadocDirectory() {
+        JavadocMappings.finishDirectory();
+    }
+
+    @JSExport
+    public static void abortJavadocDirectory() {
+        JavadocMappings.abortDirectory();
+    }
+
+    @JSExport
+    public static Int8Array writeJavadocs(String format) throws IOException {
+        return toInt8Array(JavadocMappings.write(format));
+    }
+
+    @JSExport
+    public static Int8Array writeJavadocClass(String owner) throws IOException {
+        return toInt8Array(JavadocMappings.writeClass(owner));
+    }
+
+    @JSExport
+    public static Int8Array createJavadocs(String format) throws IOException {
+        return toInt8Array(JavadocMappings.create(format));
+    }
+
+    @JSExport
+    public static void resetJavadocs() {
+        JavadocMappings.reset();
+    }
+
+    @JSExport
+    public static String getJavadoc(int kind, String owner, String name, String descriptor) {
+        return JavadocMappings.get(kind, owner, name, descriptor);
+    }
+
+    @JSExport
+    public static void setJavadoc(int kind, String owner, String name, String descriptor, String comment) throws IOException {
+        JavadocMappings.set(kind, owner, name, descriptor, comment);
     }
 
     private static ClassFileRemapper requireRemapper() {
@@ -115,6 +169,12 @@ public final class WasmInterface {
 
     private static byte[] toBytes(ArrayBuffer buffer) {
         return new Int8Array(buffer).copyToJavaArray();
+    }
+
+    private static Int8Array toInt8Array(byte[] bytes) {
+        var result = new Int8Array(bytes.length);
+        result.set(bytes);
+        return result;
     }
 
     private static String serialize(ClassData data) {
