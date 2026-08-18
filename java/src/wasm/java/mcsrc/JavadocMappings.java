@@ -17,7 +17,6 @@ import java.io.IOException;
 import java.io.StringReader;
 import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -189,16 +188,14 @@ public final class JavadocMappings {
         if (tree == null) throw new IllegalStateException("No Javadoc mappings are active");
 
         String outerOwner = outerClassName(owner);
-        MemoryMappingTree classTree = new MemoryMappingTree(tree);
-        List<String> remove = new ArrayList<>();
+        MemoryMappingTree classTree = newEnigmaTree();
 
-        for (MappingTree.ClassMapping clazz : classTree.getClasses()) {
-            if (!outerOwner.equals(outerClassName(clazz.getSrcName())) || !isMeaningful(clazz)) {
-                remove.add(clazz.getSrcName());
+        for (MappingTree.ClassMapping clazz : tree.getClasses()) {
+            if (outerOwner.equals(outerClassName(clazz.getSrcName())) && isMeaningful(clazz)) {
+                classTree.addClass(clazz);
             }
         }
 
-        remove.forEach(classTree::removeClass);
         if (classTree.getClasses().isEmpty()) return new byte[0];
 
         return write("enigma", classTree);

@@ -104,8 +104,28 @@ export async function writeJavadocSource(source: JavadocSource, owner: string): 
     }
 
     const path = existingPath ?? `${outerOwner}.mapping`.split("/");
+    let created = false;
+
+    if (!existingPath) {
+        try {
+            await getFileHandle(source.handle, path, false);
+            throw new Error(`Mapping file ${path.join("/")} already exists`);
+        } catch (error) {
+            if (!isNotFoundError(error)) throw error;
+        }
+
+        created = true;
+    }
+
     const handle = await getFileHandle(source.handle, path, true);
-    await writeBytes(handle, bytes);
+
+    try {
+        await writeBytes(handle, bytes);
+    } catch (error) {
+        if (created) await deleteFile(source.handle, path).catch(() => {});
+        throw error;
+    }
+
     source.files.set(outerOwner, path);
 }
 
@@ -194,6 +214,10 @@ async function deleteFile(root: FileSystemDirectoryHandle, path: string[]): Prom
     }
 
     await directory.removeEntry(path[path.length - 1]);
+}
+
+function isNotFoundError(error: unknown): boolean {
+    return error instanceof DOMException && error.name === "NotFoundError";
 }
 
 function outerClassName(name: string): string {

@@ -73,7 +73,8 @@ const JavadocFilePicker = () => {
         } catch (error) {
             if (!(error instanceof DOMException && error.name === "AbortError")) {
                 console.error("Unable to open Javadoc mapping file:", error);
-                messageApi.error("Unable to open Javadoc mapping file.");
+                const detail = error instanceof Error ? ` ${error.message}` : "";
+                messageApi.error(`Unable to open Javadoc mapping file.${detail}`);
             }
         } finally {
             setLoading(false);

@@ -11,7 +11,6 @@ import {
 export type JavadocString = string;
 
 export const activeJavadocFile = new BehaviorSubject<JavadocSource | null>(null);
-export const javadocModeEnabled = activeJavadocFile.pipe(map(file => file !== null));
 export const activeJavadocToken = new BehaviorSubject<Token | null>(null);
 export const javadocRevision = new BehaviorSubject(0);
 

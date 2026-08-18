@@ -27,6 +27,7 @@ class FakeFile {
     readonly kind = "file";
     readonly name: string;
     writes = 0;
+    failWrites = false;
     content: Uint8Array;
 
     constructor(name: string, content = "") {
@@ -47,6 +48,7 @@ class FakeFile {
             createWritable: async () => ({
                 write: async (data: BufferSource) => {
                     this.writes++;
+                    if (this.failWrites) throw new DOMException("Write failed", "UnknownError");
                     const view = data instanceof ArrayBuffer
                         ? new Uint8Array(data)
                         : new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
@@ -64,6 +66,7 @@ class FakeDirectory {
     readonly name: string;
     readonly entries = new Map<string, FakeFile | FakeDirectory>();
     readonly deleted: string[] = [];
+    failCreatedFileWrites = false;
 
     constructor(name: string) {
         this.name = name;
@@ -99,6 +102,7 @@ class FakeDirectory {
                 if (!options?.create) throw new DOMException("Missing file", "NotFoundError");
 
                 const created = new FakeFile(name);
+                created.failWrites = directory.failCreatedFileWrites;
                 directory.add(created);
                 return created.asHandle();
             },
@@ -176,6 +180,19 @@ describe("JavadocStorage", () => {
         const newDirectory = root.entries.get("new") as FakeDirectory;
         const packageDirectory = newDirectory.entries.get("package") as FakeDirectory;
         expect((packageDirectory.entries.get("Owner.mapping") as FakeFile).writes).toBe(1);
+    });
+
+    it("removes a newly created mapping file when writing fails", async () => {
+        const root = new FakeDirectory("mappings");
+        root.failCreatedFileWrites = true;
+        const source = directorySource(root);
+        bridge.writeJavadocClass.mockReturnValue(new Int8Array([4, 5]));
+
+        await expect(writeJavadocSource(source, "Owner")).rejects.toThrow("Write failed");
+
+        expect(root.deleted).toEqual(["Owner.mapping"]);
+        expect(root.entries.has("Owner.mapping")).toBe(false);
+        expect(source.files.has("Owner")).toBe(false);
     });
 
     it("preserves a leading dollar sign in an outer class name", async () => {
