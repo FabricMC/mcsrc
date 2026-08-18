@@ -14,9 +14,8 @@ const EDIT_JAVADOC_COMMAND_ID = 'editor.action.editJavadoc';
 
 export function applyJavadocCodeExtensions(monaco: monaco, editor: editor.IStandaloneCodeEditor, decompile: DecompileResult): IDisposable {
     const viewZoneIds: string[] = [];
-    const javadocRevisionSub = javadocRevision.subscribe(() => {
+    const refreshJavadocs = () => {
         editor.changeViewZones((accessor) => {
-            // Remove any existing zones
             viewZoneIds.forEach(id => accessor.removeZone(id));
             viewZoneIds.length = 0;
 
@@ -41,7 +40,9 @@ export function applyJavadocCodeExtensions(monaco: monaco, editor: editor.IStand
                     viewZoneIds.push(zoneId);
                 });
         });
-    });
+    };
+    const javadocRevisionSub = javadocRevision.subscribe(refreshJavadocs);
+    const modelChangeListener = editor.onDidChangeModel(refreshJavadocs);
 
     const codeLense = monaco.languages.registerCodeLensProvider("java", {
         provideCodeLenses: function(model: editor.ITextModel, token: CancellationToken): languages.ProviderResult<languages.CodeLensList> {
@@ -89,7 +90,7 @@ export function applyJavadocCodeExtensions(monaco: monaco, editor: editor.IStand
         dispose() {
             editJavadocCommand.dispose();
             codeLense.dispose();
-
+            modelChangeListener.dispose();
             javadocRevisionSub.unsubscribe();
             editor.changeViewZones((accessor) => {
                 viewZoneIds.forEach(id => accessor.removeZone(id));
