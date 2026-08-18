@@ -110,8 +110,21 @@ public final class WasmInterface {
     }
 
     @JSExport
+    public static String[] readJavadocDirectory(ArrayBuffer[] mappings, String[] paths) throws IOException {
+        byte[][] files = Arrays.stream(mappings)
+                .map(WasmInterface::toBytes)
+                .toArray(byte[][]::new);
+        return JavadocMappings.readDirectory(files, paths);
+    }
+
+    @JSExport
     public static Int8Array writeJavadocs(String format) throws IOException {
         return toInt8Array(JavadocMappings.write(format));
+    }
+
+    @JSExport
+    public static Int8Array writeJavadocClass(String owner) throws IOException {
+        return toInt8Array(JavadocMappings.writeClass(owner));
     }
 
     @JSExport

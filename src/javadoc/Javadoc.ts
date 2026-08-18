@@ -3,19 +3,19 @@ import type { Token } from "../logic/Tokens";
 import {
     getStoredJavadoc,
     setStoredJavadoc,
-    writeJavadocFile,
+    writeJavadocSource,
     type JavadocElementKind,
-    type JavadocFile,
+    type JavadocSource,
 } from "./JavadocStorage";
 
 export type JavadocString = string;
 
-export const activeJavadocFile = new BehaviorSubject<JavadocFile | null>(null);
+export const activeJavadocFile = new BehaviorSubject<JavadocSource | null>(null);
 export const javadocModeEnabled = activeJavadocFile.pipe(map(file => file !== null));
 export const activeJavadocToken = new BehaviorSubject<Token | null>(null);
 export const javadocRevision = new BehaviorSubject(0);
 
-export function activateJavadocFile(file: JavadocFile) {
+export function activateJavadocFile(file: JavadocSource) {
     activeJavadocFile.next(file);
     publishJavadocChange();
 }
@@ -28,10 +28,13 @@ export async function saveTokenJavadoc(token: Token, javadoc: JavadocString | un
     if (!target) throw new Error("This token cannot have Javadoc");
 
     const previous = getStoredJavadoc(...target);
-    setStoredJavadoc(...target, javadoc || null);
+    const next = javadoc || null;
+    if (previous === next) return;
+
+    setStoredJavadoc(...target, next);
 
     try {
-        await writeJavadocFile(file);
+        await writeJavadocSource(file, target[1]);
     } catch (error) {
         setStoredJavadoc(...target, previous);
         throw error;

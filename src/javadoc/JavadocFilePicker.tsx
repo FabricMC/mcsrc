@@ -5,11 +5,14 @@ import { useObservable } from "../utils/UseObservable";
 import { activateJavadocFile, activeJavadocFile } from "./Javadoc";
 import {
     createJavadocFile,
+    readJavadocDirectory,
     readJavadocFile,
     type JavadocFormat,
 } from "./JavadocStorage";
 
-const pickerSupported = "showOpenFilePicker" in window && "showSaveFilePicker" in window;
+const filePickerSupported = "showOpenFilePicker" in window && "showSaveFilePicker" in window;
+const directoryPickerSupported = "showDirectoryPicker" in window;
+const pickerSupported = filePickerSupported || directoryPickerSupported;
 
 const JavadocFilePicker = () => {
     const selectedFile = useObservable(activeJavadocFile);
@@ -19,19 +22,28 @@ const JavadocFilePicker = () => {
     const items: MenuProps["items"] = [
         {
             key: "open",
-            label: "Open existing…",
+            label: "Open mapping file…",
             icon: <FolderOpenOutlined />,
+            disabled: !filePickerSupported,
+        },
+        {
+            key: "open-directory",
+            label: "Open Enigma directory…",
+            icon: <FolderOpenOutlined />,
+            disabled: !directoryPickerSupported,
         },
         { type: "divider" },
         {
             key: "tiny2",
             label: "Create Tiny v2…",
             icon: <FileAddOutlined />,
+            disabled: !filePickerSupported,
         },
         {
             key: "enigma",
             label: "Create Enigma…",
             icon: <FileAddOutlined />,
+            disabled: !filePickerSupported,
         },
     ];
 
@@ -46,6 +58,10 @@ const JavadocFilePicker = () => {
                 });
                 const file = await readJavadocFile(handle);
                 activateJavadocFile(file);
+            } else if (key === "open-directory") {
+                const handle = await window.showDirectoryPicker({ mode: "readwrite" });
+                const directory = await readJavadocDirectory(handle);
+                activateJavadocFile(directory);
             } else {
                 const format = key as JavadocFormat;
                 const handle = await window.showSaveFilePicker(createPickerOptions(format));
@@ -53,7 +69,7 @@ const JavadocFilePicker = () => {
                 activateJavadocFile(file);
             }
 
-            messageApi.success("Javadoc mapping file opened.");
+            messageApi.success("Javadoc mappings opened.");
         } catch (error) {
             if (!(error instanceof DOMException && error.name === "AbortError")) {
                 console.error("Unable to open Javadoc mapping file:", error);

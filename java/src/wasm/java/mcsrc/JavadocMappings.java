@@ -2,6 +2,7 @@ package mcsrc;
 
 import net.fabricmc.mappingio.MappedElementKind;
 import net.fabricmc.mappingio.MappingReader;
+import net.fabricmc.mappingio.MappingUtil;
 import net.fabricmc.mappingio.MappingVisitor;
 import net.fabricmc.mappingio.format.MappingFormat;
 import net.fabricmc.mappingio.format.enigma.EnigmaFileReader;
@@ -16,7 +17,10 @@ import java.io.IOException;
 import java.io.StringReader;
 import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 public final class JavadocMappings {
     public static final int CLASS = 0;
@@ -49,6 +53,47 @@ public final class JavadocMappings {
 
         tree = nextTree;
         return format == MappingFormat.TINY_2_FILE ? "tiny2" : "enigma";
+    }
+
+    public static String[] readDirectory(byte[][] files, String[] paths) throws IOException {
+        if (files.length != paths.length) throw new IllegalArgumentException("File and path counts differ");
+
+        MemoryMappingTree nextTree = newEnigmaTree();
+        String[] owners = new String[files.length];
+        Set<String> seenOwners = new HashSet<>();
+
+        for (int i = 0; i < files.length; i++) {
+            MemoryMappingTree fileTree = new MemoryMappingTree();
+
+            try {
+                EnigmaFileReader.read(new StringReader(new String(files[i], StandardCharsets.UTF_8)), fileTree);
+            } catch (IOException | RuntimeException e) {
+                throw new IOException("Invalid Enigma mapping file " + paths[i] + ": " + e.getMessage(), e);
+            }
+
+            String owner = null;
+
+            for (MappingTree.ClassMapping clazz : fileTree.getClasses()) {
+                String classOwner = outerClassName(clazz.getSrcName());
+
+                if (owner == null) {
+                    owner = classOwner;
+                } else if (!owner.equals(classOwner)) {
+                    throw new IOException("Enigma mapping file " + paths[i] + " contains multiple outer classes");
+                }
+            }
+
+            if (owner == null) throw new IOException("Enigma mapping file " + paths[i] + " is empty");
+            if (!seenOwners.add(owner)) throw new IOException("Duplicate Enigma mapping for " + owner);
+
+            owners[i] = owner;
+            for (MappingTree.ClassMapping clazz : fileTree.getClasses()) {
+                nextTree.addClass(clazz);
+            }
+        }
+
+        tree = nextTree;
+        return owners;
     }
 
     public static byte[] create(String format) throws IOException {
@@ -100,6 +145,8 @@ public final class JavadocMappings {
                 default -> throw new IllegalArgumentException("Unsupported Javadoc element kind: " + kind);
             }
 
+            pruneEmptyEntries(clazz, kind, name, descriptor);
+
             return;
         }
 
@@ -131,6 +178,25 @@ public final class JavadocMappings {
         return write(format, tree);
     }
 
+    public static byte[] writeClass(String owner) throws IOException {
+        if (tree == null) throw new IllegalStateException("No Javadoc mappings are active");
+
+        String outerOwner = outerClassName(owner);
+        MemoryMappingTree classTree = new MemoryMappingTree(tree);
+        List<String> remove = new ArrayList<>();
+
+        for (MappingTree.ClassMapping clazz : classTree.getClasses()) {
+            if (!outerOwner.equals(outerClassName(clazz.getSrcName())) || !isMeaningful(clazz)) {
+                remove.add(clazz.getSrcName());
+            }
+        }
+
+        remove.forEach(classTree::removeClass);
+        if (classTree.getClasses().isEmpty()) return new byte[0];
+
+        return write("enigma", classTree);
+    }
+
     private static byte[] write(String format, MemoryMappingTree source) throws IOException {
         StringWriter output = new StringWriter();
         MappingVisitor writer = switch (format) {
@@ -147,5 +213,60 @@ public final class JavadocMappings {
         result.visitNamespaces(OFFICIAL_NAMESPACE, List.of());
         result.visitEnd();
         return result;
+    }
+
+    private static MemoryMappingTree newEnigmaTree() {
+        MemoryMappingTree result = new MemoryMappingTree();
+        result.visitNamespaces(MappingUtil.NS_SOURCE_FALLBACK, List.of(MappingUtil.NS_TARGET_FALLBACK));
+        result.visitEnd();
+        return result;
+    }
+
+    private static void pruneEmptyEntries(MappingTree.ClassMapping clazz, int kind, String name, String descriptor) {
+        if (kind == FIELD) {
+            MappingTree.FieldMapping field = clazz.getField(name, descriptor);
+            if (field != null && !isMeaningful(field)) clazz.removeField(name, descriptor);
+        } else if (kind == METHOD) {
+            MappingTree.MethodMapping method = clazz.getMethod(name, descriptor);
+            if (method != null && !isMeaningful(method)) clazz.removeMethod(name, descriptor);
+        }
+
+        if (!isMeaningful(clazz)) tree.removeClass(clazz.getSrcName());
+    }
+
+    private static boolean isMeaningful(MappingTree.ClassMapping clazz) {
+        if (hasContent(clazz)) return true;
+        if (clazz.getFields().stream().anyMatch(JavadocMappings::isMeaningful)) return true;
+        return clazz.getMethods().stream().anyMatch(JavadocMappings::isMeaningful);
+    }
+
+    private static boolean isMeaningful(MappingTree.FieldMapping field) {
+        return hasContent(field);
+    }
+
+    private static boolean isMeaningful(MappingTree.MethodMapping method) {
+        if (hasContent(method)) return true;
+        return method.getArgs().stream().anyMatch(JavadocMappings::hasContent);
+    }
+
+    private static boolean hasContent(MappingTree.ElementMapping element) {
+        if (element.getComment() != null) return true;
+
+        for (int namespace = 0; namespace < element.getTree().getMaxNamespaceId(); namespace++) {
+            if (element.getDstName(namespace) != null) return true;
+        }
+
+        return false;
+    }
+
+    private static String outerClassName(String name) {
+        int start = 0;
+
+        while (true) {
+            int separator = name.indexOf('$', start);
+            if (separator < 0) return name;
+            if (separator == 0 || name.charAt(separator - 1) != '/') return name.substring(0, separator);
+            start = separator + 1;
+        }
     }
 }
