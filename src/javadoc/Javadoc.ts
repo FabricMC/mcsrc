@@ -20,6 +20,12 @@ export function activateJavadocFile(file: JavadocSource) {
     publishJavadocChange();
 }
 
+export function deactivateJavadocFile() {
+    activeJavadocToken.next(null);
+    activeJavadocFile.next(null);
+    publishJavadocChange();
+}
+
 export async function saveTokenJavadoc(token: Token, javadoc: JavadocString | undefined) {
     const file = activeJavadocFile.value;
     if (!file) throw new Error("No Javadoc mapping file selected");

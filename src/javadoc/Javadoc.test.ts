@@ -12,7 +12,13 @@ const storage = vi.hoisted(() => ({
 
 vi.mock("./JavadocStorage", () => storage);
 
-import { activeJavadocFile, javadocRevision, saveTokenJavadoc } from "./Javadoc";
+import {
+    activeJavadocFile,
+    activeJavadocToken,
+    deactivateJavadocFile,
+    javadocRevision,
+    saveTokenJavadoc,
+} from "./Javadoc";
 
 const token = {
     type: "class",
@@ -47,5 +53,14 @@ describe("saveTokenJavadoc", () => {
 
         expect(storage.current).toBe("Existing docs");
         expect(javadocRevision.value).toBe(revision);
+    });
+
+    it("clears the active file and editor token when Javadoc mode is deactivated", () => {
+        activeJavadocToken.next(token);
+
+        deactivateJavadocFile();
+
+        expect(activeJavadocFile.value).toBeNull();
+        expect(activeJavadocToken.value).toBeNull();
     });
 });

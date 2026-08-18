@@ -18,6 +18,7 @@ vi.mock("../../java/build/generated/teavm/wasm-gc/mcsrc.wasm?url", () => ({ defa
 
 import {
     readJavadocDirectory,
+    readJavadocFile,
     writeJavadocSource,
     type JavadocDirectorySource,
 } from "./JavadocStorage";
@@ -109,9 +110,17 @@ class FakeDirectory {
     }
 }
 
-describe("JavadocStorage Enigma directories", () => {
+describe("JavadocStorage", () => {
     beforeEach(() => {
         vi.clearAllMocks();
+    });
+
+    it("opens an empty Enigma file as a new mapping tree", async () => {
+        const source = await readJavadocFile(new FakeFile("docs.mapping").asHandle());
+
+        expect(source.format).toBe("enigma");
+        expect(bridge.resetJavadocs).toHaveBeenCalledOnce();
+        expect(bridge.readJavadocs).not.toHaveBeenCalled();
     });
 
     it("recursively reads mapping files and preserves their paths", async () => {
@@ -166,6 +175,17 @@ describe("JavadocStorage Enigma directories", () => {
         const newDirectory = root.entries.get("new") as FakeDirectory;
         const packageDirectory = newDirectory.entries.get("package") as FakeDirectory;
         expect((packageDirectory.entries.get("Owner.mapping") as FakeFile).writes).toBe(1);
+    });
+
+    it("preserves a leading dollar sign in an outer class name", async () => {
+        const root = new FakeDirectory("mappings");
+        const source = directorySource(root);
+        bridge.writeJavadocClass.mockReturnValue(new Int8Array([4, 5]));
+
+        await writeJavadocSource(source, "new/package/$Proxy$Inner");
+
+        expect(bridge.writeJavadocClass).toHaveBeenCalledWith("new/package/$Proxy");
+        expect(source.files.get("new/package/$Proxy")).toEqual(["new", "package", "$Proxy.mapping"]);
     });
 
     it("deletes only the changed file when its class becomes empty", async () => {

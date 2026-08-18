@@ -44,7 +44,15 @@ let bridge: JavadocMappingsBridge | null = null;
 
 export async function readJavadocFile(handle: FileSystemFileHandle): Promise<JavadocFileSource> {
     const selectedFile = await handle.getFile();
-    const format = (await getBridge()).readJavadocs(await selectedFile.arrayBuffer());
+    const data = await selectedFile.arrayBuffer();
+    const mappingsBridge = await getBridge();
+
+    if (data.byteLength === 0 && handle.name.toLowerCase().endsWith(".mapping")) {
+        mappingsBridge.resetJavadocs();
+        return { kind: "file", handle, format: "enigma" };
+    }
+
+    const format = mappingsBridge.readJavadocs(data);
     if (format !== "tiny2" && format !== "enigma") {
         throw new Error("Invalid Javadoc mapping format");
     }
@@ -83,7 +91,7 @@ export async function writeJavadocSource(source: JavadocSource, owner: string): 
         return;
     }
 
-    const outerOwner = owner.split("$")[0];
+    const outerOwner = outerClassName(owner);
     const bytes = requireBridge().writeJavadocClass(outerOwner);
     const existingPath = source.files.get(outerOwner);
 
@@ -186,6 +194,17 @@ async function deleteFile(root: FileSystemDirectoryHandle, path: string[]): Prom
     }
 
     await directory.removeEntry(path[path.length - 1]);
+}
+
+function outerClassName(name: string): string {
+    let start = 0;
+
+    while (true) {
+        const separator = name.indexOf("$", start);
+        if (separator < 0) return name;
+        if (separator === 0 || name[separator - 1] !== "/") return name.slice(0, separator);
+        start = separator + 1;
+    }
 }
 
 async function getBridge(): Promise<JavadocMappingsBridge> {

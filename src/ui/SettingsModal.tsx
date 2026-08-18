@@ -1,5 +1,5 @@
 import { Button, Flex, Modal, type CheckboxProps, Form, Tooltip, InputNumber, type InputNumberProps, Space, Tabs } from "antd";
-import { SettingOutlined, SunOutlined, MoonOutlined, DesktopOutlined, JavaOutlined } from '@ant-design/icons';
+import { SettingOutlined, SunOutlined, MoonOutlined, DesktopOutlined, JavaOutlined, CloseOutlined } from '@ant-design/icons';
 import { Checkbox } from 'antd';
 import { useObservable } from "../utils/UseObservable";
 import { BooleanSetting, enableTabs, displayLambdas, focusSearch, KeybindSetting, type KeybindValue, bytecode, showStructure, NumberSetting, preferWasmDecompiler, compactPackages, theme, autoJarIndex } from "../logic/Settings";
@@ -8,6 +8,7 @@ import { BehaviorSubject } from "rxjs";
 import React, { useEffect, useState } from "react";
 import { modalOpen } from "./JarDecompilerModal";
 import JavadocFilePicker from "../javadoc/JavadocFilePicker";
+import { activeJavadocFile, deactivateJavadocFile } from "../javadoc/Javadoc";
 
 export const settingsModalOpen = new BehaviorSubject<boolean>(false);
 
@@ -45,21 +46,32 @@ const SettingsTab = () => {
     );
 };
 
-const AdvancedTab = () => (
-    <Flex className="settings-tab-content" vertical align="flex-start" gap="small">
-        <Button
-            data-testid="jar-decompiler"
-            icon={<JavaOutlined />}
-            onClick={() => {
-                settingsModalOpen.next(false);
-                modalOpen.next(true);
-            }}
-        >
-            Decompile All
-        </Button>
-        <JavadocFilePicker />
-    </Flex>
-);
+const AdvancedTab = () => {
+    const javadocFile = useObservable(activeJavadocFile);
+
+    return (
+        <Flex className="settings-tab-content" vertical align="flex-start" gap="small">
+            <Button
+                data-testid="jar-decompiler"
+                icon={<JavaOutlined />}
+                onClick={() => {
+                    settingsModalOpen.next(false);
+                    modalOpen.next(true);
+                }}
+            >
+                Decompile All
+            </Button>
+            <JavadocFilePicker />
+            <Button
+                disabled={!javadocFile}
+                icon={<CloseOutlined />}
+                onClick={deactivateJavadocFile}
+            >
+                Exit Javadoc mode
+            </Button>
+        </Flex>
+    );
+};
 
 const SettingsModal = () => {
     const isModalOpen = useObservable(settingsModalOpen);
