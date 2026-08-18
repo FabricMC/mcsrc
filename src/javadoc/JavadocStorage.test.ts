@@ -125,18 +125,19 @@ describe("JavadocStorage", () => {
 
     it("recursively reads mapping files and preserves their paths", async () => {
         const root = new FakeDirectory("mappings");
-        const packageDirectory = new FakeDirectory("pkg")
-            .add(new FakeFile("Pretty.mapping", "CLASS pkg/A\n"))
+        const firstPackage = new FakeDirectory("a")
+            .add(new FakeFile("A.mapping", "CLASS a/A\n"))
             .add(new FakeFile("notes.txt", "ignored"));
-        root.add(packageDirectory).add(new FakeFile("B.mapping", "CLASS b/B\n"));
-        bridge.readJavadocDirectory.mockReturnValue(["b/B", "pkg/A"]);
+        const secondPackage = new FakeDirectory("b").add(new FakeFile("B.mapping", "CLASS b/B\n"));
+        root.add(firstPackage).add(secondPackage);
+        bridge.readJavadocDirectory.mockReturnValue(["a/A", "b/B"]);
 
         const source = await readJavadocDirectory(root.asHandle());
 
         expect(bridge.readJavadocDirectory).toHaveBeenCalledOnce();
-        expect(bridge.readJavadocDirectory.mock.calls[0][1]).toEqual(["B.mapping", "pkg/Pretty.mapping"]);
-        expect(source.files.get("pkg/A")).toEqual(["pkg", "Pretty.mapping"]);
-        expect(source.files.get("b/B")).toEqual(["B.mapping"]);
+        expect(bridge.readJavadocDirectory.mock.calls[0][1]).toEqual(["a/A.mapping", "b/B.mapping"]);
+        expect(source.files.get("a/A")).toEqual(["a", "A.mapping"]);
+        expect(source.files.get("b/B")).toEqual(["b", "B.mapping"]);
     });
 
     it("opens an empty directory", async () => {
@@ -150,11 +151,11 @@ describe("JavadocStorage", () => {
     });
 
     it("rewrites only the changed class at its existing path", async () => {
-        const changed = new FakeFile("Pretty.mapping", "old");
+        const changed = new FakeFile("A.mapping", "old");
         const untouched = new FakeFile("Other.mapping", "untouched");
-        const packageDirectory = new FakeDirectory("named").add(changed).add(untouched);
+        const packageDirectory = new FakeDirectory("a").add(changed).add(untouched);
         const root = new FakeDirectory("mappings").add(packageDirectory);
-        const source = directorySource(root, new Map([["a/A", ["named", "Pretty.mapping"]]]));
+        const source = directorySource(root, new Map([["a/A", ["a", "A.mapping"]]]));
         bridge.writeJavadocClass.mockReturnValue(new Int8Array([1, 2, 3]));
 
         await writeJavadocSource(source, "a/A$Inner");
@@ -191,14 +192,15 @@ describe("JavadocStorage", () => {
     it("deletes only the changed file when its class becomes empty", async () => {
         const empty = new FakeFile("Empty.mapping");
         const other = new FakeFile("Other.mapping");
-        const root = new FakeDirectory("mappings").add(empty).add(other);
-        const source = directorySource(root, new Map([["a/Empty", ["Empty.mapping"]]]));
+        const packageDirectory = new FakeDirectory("a").add(empty).add(other);
+        const root = new FakeDirectory("mappings").add(packageDirectory);
+        const source = directorySource(root, new Map([["a/Empty", ["a", "Empty.mapping"]]]));
         bridge.writeJavadocClass.mockReturnValue(new Int8Array());
 
         await writeJavadocSource(source, "a/Empty");
 
-        expect(root.deleted).toEqual(["Empty.mapping"]);
-        expect(root.entries.has("Other.mapping")).toBe(true);
+        expect(packageDirectory.deleted).toEqual(["Empty.mapping"]);
+        expect(packageDirectory.entries.has("Other.mapping")).toBe(true);
         expect(source.files.has("a/Empty")).toBe(false);
     });
 });

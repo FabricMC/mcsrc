@@ -86,6 +86,13 @@ public final class JavadocMappings {
             if (owner == null) throw new IOException("Enigma mapping file " + paths[i] + " is empty");
             if (!seenOwners.add(owner)) throw new IOException("Duplicate Enigma mapping for " + owner);
 
+            String expectedPath = owner + ".mapping";
+
+            if (!expectedPath.equals(paths[i])) {
+                throw new IOException("Enigma mapping path " + paths[i]
+                        + " does not match class " + owner + " (expected " + expectedPath + ")");
+            }
+
             owners[i] = owner;
             for (MappingTree.ClassMapping clazz : fileTree.getClasses()) {
                 nextTree.addClass(clazz);

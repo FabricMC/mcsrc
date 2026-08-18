@@ -31,7 +31,7 @@ class JavadocMappingsTest {
 
         String[] owners = JavadocMappings.readDirectory(
                 new byte[][] { first.getBytes(UTF_8), second.getBytes(UTF_8) },
-                new String[] { "named/A.mapping", "b/B.mapping" });
+                new String[] { "a/A.mapping", "b/B.mapping" });
 
         assertArrayEquals(new String[] { "a/A", "b/B" }, owners);
         assertEquals("Class docs", JavadocMappings.get(JavadocMappings.CLASS, "a/A", "", ""));
@@ -41,24 +41,24 @@ class JavadocMappingsTest {
     }
 
     @Test
-    void writesOnlyRequestedOuterClassAndPreservesNames() throws IOException {
+    void writesOnlyRequestedOuterClass() throws IOException {
         String first = """
-                CLASS a/A NamedA
-                	FIELD value namedValue I
+                CLASS a/A
+                	FIELD value I
                 		COMMENT Field docs
                 """;
         String second = """
-                CLASS b/B NamedB
+                CLASS b/B
                 	COMMENT Other docs
                 """;
         JavadocMappings.readDirectory(
                 new byte[][] { first.getBytes(UTF_8), second.getBytes(UTF_8) },
-                new String[] { "NamedA.mapping", "NamedB.mapping" });
+                new String[] { "a/A.mapping", "b/B.mapping" });
 
         String output = new String(JavadocMappings.writeClass("a/A$Inner"), UTF_8);
 
-        assertTrue(output.contains("CLASS a/A NamedA"));
-        assertTrue(output.contains("FIELD value namedValue I"));
+        assertTrue(output.contains("CLASS a/A"));
+        assertTrue(output.contains("FIELD value I"));
         assertFalse(output.contains("b/B"));
     }
 
@@ -87,10 +87,13 @@ class JavadocMappingsTest {
 
         assertThrows(IOException.class, () -> JavadocMappings.readDirectory(
                 new byte[][] { "CLASS a/A\n".getBytes(UTF_8), "CLASS a/A\n".getBytes(UTF_8) },
-                new String[] { "one.mapping", "two.mapping" }));
+                new String[] { "a/A.mapping", "a/A.mapping" }));
         assertThrows(IOException.class, () -> JavadocMappings.readDirectory(
                 new byte[][] { "CLASS a/A\nCLASS b/B\n".getBytes(UTF_8) },
                 new String[] { "mixed.mapping" }));
+        assertThrows(IOException.class, () -> JavadocMappings.readDirectory(
+                new byte[][] { "CLASS a/A\n".getBytes(UTF_8) },
+                new String[] { "wrong/A.mapping" }));
         assertEquals("Current docs", JavadocMappings.get(JavadocMappings.CLASS, "current/Mapping", "", ""));
     }
 }
