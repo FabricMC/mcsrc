@@ -14,34 +14,39 @@
     "lint": "oxlint --type-aware --deny-warnings",
     "lint:fix": "oxlint --fix --type-aware --deny-warnings"
   },
+  "overrides": {
+    "@babel/plugin-transform-runtime": "7.29.0"
+  },
   "dependencies": {
+    "@ant-design/icons": "^6.3.2",
     "@katana-project/zip": "^0.7.1",
     "@monaco-editor/react": "^4.7.0",
-    "@run-slicer/vf": "^0.5.0-1.11.2",
-    "@xyflow/react": "^12.10.1",
-    "antd": "^6.3.2",
+    "@xyflow/react": "^12.11.2",
+    "antd": "^6.5.4",
     "comlink": "^4.4.2",
     "dagre": "^0.8.5",
-    "dexie": "^4.3.0",
-    "monaco-editor": "^0.55.1",
-    "react": "^19.2.4",
-    "react-dom": "^19.2.4",
-    "rxjs": "^7.8.2"
+    "dexie": "^4.4.4",
+    "monaco-editor": "^0.56.0",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "rxjs": "^7.8.2",
+    "vf-1.11.2": "npm:@run-slicer/vf@^0.5.0-1.11.2",
+    "vf-1.12.0": "npm:@run-slicer/vf@^0.6.4-1.12.0"
   },
   "devDependencies": {
-    "@playwright/test": "^1.58.2",
+    "@playwright/test": "^1.62.1",
     "@types/dagre": "^0.7.54",
-    "@types/node": "^25.5.0",
-    "@types/react": "^19.2.14",
-    "@types/react-dom": "^19.2.3",
-    "@vitejs/plugin-react": "^6.0.1",
-    "globals": "^17.4.0",
-    "oxlint": "^1.55.0",
-    "oxlint-tsgolint": "^0.16.0",
-    "typescript": "~5.9.3",
-    "vite": "^8.0.0",
-    "vite-plugin-svgr": "^4.5.0",
-    "vitest": "^4.1.0",
-    "wrangler": "^4.73.0"
+    "@types/node": "^26.0.0",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.4",
+    "@vitejs/plugin-react": "^6.0.5",
+    "globals": "^17.9.0",
+    "oxlint": "^1.77.0",
+    "oxlint-tsgolint": "^7.0.2001",
+    "typescript": "^7.0.2",
+    "vite": "8.0.0",
+    "vite-plugin-svgr": "^5.2.0",
+    "vitest": "^4.1.10",
+    "wrangler": "^4.120.0"
   }
 }

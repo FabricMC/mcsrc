@@ -22,7 +22,8 @@ import {
     createCopyAtAction,
     createCopyMixinAction,
     createFindAllReferencesAction,
-    createViewInheritanceAction
+    createViewInheritanceAction,
+    createCopyPermalinkAction
 } from './CodeContextActions';
 import {
     clearTokenJump,
@@ -56,6 +57,7 @@ const Code = () => {
     const lineHighlightRef = useRef<editor.IEditorDecorationsCollection | null>(null);
     const decompileResultRef = useRef(decompileResult);
     const classListRef = useRef(classList);
+    const selectedLineRef = useRef(selectedLine);
 
     const [messageApi, contextHolder] = message.useMessage();
 
@@ -119,6 +121,8 @@ const Code = () => {
             createFoldingRangeProvider(monaco)
         );
 
+        const copyLink = monaco.editor.addEditorAction(createCopyPermalinkAction(messageApi));
+
         const copyAw = monaco.editor.addEditorAction(
             createCopyAwAction(decompileResultRef, classListRef, messageApi)
         );
@@ -152,6 +156,7 @@ const Code = () => {
             copyMixin.dispose();
             copyAt.dispose();
             copyAw.dispose();
+            copyLink.dispose();
             foldingRange.dispose();
             editorOpener.dispose();
             hoverProvider.dispose();
@@ -180,7 +185,6 @@ const Code = () => {
                 const currentLine = selectedLine?.line;
                 if (currentLine) {
                     const lineEnd = selectedLine?.lineEnd ?? currentLine;
-                    editor.setSelection(new Range(currentLine, 1, currentLine, 1));
                     editor.revealLinesInCenterIfOutsideViewport(currentLine, lineEnd);
 
                     // Highlight the line range
@@ -310,6 +314,10 @@ const Code = () => {
 
     // Handle gutter clicks for line linking
     useEffect(() => {
+        selectedLineRef.current = selectedLine;
+    }, [selectedLine]);
+
+    useEffect(() => {
         if (!editorRef.current) return;
         const codeEditor = editorRef.current;
 
@@ -320,9 +328,9 @@ const Code = () => {
 
                 if (lineNumber) {
                     // Shift-click to select a range
-                    console.log(selectedLine);
-                    if (e.event.shiftKey && selectedLine) {
-                        selectedLines.next({ line: selectedLine.line, lineEnd: lineNumber });
+                    console.log(selectedLineRef.current);
+                    if (e.event.shiftKey && selectedLineRef.current) {
+                        selectedLines.next({ line: selectedLineRef.current.line, lineEnd: lineNumber });
                     } else {
                         selectedLines.next({ line: lineNumber });
                     }
@@ -334,7 +342,7 @@ const Code = () => {
             onMouseDown.dispose();
         };
         // oxlint-disable-next-line eslint-plugin-react-hooks/exhaustive-deps
-    }, [editorRef.current, selectedLine]);
+    }, [editorRef.current, selectedLines]);
 
     return (
         <Spin
@@ -367,6 +375,7 @@ const Code = () => {
                     foldingHighlight: false,
                     scrollBeyondLastLine: false,
                     editContext: IS_ANDROID_CHROME ? false : undefined, // Disable content editable on Android Chrome to attempt to stop the virtual keyboard from appearing
+                    selectOnLineNumbers: false // To avoid blue flash when selecting lines
                 }}
                 onMount={(codeEditor) => {
                     editorRef.current = codeEditor;

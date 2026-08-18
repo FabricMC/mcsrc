@@ -6,6 +6,7 @@ import { decompilerSplits, decompilerThreads, displayLambdas, MAX_THREADS, prefe
 import { getDecompilerOptions } from "../logic/Decompiler";
 import { decompileEntireJar, deleteCache, setOptions, type DecompileEntireJarTask } from "../workers/decompile/client";
 import { minecraftJar } from "../logic/MinecraftApi";
+import { DEFAULT_VERSION } from "../logic/vineflower/versions";
 
 export const modalOpen = new BehaviorSubject(false);
 
@@ -22,7 +23,7 @@ export const JarDecompilerModal = () => {
 
         await setOptions(getDecompilerOptions(displayLambdas.value));
 
-        const task = decompileEntireJar(jar.jar, {
+        const task = decompileEntireJar(jar.jar, DEFAULT_VERSION, {
             threads: decompilerThreads.value,
             splits: decompilerSplits.value,
             logger(progress, current, total) {

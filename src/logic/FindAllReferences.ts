@@ -155,9 +155,15 @@ export function getNextJumpToken(decompileResult: DecompileResult): Token | unde
         }
     }
 
-    if (!referenceTokenIndex) {
-        console.log("Could not find reference token for", reference);
-        return undefined;
+    if (referenceTokenIndex === null) {
+        // Synthetic methods and static initializers may not have declarations in
+        // decompiled source. Vineflower instead places their contents directly in
+        // a lambda or initializer, so locate the referenced token in the class.
+        const token = findReferenceToken(decompileResult.tokens, query);
+        if (!token) {
+            console.log("Could not find token for", query);
+        }
+        return token;
     }
 
     const parts = query.split(":");
@@ -187,4 +193,34 @@ export function getNextJumpToken(decompileResult: DecompileResult): Token | unde
     // Just return the declaration that supposedly contains the reference
     console.log("Could not find token for", query);
     return decompileResult.tokens[referenceTokenIndex];
+}
+
+function findReferenceToken(tokens: Token[], query: ReferenceKey): Token | undefined {
+    const parts = query.split(":");
+    const className = toClassName(parts[0]);
+    const name = parts[1];
+    const descriptor = parts[2];
+    const queryType = getQueryType(query);
+
+    return tokens.find(token => {
+        if (token.declaration) {
+            return false;
+        }
+
+        if (queryType == "method") {
+            if (name == "<init>") {
+                return token.type == "class" && token.className == className;
+            }
+
+            return token.type == "method"
+                && token.className == className
+                && token.name == name
+                && token.descriptor == descriptor;
+        }
+
+        return token.type == "field"
+            && token.className == className
+            && token.name == name
+            && token.descriptor == descriptor;
+    });
 }

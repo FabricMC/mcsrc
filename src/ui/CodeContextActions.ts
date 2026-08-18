@@ -4,11 +4,41 @@ import type { DecompileResult } from "../workers/decompile/types";
 import { openInheritanceViewTab } from "../logic/tabs";
 import { dottedClassNameFromClassName, type ClassFilePath, type ClassName } from "../utils/Names";
 import type { ReferenceKey } from "../workers/jar-index/types";
+import { supportsPermalinking } from "../logic/Settings";
+import { firstValueFrom } from "rxjs";
 
 export const IS_DEFINITION_CONTEXT_KEY_NAME = "is_definition";
 
 async function setClipboard(text: string): Promise<void> {
     await navigator.clipboard.writeText(text);
+}
+
+export function createCopyPermalinkAction(
+    messageApi: { error: (msg: string) => void; success: (msg: string) => void; }
+) {
+    return {
+        id: 'copy_permalink',
+        label: 'Copy Permalink',
+        contextMenuGroupId: '9_cutcopypaste',
+        run: async function (editor: editor.ICodeEditor, ...args: any[]): Promise<void> {
+            const position = editor.getPosition();
+            if (!position) {
+                messageApi.error("Failed to get cursor position.");
+                return;
+            }
+
+            if (!await firstValueFrom(supportsPermalinking)) {
+                messageApi.error("Permalinks are not supported in this environment.");
+                return;
+            }
+
+            const urlWithoutHash = window.location.origin + window.location.pathname + window.location.search;
+
+            await setClipboard(urlWithoutHash + "#L" + position.lineNumber);
+
+            messageApi.success("Copied Permalink to clipboard.");
+        }
+    };
 }
 
 export function createCopyAwAction(

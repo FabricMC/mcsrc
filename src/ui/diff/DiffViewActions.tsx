@@ -3,6 +3,7 @@ import {
     CodeOutlined,
     DownOutlined,
     FileTextOutlined,
+    SortAscendingOutlined,
     SplitCellsOutlined,
     UpOutlined,
 } from "@ant-design/icons";
@@ -10,7 +11,7 @@ import { Button, Tooltip } from "antd";
 import { type CSSProperties, useMemo } from "react";
 import { getDiffChanges } from "../../logic/Diff";
 import { isDecompiling } from "../../logic/Decompiler";
-import { bytecode, unifiedDiff } from "../../logic/Settings";
+import {bytecode, sortDiff, unifiedDiff} from "../../logic/Settings";
 import { selectedFile } from "../../logic/State";
 import { openCodeTab } from "../../logic/tabs";
 import { useObservable } from "../../utils/UseObservable";
@@ -70,6 +71,7 @@ export const DiffViewModeButtons = () => {
     const diffChanges = useMemo(() => getDiffChanges(), []);
     const isUnifiedDiff = useObservable(unifiedDiff.observable);
     const isBytecode = useObservable(bytecode.observable);
+    const isSort = useObservable(sortDiff.observable);
     const currentFile = useObservable(selectedFile);
     const changes = useObservable(diffChanges);
     const currentChange = currentFile ? changes?.get(currentFile) : undefined;
@@ -95,6 +97,15 @@ export const DiffViewModeButtons = () => {
                     aria-label={isBytecode ? "Show decompiled code" : "Show bytecode"}
                     aria-pressed={isBytecode}
                     style={hasNoLineChanges ? noLineChangesBytecodeStyle : undefined}
+                />
+            </Tooltip>
+            <Tooltip title={isSort ? "Sort by file name" : "Sort by change"}>
+                <Button
+                    type={isSort ? "primary" : "default"}
+                    icon={<SortAscendingOutlined />}
+                    onClick={() => sortDiff.value = !sortDiff.value}
+                    aria-label={isSort ? "Sort by file name" : "Sort by change"}
+                    aria-pressed={isSort}
                 />
             </Tooltip>
         </>

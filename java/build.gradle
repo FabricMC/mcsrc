@@ -1,10 +1,22 @@
 plugins {
     id 'java-library'
+    id 'maven-publish'
     alias(libs.plugins.teavm)
 }
 
+def ENV = System.getenv()
+version = version + (ENV.GITHUB_ACTIONS ? "" : "+local")
+
 repositories {
     mavenCentral()
+}
+
+sourceSets {
+    wasm
+    dummy1
+    dummy2
+    dummy3
+    dummy4
 }
 
 dependencies {
@@ -13,8 +25,8 @@ dependencies {
     api libs.asm.util
     api libs.mapping.io
     api libs.mapping.io.extras
-    api libs.teavm.core
-    testImplementation libs.teavm.jso
+    wasmImplementation sourceSets.main.output
+    wasmImplementation libs.teavm.jso
 }
 
 java {
@@ -23,40 +35,37 @@ java {
     }
 }
 
-sourceSets {
-    dummy1
-    dummy2
-    dummy3
-    dummy4
-}
-
 tasks.register('dummy1Jar', Jar) {
     from sourceSets.dummy1.output
     archiveBaseName = 'dummy1'
+    archiveVersion = ''
     archiveClassifier = ''
 }
 
 tasks.register('dummy2Jar', Jar) {
     from sourceSets.dummy2.output
     archiveBaseName = 'dummy2'
+    archiveVersion = ''
     archiveClassifier = ''
 }
 
 tasks.register('dummy3Jar', Jar) {
     from sourceSets.dummy3.output
     archiveBaseName = 'dummy3'
+    archiveVersion = ''
     archiveClassifier = ''
 }
 
 tasks.register('dummy4Jar', Jar) {
     from sourceSets.dummy4.output
     archiveBaseName = 'dummy4'
+    archiveVersion = ''
     archiveClassifier = ''
 }
 
 teavm {
     all {
-        mainClass = "mcsrc.Indexer"
+        mainClass = "mcsrc.WasmInterface"
     }
     js {
         moduleType = org.teavm.gradle.api.JSModuleType.ES2015
@@ -67,6 +76,32 @@ teavm {
         modularRuntime = true
 //        obfuscated = false
         optimization = org.teavm.gradle.api.OptimizationLevel.AGGRESSIVE
+    }
+}
+
+['generateJavaScript', 'generateWasmGC'].each {
+    tasks.named(it) {
+        classpath.from sourceSets.wasm.runtimeClasspath
+    }
+}
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            artifactId = 'core'
+            from components.java
+        }
+    }
+    repositories {
+        if (ENV.MAVEN_URL) {
+            maven {
+                url ENV.MAVEN_URL
+                credentials {
+                    username ENV.MAVEN_USERNAME
+                    password ENV.MAVEN_PASSWORD
+                }
+            }
+        }
     }
 }
 

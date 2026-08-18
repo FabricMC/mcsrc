@@ -12,7 +12,9 @@ vi.mock('./State', () => ({
     selectedFile: { subscribe: vi.fn() },
     selectedLines: { subscribe: vi.fn() },
     diffLeftSelectedMinecraftVersion: { subscribe: vi.fn() },
-    diffView: { subscribe: vi.fn() }
+    diffSelectionSide: { subscribe: vi.fn() },
+    diffView: { subscribe: vi.fn() },
+    vineflowerVersion: { subscribe: vi.fn() }
 }));
 
 vi.mock('./MinecraftApi', () => ({
@@ -74,7 +76,7 @@ describe('Permalink', () => {
             });
         });
 
-        describe('Line Number Parsing', () => {
+        describe('Normal Mod Line Number Parsing', () => {
             it('should parse single line number with #', () => {
                 const state = parsePathToState('1/1.21/net/minecraft/ChatFormatting#L123')!;
 
@@ -125,6 +127,26 @@ describe('Permalink', () => {
                 const state = parsePathToState('1/1.21/net/minecraft/ChatFormatting')!;
                 expect(state.selectedLines).toBe(null);
             });
+
+            it('should return null selectedLines when line number is malformed', () => {
+                const state = parsePathToState('1/1.21/net/minecraft/ChatFormatting#Labc')!;
+                expect(state.selectedLines).toBe(null);
+            });
+
+            it('should return null selectedLines when line number is not at the end', () => {
+                const state = parsePathToState('1/1.21/net/minecraft/ChatFormatting#L5something')!;
+                expect(state.selectedLines).toBe(null);
+            });
+
+            it('should return null selectedLines when using #R', () => {
+                const state = parsePathToState('1/1.21/net/minecraft/ChatFormatting#R12')!;
+                expect(state.selectedLines).toBe(null);
+            });
+
+            it('should return null selectedLines when using #LR', () => {
+                const state = parsePathToState('1/1.21/net/minecraft/ChatFormatting#LR12')!;
+                expect(state.selectedLines).toBe(null);
+            });
         });
 
         describe('URL Decoding', () => {
@@ -165,7 +187,7 @@ describe('Permalink', () => {
             it('should parse a diff permalink', () => {
                 const state = parsePathToState('1/diff/1.21/1.21.4/net/minecraft/ChatFormatting')!;
 
-                expect(state.version).toBe(1);
+                expect(state.version).toBe(2);
                 expect(state.minecraftVersion).toBe('1.21.4');
                 expect(state.file).toBe('net/minecraft/ChatFormatting.class');
                 expect(state.selectedLines).toBe(null);
@@ -193,7 +215,7 @@ describe('Permalink', () => {
             it('should parse a diff permalink without a file', () => {
                 const state = parsePathToState('1/diff/1.21/1.21.4')!;
 
-                expect(state.version).toBe(1);
+                expect(state.version).toBe(2);
                 expect(state.minecraftVersion).toBe('1.21.4');
                 expect(state.file).toBeUndefined();
                 expect(state.selectedLines).toBe(null);
@@ -211,6 +233,168 @@ describe('Permalink', () => {
             });
         });
 
+        describe('Version 2 Diff Mode Line Number Parsing', () => {
+            it('should parse single line number with #L', () => {
+                const state = parsePathToState('2/diff/1.21/1.21.4/net/minecraft/ChatFormatting#L123')!;
+
+                expect(state.selectedLines).toEqual({
+                    line: 123,
+                    lineEnd: undefined
+                });
+                expect(state.diff).toEqual({ leftMinecraftVersion: '1.21', selectionSide: 'left' });
+            });
+
+            it('should parse line range with #L', () => {
+                const state = parsePathToState('2/diff/1.21/1.21.4/net/minecraft/ChatFormatting#L10-20')!;
+
+                expect(state.selectedLines).toEqual({
+                    line: 10,
+                    lineEnd: 20
+                });
+                expect(state.diff).toEqual({ leftMinecraftVersion: '1.21', selectionSide: 'left' });
+            });
+
+            it('should parse single line number with #R', () => {
+                const state = parsePathToState('2/diff/1.21/1.21.4/net/minecraft/ChatFormatting#R123')!;
+
+                expect(state.selectedLines).toEqual({
+                    line: 123,
+                    lineEnd: undefined
+                });
+                expect(state.diff).toEqual({ leftMinecraftVersion: '1.21', selectionSide: 'right' });
+            });
+
+            it('should parse line range with #R', () => {
+                const state = parsePathToState('2/diff/1.21/1.21.4/net/minecraft/ChatFormatting#R10-20')!;
+
+                expect(state.selectedLines).toEqual({
+                    line: 10,
+                    lineEnd: 20
+                });
+                expect(state.diff).toEqual({ leftMinecraftVersion: '1.21', selectionSide: 'right' });
+            });
+
+            it('should handle URL-encoded line marker (%23) with L', () => {
+                const state = parsePathToState('2/diff/1.21/1.21.4/net/minecraft/ChatFormatting%23L50')!;
+
+                expect(state.selectedLines).toEqual({
+                    line: 50,
+                    lineEnd: undefined
+                });
+                expect(state.diff).toEqual({ leftMinecraftVersion: '1.21', selectionSide: 'left' });
+            });
+
+            it('should handle URL-encoded line marker (%23) with R', () => {
+                const state = parsePathToState('2/diff/1.21/1.21.4/net/minecraft/ChatFormatting%23R50')!;
+
+                expect(state.selectedLines).toEqual({
+                    line: 50,
+                    lineEnd: undefined
+                });
+                expect(state.diff).toEqual({ leftMinecraftVersion: '1.21', selectionSide: 'right' });
+            });
+
+            it('should handle URL-encoded line range (%23) with L', () => {
+                const state = parsePathToState('2/diff/1.21/1.21.4/net/minecraft/ChatFormatting%23L10-20')!;
+
+                expect(state.selectedLines).toEqual({
+                    line: 10,
+                    lineEnd: 20
+                });
+                expect(state.diff).toEqual({ leftMinecraftVersion: '1.21', selectionSide: 'left' });
+            });
+
+            it('should handle URL-encoded line range (%23) with R', () => {
+                const state = parsePathToState('2/diff/1.21/1.21.4/net/minecraft/ChatFormatting%23R10-20')!;
+
+                expect(state.selectedLines).toEqual({
+                    line: 10,
+                    lineEnd: 20
+                });
+                expect(state.diff).toEqual({ leftMinecraftVersion: '1.21', selectionSide: 'right' });
+            });
+
+            it('should handle line number at end of complex path', () => {
+                const state = parsePathToState('2/diff/1.21/1.21.4/net/minecraft/ChatFormatting/ChatFormatting#L123')!;
+
+                expect(state.selectedLines).toEqual({
+                    line: 123,
+                    lineEnd: undefined
+                });
+                expect(state.diff).toEqual({ leftMinecraftVersion: '1.21', selectionSide: 'left' });
+            });
+
+            it('should return null selectedLines when no line number present', () => {
+                const state = parsePathToState('2/diff/1.21/1.21.4/net/minecraft/ChatFormatting')!;
+                expect(state.selectedLines).toBe(null);
+                expect(state.diff!.selectionSide).toBeUndefined();
+            });
+
+            it('should return null selectedLines when line number is malformed', () => {
+                const state = parsePathToState('2/diff/1.21/1.21.4/net/minecraft/ChatFormatting#Labc')!;
+                expect(state.selectedLines).toBe(null);
+                expect(state.diff!.selectionSide).toBeUndefined();
+            });
+
+            it('should return null selectedLines when line number is not at the end', () => {
+                const state = parsePathToState('2/diff/1.21/1.21.4/net/minecraft/ChatFormatting#L5something')!;
+                expect(state.selectedLines).toBe(null);
+                expect(state.diff!.selectionSide).toBeUndefined();
+            });
+
+            it('should return null selectedLines when using #LR', () => {
+                const state = parsePathToState('2/diff/1.21/1.21.4/net/minecraft/ChatFormatting#LR12')!;
+                expect(state.selectedLines).toBe(null);
+                expect(state.diff!.selectionSide).toBeUndefined();
+            });
+        });
+
+        it.each(['L', 'R'])('should ignore #%s line numbers in version 1 diff permalinks', side => {
+            const state = parsePathToState(`1/diff/1.21/1.21.4/net/minecraft/ChatFormatting#${side}12`)!;
+
+            expect(state.file).toBe('net/minecraft/ChatFormatting.class');
+            expect(state.selectedLines).toBe(null);
+            expect(state.diff).toEqual({ leftMinecraftVersion: '1.21' });
+        });
+
+        describe('Version 2 URLs (/2/)', () => {
+            it('should parse a /2/ permalink with version 2', () => {
+                const state = parsePathToState('2/1.21/net/minecraft/ChatFormatting')!;
+
+                expect(state.version).toBe(2);
+                expect(state.minecraftVersion).toBe('1.21');
+                expect(state.file).toBe('net/minecraft/ChatFormatting.class');
+                expect(state.selectedLines).toBe(null);
+            });
+
+            it('should parse a /2/ permalink with line numbers', () => {
+                const state = parsePathToState('2/1.21.4/net/minecraft/server/MinecraftServer#L100-200')!;
+
+                expect(state.version).toBe(2);
+                expect(state.minecraftVersion).toBe('1.21.4');
+                expect(state.file).toBe('net/minecraft/server/MinecraftServer.class');
+                expect(state.selectedLines).toEqual({ line: 100, lineEnd: 200 });
+            });
+
+            it('should parse a /2/ diff permalink', () => {
+                const state = parsePathToState('2/diff/1.21/1.21.4/net/minecraft/ChatFormatting')!;
+
+                expect(state.version).toBe(2);
+                expect(state.minecraftVersion).toBe('1.21.4');
+                expect(state.file).toBe('net/minecraft/ChatFormatting.class');
+                expect(state.diff).toEqual({ leftMinecraftVersion: '1.21' });
+            });
+
+            it('should parse a /2/ diff permalink without a file', () => {
+                const state = parsePathToState('2/diff/1.21/1.21.4')!;
+
+                expect(state.version).toBe(2);
+                expect(state.minecraftVersion).toBe('1.21.4');
+                expect(state.file).toBeUndefined();
+                expect(state.diff).toEqual({ leftMinecraftVersion: '1.21' });
+            });
+        });
+
         describe('Real-world Examples', () => {
             it('should parse multiline permalink', () => {
                 const state = parsePathToState('1/1.21.4/net/minecraft/server/MinecraftServer#L250-260')!;
@@ -225,12 +409,16 @@ describe('Permalink', () => {
             });
 
             it('should parse a real-world diff permalink', () => {
-                const state = parsePathToState('1/diff/1.21.4/1.21.5/net/minecraft/server/MinecraftServer')!;
+                const state = parsePathToState('2/diff/1.21.4/1.21.5/net/minecraft/server/MinecraftServer#R250-260')!;
 
-                expect(state.version).toBe(1);
+                expect(state.version).toBe(2);
                 expect(state.minecraftVersion).toBe('1.21.5');
                 expect(state.file).toBe('net/minecraft/server/MinecraftServer.class');
-                expect(state.diff).toEqual({ leftMinecraftVersion: '1.21.4' });
+                expect(state.diff).toEqual({ leftMinecraftVersion: '1.21.4', selectionSide: 'right' });
+                expect(state.selectedLines).toEqual({
+                    line: 250,
+                    lineEnd: 260
+                });
             });
         });
     });

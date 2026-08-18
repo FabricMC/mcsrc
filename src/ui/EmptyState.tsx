@@ -69,7 +69,7 @@ export const EmptyState = () => {
         >
             <Space orientation="vertical" size="large" align="center" style={{ padding: "2rem", margin: "auto" }}>
                 <img
-                    src="/assets/mcsrc_favicon.svg"
+                    src="/mcsrc_favicon.svg"
                     alt="mcsrc logo"
                     style={{
                         width: "120px",

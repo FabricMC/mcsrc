@@ -1,12 +1,11 @@
-name: Publish
+name: Publish Beta
 
 on:
   push:
     branches: ["main"]
-  workflow_dispatch: # Manual run
 
 concurrency:
-  group: "pages"
+  group: "publish-beta"
   cancel-in-progress: false
 
 permissions:
@@ -14,7 +13,7 @@ permissions:
 
 jobs:
   build:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -24,7 +23,7 @@ jobs:
         working-directory: java
       - run: npm ci
       - run: npm run build
-      - run: npx wrangler deploy
+      - run: npx wrangler deploy --env beta
         env:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}

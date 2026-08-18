@@ -1,6 +1,6 @@
 // Type declarations for TeaVM-generated Java indexer modules
 
-declare module "*/java.js" {
+declare module "*/mcsrc.js" {
     export function index(data: ArrayBufferLike): void;
     export function getReference(key: string): string[];
     export function getReferenceSize(): number;

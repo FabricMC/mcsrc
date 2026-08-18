@@ -1,5 +1,5 @@
-import { load } from "../../java/build/generated/teavm/wasm-gc/java.wasm-runtime.js";
-import mappingsWasm from "../../java/build/generated/teavm/wasm-gc/java.wasm?url";
+import { load } from "../../java/build/generated/teavm/wasm-gc/mcsrc.wasm-runtime.js";
+import mappingsWasm from "../../java/build/generated/teavm/wasm-gc/mcsrc.wasm?url";
 
 export type JavadocFormat = "tiny2" | "enigma";
 export type JavadocElementKind = 0 | 1 | 2;
@@ -96,7 +96,7 @@ async function getBridge(): Promise<JavadocMappingsBridge> {
         bridge = teavm.exports as JavadocMappingsBridge;
     } catch (error) {
         console.warn("Failed to load Javadoc mappings WASM, falling back to JavaScript", error);
-        bridge = await import("../../java/build/generated/teavm/js/java.js") as unknown as JavadocMappingsBridge;
+        bridge = await import("../../java/build/generated/teavm/js/mcsrc.js") as unknown as JavadocMappingsBridge;
     }
 
     return bridge;
