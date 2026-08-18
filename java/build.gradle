@@ -26,6 +26,7 @@ dependencies {
     api libs.mapping.io
     api libs.mapping.io.extras
     wasmImplementation sourceSets.main.output
+    wasmImplementation libs.mapping.io
     wasmImplementation libs.teavm.jso
 }
 
