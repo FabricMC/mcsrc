@@ -13,10 +13,11 @@ import { decompileClass, getDecompilerOptions } from '../logic/Decompiler';
 import { selectedFile, referencesQuery } from '../logic/State';
 import { autoJarIndex, compactPackages, displayLambdas } from '../logic/Settings';
 import { setOptions } from '../workers/decompile/client';
-import { jarIndex, type ClassData } from '../workers/jar-index/client';
+import { jarIndex } from '../workers/jar-index/client';
 import { ClassDataIcon, JavaIcon, PackageIcon } from './intellij-icons';
 import { DEFAULT_VERSION, vineflowerVersionToPermalinkVersion } from '../logic/vineflower/versions';
 import { classNameFromClassFilePath, dottedClassNameFromClassName, isClassFilePath, toClassName, withoutClassExtension, type ClassFilePath } from '../utils/Names';
+import type {ClassData} from "../workers/jar-index/types";
 
 const classData: Observable<Map<string, ClassData> | null> = combineLatest([
     jarIndex,
