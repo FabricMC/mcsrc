@@ -16,12 +16,12 @@ export async function waitForDecompiledContent(page: Page, expectedText: string)
 }
 
 export async function selectMinecraftVersion(page: Page, version: string, selectorIndex = 0) {
-    const selector = page.locator('button:has(.anticon-down)').nth(selectorIndex);
+    const selector = page.getByLabel('Select Minecraft version').nth(selectorIndex);
     await selector.click();
+    await selector.fill(version);
 
-    const listbox = page.getByRole('listbox', { name: 'Minecraft versions' });
-    await expect(listbox).toBeVisible();
-    await listbox.getByRole('option').filter({ hasText: version }).click();
+    const targetOption = page.locator('.ant-select-item-option-active').getByText(version, { exact: true });
+    await targetOption.click();
 }
 
 export async function waitForBlockingModalToClose(page: Page) {
