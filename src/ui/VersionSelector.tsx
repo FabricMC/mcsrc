@@ -41,20 +41,23 @@ function VersionSelector({
 
     const favoriteSet = useMemo(() => new Set(favoriteVersions), [favoriteVersions]);
     const filteredVersions = useMemo(() => {
+        if (!versions) return [];
+
         const normalizedQuery = query.trim().toLowerCase();
         const visibleVersions = versions
-            ?.filter(v => showSnapshots || v.type === "release" || favoriteSet.has(v.id))
-            .filter(v => v.id.toLowerCase().includes(normalizedQuery)) ?? [];
-
-        const sorted = [...visibleVersions].sort((a, b) => {
-            const favoriteSort = Number(favoriteSet.has(b.id)) - Number(favoriteSet.has(a.id));
-            return favoriteSort || versions!.indexOf(a) - versions!.indexOf(b);
-        }).map(v => v.id);
-        const dividerIndex = sorted.findIndex(version => !favoriteSet.has(version));
+            .filter(v => showSnapshots || v.type === "release" || favoriteSet.has(v.id))
+            .map(v => v.id)
+            .filter(id => id.toLowerCase().includes(normalizedQuery))
+            .sort((a, b) => {
+                const exactMatch = Number(b === normalizedQuery) - Number(a === normalizedQuery);
+                if (exactMatch) return exactMatch;
+                return Number(favoriteSet.has(b)) - Number(favoriteSet.has(a));
+            });
+        const dividerIndex = visibleVersions.findIndex(version => !favoriteSet.has(version));
         if (dividerIndex > 0) {
-            sorted.splice(dividerIndex, 0, "divider");
+            visibleVersions.splice(dividerIndex, 0, "divider");
         }
-        return sorted;
+        return visibleVersions;
     }, [favoriteSet, query, showSnapshots, versions]);
 
     const toggleFavorite = (version: string) => {

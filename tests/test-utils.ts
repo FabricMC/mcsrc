@@ -20,14 +20,7 @@ export async function selectMinecraftVersion(page: Page, version: string, select
     await selector.click();
     await selector.fill(version);
 
-    const targetOption = page.locator('.ant-select-item-option').getByText(version, { exact: true });
-    let i = 0;
-    while (!(await targetOption.isVisible())) {
-        await page.keyboard.press('ArrowDown');
-        i++;
-        expect(i).toBeLessThan(500);
-    }
-
+    const targetOption = page.locator('.ant-select-item-option-active').getByText(version, { exact: true });
     await targetOption.click();
 }
 
