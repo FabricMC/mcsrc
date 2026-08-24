@@ -3,6 +3,8 @@ import { SwapOutlined } from "@ant-design/icons";
 import { SettingsModalButton } from "./SettingsModal";
 import VersionSelector from "./VersionSelector";
 import { diffView } from "../logic/State";
+import { activeJavadocFile } from "../javadoc/Javadoc";
+import { useObservable } from "../utils/UseObservable";
 
 const Header = () => {
     return (
@@ -18,13 +20,20 @@ const Header = () => {
 };
 
 const HeaderBody = () => {
+    const javadocMode = useObservable(activeJavadocFile) !== null;
+
     return (
         <Flex justify="center" align="center" gap={6} style={{ width: "max-content", minWidth: "100%" }}>
             <div style={{ flex: "0 0 auto" }}>
-                <VersionSelector />
+                <Tooltip title={javadocMode ? "Version selection is unavailable in Javadoc mode" : undefined}>
+                    <span>
+                        <VersionSelector disabled={javadocMode} />
+                    </span>
+                </Tooltip>
             </div>
-            <Tooltip title="Compare versions">
+            <Tooltip title={javadocMode ? "Version comparison is unavailable in Javadoc mode" : "Compare versions"}>
                 <Button
+                    disabled={javadocMode}
                     icon={<SwapOutlined />}
                     onClick={() => diffView.next(true)}
                 >

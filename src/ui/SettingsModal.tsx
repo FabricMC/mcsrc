@@ -1,5 +1,5 @@
 import { Button, Flex, Modal, type CheckboxProps, Form, Tooltip, InputNumber, type InputNumberProps, Space, Tabs } from "antd";
-import { SettingOutlined, SunOutlined, MoonOutlined, DesktopOutlined, JavaOutlined } from '@ant-design/icons';
+import { SettingOutlined, SunOutlined, MoonOutlined, DesktopOutlined, JavaOutlined, CloseOutlined } from '@ant-design/icons';
 import { Checkbox } from 'antd';
 import { useObservable } from "../utils/UseObservable";
 import { BooleanSetting, enableTabs, displayLambdas, focusSearch, KeybindSetting, type KeybindValue, bytecode, showStructure, NumberSetting, preferWasmDecompiler, compactPackages, theme, autoJarIndex } from "../logic/Settings";
@@ -7,6 +7,8 @@ import { capturingKeybind, rawKeydownEvent } from "../logic/Keybinds";
 import { BehaviorSubject } from "rxjs";
 import React, { useEffect, useState } from "react";
 import { modalOpen } from "./JarDecompilerModal";
+import JavadocFilePicker from "../javadoc/JavadocFilePicker";
+import { activeJavadocFile, deactivateJavadocFile } from "../javadoc/Javadoc";
 
 export const settingsModalOpen = new BehaviorSubject<boolean>(false);
 
@@ -26,6 +28,7 @@ export const SettingsModalButton = () => {
 const SettingsTab = () => {
     const displayLambdasValue = useObservable(displayLambdas.observable);
     const bytecodeValue = useObservable(bytecode.observable);
+    const javadocMode = useObservable(activeJavadocFile) !== null;
 
     return (
         <div className="settings-tab-content">
@@ -35,7 +38,14 @@ const SettingsTab = () => {
                 <BooleanOption setting={compactPackages} title="Compact Packages" tooltip="Collapse packages with one child into one." />
                 <BooleanOption setting={autoJarIndex} title="Auto Jar Index" tooltip="Automatically index class metadata for file icons." />
                 <BooleanOption setting={displayLambdas} title="Lambda Names" tooltip="Display lambda names as inline comments. Does not support permalinking." disabled={bytecodeValue} />
-                <BooleanOption setting={bytecode} title="Show Bytecode" tooltip="Show bytecode instructions alongside decompiled source. Does not support permalinking." disabled={displayLambdasValue} />
+                <BooleanOption
+                    setting={bytecode}
+                    title="Show Bytecode"
+                    tooltip={javadocMode
+                        ? "Bytecode is unavailable in Javadoc mode."
+                        : "Show bytecode instructions alongside decompiled source. Does not support permalinking."}
+                    disabled={displayLambdasValue || javadocMode}
+                />
                 <BooleanOption setting={preferWasmDecompiler} title="Prefer WASM Decompiler" tooltip="WASM decompiler might be faster than JavaScript." />
                 <KeybindOption setting={focusSearch} title="Focus Search" captureId="focus_search" />
                 <KeybindOption setting={showStructure} title="Show Structure" captureId="show_structure" />
@@ -44,20 +54,32 @@ const SettingsTab = () => {
     );
 };
 
-const AdvancedTab = () => (
-    <Flex className="settings-tab-content" vertical align="flex-start" gap="small">
-        <Button
-            data-testid="jar-decompiler"
-            icon={<JavaOutlined />}
-            onClick={() => {
-                settingsModalOpen.next(false);
-                modalOpen.next(true);
-            }}
-        >
-            Decompile All
-        </Button>
-    </Flex>
-);
+const AdvancedTab = () => {
+    const javadocFile = useObservable(activeJavadocFile);
+
+    return (
+        <Flex className="settings-tab-content" vertical align="flex-start" gap="small">
+            <Button
+                data-testid="jar-decompiler"
+                icon={<JavaOutlined />}
+                onClick={() => {
+                    settingsModalOpen.next(false);
+                    modalOpen.next(true);
+                }}
+            >
+                Decompile All
+            </Button>
+            <JavadocFilePicker />
+            <Button
+                disabled={!javadocFile}
+                icon={<CloseOutlined />}
+                onClick={deactivateJavadocFile}
+            >
+                Exit Javadoc mode
+            </Button>
+        </Flex>
+    );
+};
 
 const SettingsModal = () => {
     const isModalOpen = useObservable(settingsModalOpen);

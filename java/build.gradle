@@ -26,13 +26,21 @@ dependencies {
     api libs.mapping.io
     api libs.mapping.io.extras
     wasmImplementation sourceSets.main.output
+    wasmImplementation libs.mapping.io
     wasmImplementation libs.teavm.jso
+    testImplementation sourceSets.wasm.output
+    testImplementation libs.junit
+    testRuntimeOnly libs.junit.platform.launcher
 }
 
 java {
     toolchain {
         languageVersion = JavaLanguageVersion.of(25)
     }
+}
+
+tasks.test {
+    useJUnitPlatform()
 }
 
 tasks.register('dummy1Jar', Jar) {

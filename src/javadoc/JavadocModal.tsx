@@ -1,13 +1,12 @@
 import { Modal, Button, message } from "antd";
-import { activeJavadocToken, getJavadocForToken, javadocData, setTokenJavadoc } from "./Javadoc";
+import { activeJavadocToken, getJavadocForToken, saveTokenJavadoc } from "./Javadoc";
 import { useObservable } from "../utils/UseObservable";
 import type { Token } from "../logic/Tokens";
 import JavadocMarkdownEditor from "./JavadocMarkdownEditor";
 import { useEffect, useMemo, useState } from "react";
-import { writeJavadoc } from "./JavadocStorage";
 
 const ModalBody = ({ token, onValueChange }: { token: Token; onValueChange: (value: string | undefined) => void; }) => {
-    const initialValue = useMemo(() => getJavadocForToken(token, javadocData.value) || "", [token]);
+    const initialValue = useMemo(() => getJavadocForToken(token) || "", [token]);
 
     return (
         <div style={{ width: "100%", boxSizing: "border-box" }}>
@@ -62,9 +61,8 @@ const JavadocModal = () => {
 
         setLoading(true);
         try {
-            const documentation = currentValue ?? getJavadocForToken(token, javadocData.value) ?? "";
-            await writeJavadoc(token, documentation);
-            setTokenJavadoc(token, documentation);
+            const documentation = currentValue ?? getJavadocForToken(token) ?? "";
+            await saveTokenJavadoc(token, documentation);
             messageApi.success("Javadoc saved successfully.");
             activeJavadocToken.next(null);
         } catch (error) {
