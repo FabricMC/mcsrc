@@ -1,4 +1,4 @@
-import { BehaviorSubject, combineLatest, distinctUntilChanged, filter, from, map, shareReplay, switchMap, tap, Observable } from "rxjs";
+import { BehaviorSubject, combineLatest, distinctUntilChanged, filter, from, map, shareReplay, switchMap, tap, Observable, catchError, EMPTY } from "rxjs";
 import { agreedEula } from "./Settings";
 import { openJar, type Jar } from "../utils/Jar";
 import { selectedMinecraftVersion } from "./State";
@@ -10,7 +10,7 @@ const CACHE_NAME = 'mcsrc-v1';
 const VERSIONS_URL = "https://piston-meta.mojang.com/mc/game/version_manifest_v2.json";
 
 interface VersionsList {
-    versions: VersionListEntry[]
+    versions: VersionListEntry[];
 }
 
 interface VersionListEntry {
@@ -53,11 +53,12 @@ export const minecraftVersions = agreedEula.observable.pipe(
     filter(agreed => agreed),
     switchMap(() => from(fetchVersions())),
     tap(versions => {
-        // On inital load, if we dont have a version selected or the selected version is not valid, default to the latest version.
+        // Default to the latest version on initial load or if the selected version is no longer valid.
         const currentVersion = selectedMinecraftVersion.value;
-        const isValid = currentVersion !== null && versions.some(v => v.id === currentVersion);
+        const shouldDefault =
+            currentVersion !== null && !versions.some(v => v.id === currentVersion);
 
-        if (!isValid && versions.length > 0) {
+        if (shouldDefault && versions.length > 0) {
             // Select the latest stable release version if it exists, otherwise fall back to the latest version
             const latestRelease = versions.find(v => v.type === "release");
             const defaultVersion = latestRelease ? latestRelease.id : versions[0].id;
@@ -74,21 +75,39 @@ export const minecraftVersionIds = minecraftVersions.pipe(
 export const downloadProgress = new BehaviorSubject<number | undefined>(undefined);
 export const remapProgress = new BehaviorSubject<number | undefined>(undefined);
 
+let downloadAbortController: AbortController | undefined;
+
+export function cancelDownload(): void {
+    downloadAbortController?.abort();
+    downloadAbortController = undefined;
+    selectedMinecraftVersion.next(null);
+}
+
 export const REMAPPED_JAR_CACHE_VERSION = 7;
 
 export const minecraftJar = minecraftJarPipeline(selectedMinecraftVersion);
 export function minecraftJarPipeline(source$: Observable<string | null>): Observable<MinecraftJar> {
     return combineLatest([
         source$.pipe(
-            filter(id => id !== null),
-            distinctUntilChanged()
+            distinctUntilChanged(),
+            filter(id => id !== null)
         ),
         minecraftVersions
     ]).pipe(
         map(([version, versions]) => versions.find(v => v.id === version)),
         filter((version) => version !== undefined),
         tap((version) => console.log(`Opening Minecraft jar ${version.id}`)),
-        switchMap(version => from(downloadMinecraftJar(version, downloadProgress))),
+        switchMap(version =>
+            from(downloadMinecraftJar(version, downloadProgress)).pipe(
+                catchError((error) => {
+                    if (error instanceof DOMException && error.name === 'AbortError') {
+                        console.log(`Download of Minecraft jar ${version.id} was aborted.`);
+                        return EMPTY;
+                    }
+                    throw error; // Rethrow other errors
+                })
+            )
+        ),
         shareReplay({ bufferSize: 1, refCount: false })
     );
 }
@@ -124,7 +143,7 @@ export function isUnobfuscated(version: VersionListEntry): boolean {
 }
 
 function isSupported(version: VersionListEntry): boolean {
-    if(isUnobfuscated(version)) return true;
+    if (isUnobfuscated(version)) return true;
     // This version was released after the first snapshot with official mappings,
     // but its mappings were never published.
     if (version.id === '1.14_combat-3') return false;
@@ -145,9 +164,9 @@ async function fetchVersionManifest(version: VersionListEntry): Promise<VersionM
     return getJson<VersionManifest>(version.url);
 }
 
-async function cachedFetch(url: string, onProgress?: (percent: number) => void): Promise<Blob> {
+async function cachedFetch(url: string, signal: AbortSignal, onProgress?: (percent: number) => void): Promise<Blob> {
     if (!('caches' in window)) {
-        const response = await fetch(url);
+        const response = await fetch(url, { signal });
         if (!response.ok) {
             throw new Error(`Failed to fetch ${url}: ${response.statusText}`);
         }
@@ -160,7 +179,7 @@ async function cachedFetch(url: string, onProgress?: (percent: number) => void):
         return await cachedResponse.blob();
     }
 
-    const response = await fetch(url);
+    const response = await fetch(url, { signal });
     if (!response.ok) {
         throw new Error(`Failed to fetch ${url}: ${response.statusText}`);
     }
@@ -208,6 +227,10 @@ async function consumeResponseWithProgress(response: Response, onProgress?: (per
 
 async function downloadMinecraftJar(version: VersionListEntry, progress: BehaviorSubject<number | undefined>): Promise<MinecraftJar> {
     console.log(`Downloading Minecraft jar for version: ${version.id}`);
+
+    downloadAbortController = new AbortController();
+    const signal = downloadAbortController.signal;
+
     const versionManifest = await fetchVersionManifest(version);
     const client = versionManifest.downloads.client;
     const mappings = versionManifest.downloads.client_mappings;
@@ -217,10 +240,10 @@ async function downloadMinecraftJar(version: VersionListEntry, progress: Behavio
 
     try {
         [rawBlob, mappingsBlob] = await Promise.all([
-            cachedFetch(client.url, (percent) => {
+            cachedFetch(client.url, signal, (percent) => {
                 progress.next(percent);
             }),
-            mappings ? cachedFetch(mappings.url) : Promise.resolve(null)
+            mappings ? cachedFetch(mappings.url, signal) : Promise.resolve(null)
         ]);
     } finally {
         progress.next(undefined);
