@@ -1,5 +1,5 @@
 import { Button, Flex, Modal, type CheckboxProps, Form, Tooltip, InputNumber, type InputNumberProps, Space, Tabs } from "antd";
-import { SettingOutlined, SunOutlined, MoonOutlined, DesktopOutlined, JavaOutlined } from '@ant-design/icons';
+import { SettingOutlined, SunOutlined, MoonOutlined, DesktopOutlined, JavaOutlined, FileTextOutlined } from '@ant-design/icons';
 import { Checkbox } from 'antd';
 import { useObservable } from "../utils/UseObservable";
 import { BooleanSetting, enableTabs, displayLambdas, focusSearch, KeybindSetting, type KeybindValue, bytecode, showStructure, NumberSetting, preferWasmDecompiler, compactPackages, theme, autoJarIndex } from "../logic/Settings";
@@ -7,6 +7,7 @@ import { capturingKeybind, rawKeydownEvent } from "../logic/Keybinds";
 import { BehaviorSubject } from "rxjs";
 import React, { useEffect, useState } from "react";
 import { modalOpen } from "./JarDecompilerModal";
+import { openLauncherMeta } from "../logic/LauncherMeta";
 
 export const settingsModalOpen = new BehaviorSubject<boolean>(false);
 
@@ -55,6 +56,15 @@ const AdvancedTab = () => (
             }}
         >
             Decompile All
+        </Button>
+        <Button
+            icon={<FileTextOutlined />}
+            onClick={() => {
+                settingsModalOpen.next(false);
+                openLauncherMeta();
+            }}
+        >
+            Launcher meta
         </Button>
     </Flex>
 );

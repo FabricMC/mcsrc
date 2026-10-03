@@ -2,8 +2,8 @@ import { Button, Divider, Empty, Flex, Input, Popover, Tooltip } from "antd";
 import type { ButtonProps } from "antd";
 import { DownOutlined, EyeInvisibleOutlined, EyeOutlined, SearchOutlined, StarFilled, StarOutlined } from "@ant-design/icons";
 import { Fragment, useMemo, useState } from "react";
-import type { BehaviorSubject } from "rxjs";
-import { minecraftVersions } from "../logic/MinecraftApi";
+import type { BehaviorSubject, Observable } from "rxjs";
+import { minecraftVersions, type VersionListEntry } from "../logic/MinecraftApi";
 import { selectedMinecraftVersion } from "../logic/State";
 import { useObservable } from "../utils/UseObservable";
 import { favoriteMinecraftVersions, showSnapshotVersions } from "../logic/Settings";
@@ -12,16 +12,22 @@ const EMPTY_FAVORITE_VERSIONS: string[] = [];
 
 interface VersionSelectorProps {
     selectedVersion?: BehaviorSubject<string | null>;
+    versions?: Observable<VersionListEntry[]>;
+    placeholder?: string;
+    ariaLabel?: string;
     minWidth?: number;
     size?: ButtonProps["size"];
 }
 
 function VersionSelector({
     selectedVersion = selectedMinecraftVersion,
+    versions: versionsSource = minecraftVersions,
+    placeholder,
+    ariaLabel,
     minWidth = 128,
     size,
 }: VersionSelectorProps) {
-    const versions = useObservable(minecraftVersions);
+    const versions = useObservable(versionsSource);
     const currentVersion = useObservable(selectedVersion);
     const favoriteVersions = useObservable(favoriteMinecraftVersions.observable) ?? EMPTY_FAVORITE_VERSIONS;
     const showSnapshots = useObservable(showSnapshotVersions.observable) ?? true;
@@ -43,7 +49,10 @@ function VersionSelector({
     const dividerIndex = filteredVersions.findIndex(version => !favoriteSet.has(version.id));
     const showFavoritesDivider = dividerIndex > 0;
 
-    const selectedVersionId = currentVersion || versions?.[0]?.id;
+    let selectedVersionId: string | null | undefined = currentVersion;
+    if (selectedVersionId == null && placeholder === undefined) {
+        selectedVersionId = versions?.[0]?.id;
+    }
 
     const toggleFavorite = (version: string) => {
         favoriteMinecraftVersions.value = favoriteVersions.includes(version)
@@ -132,8 +141,8 @@ function VersionSelector({
             trigger="click"
             onOpenChange={setOpen}
         >
-            <Button size={size} style={{ minWidth, justifyContent: "space-between" }}>
-                <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{selectedVersionId}</span>
+            <Button aria-label={ariaLabel} size={size} style={{ minWidth, justifyContent: "space-between" }}>
+                <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{selectedVersionId ?? placeholder}</span>
                 <DownOutlined />
             </Button>
         </Popover>

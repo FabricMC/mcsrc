@@ -1,4 +1,5 @@
 import { BehaviorSubject, combineLatest, distinctUntilChanged, filter, from, map, shareReplay, switchMap, tap, Observable } from "rxjs";
+import { fromFetch } from "rxjs/fetch";
 import { agreedEula } from "./Settings";
 import { openJar, type Jar } from "../utils/Jar";
 import { selectedMinecraftVersion } from "./State";
@@ -8,12 +9,24 @@ import EXPERIMENTAL_VERSIONS from "./experimental_versions.json";
 
 const CACHE_NAME = 'mcsrc-v1';
 const VERSIONS_URL = "https://piston-meta.mojang.com/mc/game/version_manifest_v2.json";
+const JAVA_RUNTIMES_URL = "https://piston-meta.mojang.com/v1/products/java-runtime/2ec0cc96c44e5a76b9c8b7c39df7210883d12871/all.json";
+
+export type Json = null | boolean | number | string | Json[] | { [key: string]: Json };
+export type Manifest = { [key: string]: Json };
+
+export interface JavaRuntime {
+    availability: { group: number; progress: number };
+    manifest: { url: string; sha1: string; size: number };
+    version: { name: string; released: string };
+}
+
+export type JavaRuntimes = Record<string, Record<string, JavaRuntime[]>>;
 
 interface VersionsList {
     versions: VersionListEntry[]
 }
 
-interface VersionListEntry {
+export interface VersionListEntry {
     id: string;
     type: string;
     url: string;
@@ -111,6 +124,36 @@ async function fetchVersions(): Promise<VersionListEntry[]> {
     const versions = filteredVersions
         .sort((a, b) => b.releaseTime.localeCompare(a.releaseTime));
     return versions;
+}
+
+function loadMetadataJson<T>(url: string) {
+    return fromFetch(url, {
+        selector: async response => {
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${url}`);
+            }
+            const data = await response.json() as T;
+            return { data, lastModified: response.headers.get("Last-Modified") };
+        },
+    });
+}
+
+// Includes versions that cannot be opened by the decompiler.
+export function fetchLauncherVersions(): Observable<VersionListEntry[]> {
+    return loadMetadataJson<VersionsList>(VERSIONS_URL).pipe(
+        map(({ data }) => {
+            const versions = [...data.versions, ...EXPERIMENTAL_VERSIONS.versions];
+            return versions.sort((left, right) => right.releaseTime.localeCompare(left.releaseTime));
+        }),
+    );
+}
+
+export function fetchLauncherVersionManifest(version: VersionListEntry): Observable<Manifest> {
+    return loadMetadataJson<Manifest>(version.url).pipe(map(result => result.data));
+}
+
+export function fetchJavaRuntimes() {
+    return loadMetadataJson<JavaRuntimes>(JAVA_RUNTIMES_URL);
 }
 
 export function isUnobfuscated(version: VersionListEntry): boolean {
