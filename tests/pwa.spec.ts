@@ -29,7 +29,7 @@ async function waitForController(page: Page) {
 
 /**
  * PWA wiring: the manifest is served for installation, and the service worker caches the
- * app shell so the site still opens without a network.
+ * app shell and its assets so the site still opens without a network.
  */
 test.describe('PWA', () => {
     test.beforeEach(async ({ page }) => {
