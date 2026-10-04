@@ -2,11 +2,11 @@ import { test, expect, type Page } from '@playwright/test';
 import { setupTest } from './test-utils';
 
 /**
- * Service worker behaviour is only asserted on Chromium. Playwright's Firefox emulates
+ * Service worker behavior is only asserted on Chromium. Playwright's Firefox emulates
  * offline by rejecting the navigation itself (NS_ERROR_OFFLINE) before the worker can
  * answer it, so the offline path cannot be verified there.
  */
-const NOT_CHROMIUM = 'service worker offline behaviour is only verified on Chromium';
+const NOT_CHROMIUM = 'service worker offline behavior is only verified on Chromium';
 
 /** The shell is written by the install handler, which runs after the worker is active. */
 async function shellIsCached(page: Page): Promise<boolean> {
