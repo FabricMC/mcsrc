@@ -1,27 +1,9 @@
 import * as Comlink from "comlink";
 import { BehaviorSubject, distinctUntilChanged, map, shareReplay } from "rxjs";
 import { minecraftJar, type MinecraftJar } from "../../logic/MinecraftApi";
-import type {ClassDataString, JarIndexer, MemberData, ReferenceKey, ReferenceString} from "./types";
+import type { ClassData, JarIndexer, MemberData, ReferenceKey, ReferenceString } from "./types";
 import Dexie, { type EntityTable } from "dexie";
-import { isClassFilePath, toClassName, type ClassFilePath, type ClassName } from "../../utils/Names";
-
-
-export interface ClassData {
-    className: ClassName;
-    superName: ClassName | "";
-    accessFlags: number;
-    interfaces: ClassName[];
-}
-
-export function parseClassData(data: ClassDataString): ClassData {
-    const [className, superName, accessFlagsStr, interfacesStr] = data.split("|");
-    return {
-        className: toClassName(className),
-        superName: superName ? toClassName(superName) : "",
-        accessFlags: parseInt(accessFlagsStr, 10),
-        interfaces: interfacesStr ? interfacesStr.split(",").filter(i => i.length > 0).map(toClassName) : []
-    };
-}
+import {isClassFilePath, type ClassFilePath} from "../../utils/Names";
 
 // Percent complete is total >= 0
 export const indexProgress = new BehaviorSubject<number>(-1);
@@ -187,13 +169,13 @@ export class JarIndex {
         try {
             await this.indexJar();
 
-            let results: Promise<ClassDataString[]>[] = [];
+            let results: Promise<ClassData[]>[] = [];
             for (const worker of this.workers) {
                 results.push(worker.c.getClassData());
             }
 
             const classDataStrings = await Promise.all(results).then(arrays => arrays.flat());
-            this.classDataCache = classDataStrings.map(parseClassData);
+            this.classDataCache = classDataStrings;
 
             await db.classData.put({
                 name: this.minecraftJar.jar.name,

@@ -1,7 +1,8 @@
 import { load } from "../../../java/build/generated/teavm/wasm-gc/mcsrc.wasm-runtime.js";
 import indexerWasm from '../../../java/build/generated/teavm/wasm-gc/mcsrc.wasm?url';
-import { openJar, type Jar } from "../../utils/Jar.js";
+import { type Jar, openJar } from "../../utils/Jar.js";
 import type { ClassFilePath, ClassName } from "../../utils/Names.js";
+import { parseClassData, parseMemberData } from "./parse.ts";
 
 export type Class = ClassName;
 export type Method = `${ClassName}:${string}:${string}`;
@@ -16,6 +17,13 @@ export type ReferenceString =
     | `f:${Field}`;
 
 export type ClassDataString = `${string}|${string}|${number}|${string}`;
+
+export interface ClassData {
+    className: ClassName;
+    superName: ClassName | "";
+    accessFlags: number;
+    interfaces: ClassName[];
+}
 
 export type MemberData = {
     className: ClassName;
@@ -86,22 +94,14 @@ export class JarIndexer {
         return indexer.getBytecode(classData);
     };
 
-    getClassData = async (): Promise<ClassDataString[]> => {
+    getClassData = async (): Promise<ClassData[]> => {
         const indexer = await this.getIndexer();
-        return indexer.getClassData();
+        return indexer.getClassData().map(parseClassData);
     };
 
     getMemberData = async (): Promise<MemberData[]> => {
         const indexer = await this.getIndexer();
-        const raw = indexer.getMemberData();
-        return raw.map(item => {
-            let parts = item.split("|");
-            return {
-                className: parts[0] as ClassName,
-                methods: parts[1].split(",") as Method[],
-                fields: parts[2].split(",") as Field[]
-            }
-        })
+        return indexer.getMemberData().map(parseMemberData);
     };
 }
 
