@@ -1,5 +1,5 @@
 import { useObservable } from "../utils/UseObservable";
-import { formatReference, goToReference, referenceResults } from "../logic/FindAllReferences";
+import { formatReference, goToReference, referenceResults, type ReferenceMatch } from "../logic/FindAllReferences";
 import { map, Observable } from "rxjs";
 import { openCodeTab } from "../logic/tabs";
 import { referencesQuery } from "../logic/State";
@@ -19,15 +19,15 @@ function getUsageClass(usage: ReferenceString): ClassName {
 
 interface ReferenceGroup {
     className: ClassName;
-    references: ReferenceString[];
+    references: ReferenceMatch[];
 }
 
 const groupedResults: Observable<ReferenceGroup[]> = referenceResults.pipe(
     map(results => {
-        const groups = new Map<ClassName, ReferenceString[]>();
+        const groups = new Map<ClassName, ReferenceMatch[]>();
 
         for (const usage of results) {
-            const className = getUsageClass(usage);
+            const className = getUsageClass(usage.reference);
             const references = groups.get(className) || [];
             references.push(usage);
             groups.set(className, references);
@@ -65,11 +65,11 @@ const UsageGroupItem = ({ group }: UsageGroupItemProps) => {
                 {group.className}
             </div>
             <div style={{ paddingLeft: "16px" }}>
-                {group.references.map((reference, index) => (
+                {group.references.map(({ reference, queries }, index) => (
                     <div
                         key={index}
                         onClick={() => {
-                            if (query) goToReference(query, reference);
+                            if (query) goToReference(query, reference, queries);
                         }}
                         style={{
                             cursor: "pointer",

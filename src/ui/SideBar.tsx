@@ -1,4 +1,4 @@
-import { Button, Divider, Dropdown, Flex, Input } from "antd";
+import { Button, Checkbox, Divider, Dropdown, Flex, Input } from "antd";
 import Header from "./Header";
 import FileList from "./FileList";
 import type { InputProps, InputRef } from "antd/es/input";
@@ -7,7 +7,8 @@ import { useObservable } from "../utils/UseObservable";
 import { isSearching } from "../logic/JarFile";
 import SearchResults from "./SearchResults";
 import ReferenceResults from "./ReferenceResults";
-import { formatReferenceQuery, isViewingReferences } from "../logic/FindAllReferences";
+import { formatReferenceQuery, isViewingReferences, methodReferenceKeys } from "../logic/FindAllReferences";
+import { includeMethodHierarchy } from "../logic/Settings";
 import { ArrowLeftOutlined, CaretDownOutlined, SearchOutlined } from "@ant-design/icons";
 import { focusSearchEvent } from "../logic/Keybinds";
 import { useEffect, useRef } from "react";
@@ -16,6 +17,8 @@ import { searchQuery, referencesQuery, searchType, type SearchType } from "../lo
 const SideBar = () => {
     const showReference = useObservable(isViewingReferences);
     const currentReferenceQuery = useObservable(referencesQuery);
+    const hierarchyKeys = useObservable(methodReferenceKeys) ?? [];
+    const includeHierarchy = useObservable(includeMethodHierarchy.observable);
     const currentSearchType = useObservable(searchType);
     const focusSearch = useObservable(focusSearchEvent);
     const searchRef = useRef<InputRef>(null);
@@ -62,6 +65,13 @@ const SideBar = () => {
                     <div style={{ fontSize: "12px", textAlign: "center" }}>
                         References of: {currentReferenceQuery ? formatReferenceQuery(currentReferenceQuery) : ""}
                     </div>
+                    {hierarchyKeys.length > 1 && <Checkbox
+                        checked={includeHierarchy}
+                        onChange={event => {
+                            includeMethodHierarchy.value = event.target.checked;
+                        }}
+                        style={{ marginTop: 8, alignSelf: "center" }}
+                    >Include method hierarchy</Checkbox>}
                 </>
             ) : (
                 <Input

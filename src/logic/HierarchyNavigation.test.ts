@@ -85,4 +85,49 @@ describe('Hierarchy navigation', () => {
         expect(index.relations({ ...declaration('A'), declaration: false })).toEqual({ parents: [], children: [] });
         expect(names(index.relations(declaration('A')).parents)).toEqual(['B']);
     });
+
+    it('expands a child method to bases, siblings, descendants, and inherited reference owners', () => {
+        const index = new HierarchyNavigation([
+            classData('Parent'), classData('Child', ['Parent']), classData('Sibling', ['Parent']),
+            classData('Inherited', ['Child']), classData('Unrelated'),
+        ], [memberData('Parent'), memberData('Child'), memberData('Sibling'), memberData('Unrelated')]);
+        expect(index.methodHierarchy(toClassName('Child'), 'run', '()V').sort()).toEqual([
+            'Child:run:()V', 'Inherited:run:()V', 'Parent:run:()V', 'Sibling:run:()V',
+        ]);
+    });
+
+    it('includes generic bridge keys without including overloads', () => {
+        const child = memberData('Child', '(Ljava/lang/String;)Ljava/lang/String;');
+        const bridge: Method = `${toClassName('Child')}:run:(Ljava/lang/Object;)Ljava/lang/Object;`;
+        child.methods.push(bridge);
+        child.methodAccess[bridge] = 0x1041;
+        child.methodBridges[bridge] = child.methods[0];
+        const index = new HierarchyNavigation(classes, [memberData('Parent', '(Ljava/lang/Object;)Ljava/lang/Object;'), child]);
+        const keys = index.methodHierarchy(toClassName('Child'), 'run', '(Ljava/lang/String;)Ljava/lang/String;');
+        expect(keys).toEqual(expect.arrayContaining(['Parent:run:(Ljava/lang/Object;)Ljava/lang/Object;', bridge]));
+        expect(index.methodHierarchy(toClassName('Child'), 'run', '(I)V')).toEqual(['Child:run:(I)V']);
+    });
+
+    it('keeps static and private declarations out of an override family', () => {
+        for (const access of [2, 8]) {
+            const index = new HierarchyNavigation(classes, [memberData('Parent'), memberData('Child', '()V', access)]);
+            expect(index.methodHierarchy(toClassName('Parent'), 'run', '()V')).not.toContain('Child:run:()V');
+        }
+    });
+
+    it('includes covariant descriptors but excludes unrelated returns and inaccessible inherited methods', () => {
+        const index = new HierarchyNavigation(classes, [
+            memberData('Parent', '()LParent;'), memberData('Child', '()LChild;'), memberData('Grandchild', '()LOther;'),
+        ]);
+        const keys = index.methodHierarchy(toClassName('Child'), 'run', '()LChild;');
+        expect(keys).toContain('Parent:run:()LParent;');
+        expect(keys).not.toContain('Grandchild:run:()LOther;');
+
+        const packageIndex = new HierarchyNavigation([
+            classData('a/Parent'), classData('a/Child', ['a/Parent']), classData('b/Child', ['a/Parent']),
+        ], [memberData('a/Parent', '()V', 0)]);
+        expect(packageIndex.methodHierarchy(toClassName('a/Parent'), 'run', '()V').sort()).toEqual([
+            'a/Child:run:()V', 'a/Parent:run:()V',
+        ]);
+    });
 });

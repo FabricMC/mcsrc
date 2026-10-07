@@ -1,4 +1,4 @@
-import { BehaviorSubject, distinctUntilChanged, from, map, switchMap, throttleTime } from "rxjs";
+import { BehaviorSubject, combineLatest, distinctUntilChanged, from, map, of, shareReplay, startWith, switchMap } from "rxjs";
 import { jarIndex } from "../workers/jar-index/client";
 import { openCodeTab } from "./tabs";
 import { referencesQuery } from "./State";
@@ -6,20 +6,55 @@ import type { Token } from "./Tokens";
 import type { DecompileResult } from "../workers/decompile/types";
 import type { ReferenceKey, ReferenceString } from "../workers/jar-index/types";
 import { toClassFilePath, toClassName, type ClassName } from "../utils/Names";
+import { hierarchyNavigation } from './Inheritance';
+import { includeMethodHierarchy } from './Settings';
 
-export const referenceResults = referencesQuery
-    .pipe(
-        throttleTime(200),
-        distinctUntilChanged(),
-        switchMap((query) => {
-            if (!query) {
-                return from([[]]);
+export const methodReferenceKeys = combineLatest([referencesQuery, hierarchyNavigation]).pipe(
+    map(([query, navigation]) => {
+        if (!query || getQueryType(query) !== 'method' || !navigation) return [];
+        const [owner, name, descriptor] = query.split(':');
+        return navigation.index.methodHierarchy(toClassName(owner), name, descriptor);
+    }),
+    shareReplay({ bufferSize: 1, refCount: true }),
+);
+
+export interface ReferenceMatch {
+    reference: ReferenceString;
+    queries: ReferenceKey[];
+}
+
+export const referenceResults = jarIndex.pipe(
+    switchMap(index => combineLatest([referencesQuery, includeMethodHierarchy.observable, hierarchyNavigation]).pipe(
+        map(([query, includeHierarchy, navigation]): ReferenceKey[] => {
+            if (!query) return [];
+            if (includeHierarchy && getQueryType(query) === 'method') {
+                if (!navigation || navigation.jarName !== index.minecraftJar.jar.name) return [];
+                const [owner, name, descriptor] = query.split(':');
+                return navigation.index.methodHierarchy(toClassName(owner), name, descriptor);
             }
-            return jarIndex.pipe(
-                switchMap((index) => from(index.getReference(query)))
+            return [query];
+        }),
+        distinctUntilChanged((previous, current) => previous.length === current.length && previous.every((key, position) => key === current[position])),
+        switchMap(keys => {
+            if (keys.length === 0) return of<ReferenceMatch[]>([]);
+            return from(Promise.all(keys.map(async key => ({ key, references: await index.getReference(key) })))).pipe(
+                map(results => {
+                    const matches = new Map<ReferenceString, ReferenceMatch>();
+                    for (const { key, references } of results) {
+                        for (const reference of references) {
+                            const match = matches.get(reference) ?? { reference, queries: [] };
+                            match.queries.push(key);
+                            matches.set(reference, match);
+                        }
+                    }
+                    return [...matches.values()];
+                }),
+                startWith<ReferenceMatch[]>([]),
             );
-        })
-    );
+        }),
+    )),
+    shareReplay({ bufferSize: 1, refCount: true }),
+);
 
 export const isViewingReferences = referencesQuery.pipe(
     map((query) => query.length > 0)
@@ -77,13 +112,14 @@ interface ReferenceNavigation {
     className: ClassName;
     // The reference being navigated to
     query: ReferenceKey;
+    queries: ReferenceKey[];
     // The location of where the reference is found
     reference: ReferenceString;
 }
 
 export const nextReferenceNavigation = new BehaviorSubject<ReferenceNavigation | undefined>(undefined);
 
-export function goToReference(query: ReferenceKey, reference: ReferenceString) {
+export function goToReference(query: ReferenceKey, reference: ReferenceString, queries: ReferenceKey[] = [query]) {
     const className = toClassName(reference.slice(2).split(":")[0].split('$')[0]);
     openCodeTab(toClassFilePath(className));
 
@@ -92,7 +128,7 @@ export function goToReference(query: ReferenceKey, reference: ReferenceString) {
         return;
     }
 
-    nextReferenceNavigation.next({ className, query, reference });
+    nextReferenceNavigation.next({ className, query, queries, reference });
 }
 
 export function getNextJumpToken(decompileResult: DecompileResult): Token | undefined {
@@ -102,7 +138,7 @@ export function getNextJumpToken(decompileResult: DecompileResult): Token | unde
         return undefined;
     }
 
-    const { className, query, reference } = referenceNavigation;
+    const { className, query, queries, reference } = referenceNavigation;
 
     if (decompileResult.className != className) {
         console.log("Decompile result class does not match reference navigation class", decompileResult.className, className);
@@ -159,35 +195,18 @@ export function getNextJumpToken(decompileResult: DecompileResult): Token | unde
         // Synthetic methods and static initializers may not have declarations in
         // decompiled source. Vineflower instead places their contents directly in
         // a lambda or initializer, so locate the referenced token in the class.
-        const token = findReferenceToken(decompileResult.tokens, query);
+        const token = findReferenceToken(decompileResult.tokens, queries);
         if (!token) {
             console.log("Could not find token for", query);
         }
         return token;
     }
 
-    const parts = query.split(":");
-    const name = parts[1];
-    const descriptor = parts[2];
-    const queryType = getQueryType(query);
-
-    // Next continue searching from the reference token index to find the actual reference
-    for (let i = referenceTokenIndex + 1; i < decompileResult.tokens.length; i++) {
-        const token = decompileResult.tokens[i];
-
-        // Special case for constructor reference
-        if (name == "<init>" && token.type == "class" && token.className == toClassName(parts[0])) {
-            return token;
-        }
-
-        if (queryType == "method" && token.type == "method" && token.name == name && token.descriptor == descriptor) {
-            return token;
-        }
-
-        if (queryType == "field" && token.type == "field" && token.name == name) {
-            return token;
-        }
-    }
+    const remainingTokens = decompileResult.tokens.slice(referenceTokenIndex + 1);
+    const nextDeclaration = remainingTokens.findIndex(token => token.declaration && (token.type === 'method' || token.type === 'class'));
+    const bodyTokens = nextDeclaration < 0 ? remainingTokens : remainingTokens.slice(0, nextDeclaration);
+    const token = findReferenceToken(bodyTokens, queries);
+    if (token) return token;
 
     // Give up if we reach another declaration, it means we didnt find it
     // Just return the declaration that supposedly contains the reference
@@ -195,14 +214,13 @@ export function getNextJumpToken(decompileResult: DecompileResult): Token | unde
     return decompileResult.tokens[referenceTokenIndex];
 }
 
-function findReferenceToken(tokens: Token[], query: ReferenceKey): Token | undefined {
-    const parts = query.split(":");
-    const className = toClassName(parts[0]);
-    const name = parts[1];
-    const descriptor = parts[2];
-    const queryType = getQueryType(query);
-
-    return tokens.find(token => {
+function findReferenceToken(tokens: Token[], queries: ReferenceKey[]): Token | undefined {
+    return tokens.find(token => queries.some(query => {
+        const parts = query.split(":");
+        const className = toClassName(parts[0]);
+        const name = parts[1];
+        const descriptor = parts[2];
+        const queryType = getQueryType(query);
         if (token.declaration) {
             return false;
         }
@@ -222,5 +240,5 @@ function findReferenceToken(tokens: Token[], query: ReferenceKey): Token | undef
             && token.className == className
             && token.name == name
             && token.descriptor == descriptor;
-    });
+    }));
 }

@@ -1,5 +1,5 @@
 import type { ClassData } from '../workers/jar-index/client';
-import type { MemberData } from '../workers/jar-index/types';
+import type { MemberData, Method } from '../workers/jar-index/types';
 import type { ClassName } from '../utils/Names';
 import type { Token } from './Tokens';
 import { isAbstract, isInterface } from '../utils/Classfile';
@@ -37,9 +37,11 @@ export class HierarchyNavigation {
     private readonly methods = new Map<ClassName, MethodDeclaration[]>();
     private readonly methodsByName = new Map<string, MethodDeclaration[]>();
     private readonly ancestors = new Map<ClassName, Set<ClassName>>();
+    private readonly declaredMethods: Map<ClassName, Set<Method>>;
 
     constructor(classes: ClassData[], members: MemberData[]) {
         this.classes = new Map(classes.map(data => [data.className, data]));
+        this.declaredMethods = new Map(members.map(data => [data.className, new Set(data.methods)]));
         for (const data of classes) {
             for (const parent of this.parentNames(data.className)) {
                 const children = this.children.get(parent) ?? [];
@@ -132,6 +134,62 @@ export class HierarchyNavigation {
 
     isInterfaceClass(className: ClassName): boolean {
         return isInterface(this.classes.get(className)?.accessFlags ?? 0);
+    }
+
+    private resolveMethod(className: ClassName, name: string, descriptor: string): MethodDeclaration | undefined {
+        for (const owner of [className, ...this.ancestorNames(className)]) {
+            const key: Method = `${owner}:${name}:${descriptor}`;
+            if (this.declaredMethods.get(owner)?.has(key)) {
+                const method = this.methods.get(owner)?.find(method => method.name === name && method.descriptor === descriptor);
+                if (!method) return undefined;
+                if (owner !== className && (method.access & PUBLIC_OR_PROTECTED) === 0) {
+                    const ownerPackage = owner.slice(0, owner.lastIndexOf('/'));
+                    const childPackage = className.slice(0, className.lastIndexOf('/'));
+                    if (ownerPackage !== childPackage) return undefined;
+                }
+                return method;
+            }
+        }
+        return undefined;
+    }
+
+    /** Returns reference keys for an override family, including bridges and inherited owners. */
+    methodHierarchy(className: ClassName, name: string, descriptor: string): Method[] {
+        const requested: Method = `${className}:${name}:${descriptor}`;
+        const resolved = this.resolveMethod(className, name, descriptor);
+        const initial = resolved && this.visibleMethod(resolved);
+        if (!initial) return [requested];
+
+        const family = new Set<MethodDeclaration>();
+        const pending = [initial];
+        while (pending.length > 0) {
+            const method = pending.pop()!;
+            if (family.has(method)) continue;
+            family.add(method);
+            const relations = this.relations({ ...method, declaration: true, start: 0, length: 0 });
+            for (const target of [...relations.parents, ...relations.children]) {
+                const related = this.resolveMethod(target.className, target.name!, target.descriptor!);
+                if (related) pending.push(related);
+            }
+        }
+
+        const keys = new Set<Method>([requested]);
+        const variants = (this.methodsByName.get(name) ?? []).filter(method => {
+            const visible = this.visibleMethod(method);
+            return visible && family.has(visible);
+        });
+        const descriptors = new Set(variants.map(method => method.descriptor));
+        // Bytecode calls can name an inheriting class rather than the declaring class.
+        for (const owner of this.classes.keys()) {
+            for (const descriptor of descriptors) {
+                const resolved = this.resolveMethod(owner, name, descriptor);
+                const visible = resolved && this.visibleMethod(resolved);
+                if (visible && family.has(visible)) {
+                    keys.add(`${owner}:${name}:${descriptor}`);
+                }
+            }
+        }
+        return [...keys];
     }
 
     isAbstractDeclaration(target: HierarchyTarget): boolean {
