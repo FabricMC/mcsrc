@@ -21,6 +21,8 @@ export type MemberData = {
     className: ClassName;
     methods: Method[];
     fields: Field[];
+    methodAccess: Record<string, number>;
+    methodBridges: Record<string, string>;
 };
 
 export class JarIndexer {
@@ -98,8 +100,13 @@ export class JarIndexer {
             let parts = item.split("|");
             return {
                 className: parts[0] as ClassName,
-                methods: parts[1].split(",") as Method[],
-                fields: parts[2].split(",") as Field[]
+                methods: parts[1] ? parts[1].split(",") as Method[] : [],
+                fields: parts[2] ? parts[2].split(",") as Field[] : [],
+                methodAccess: Object.fromEntries((parts[3] || "").split(",").filter(Boolean).map(value => {
+                    const separator = value.lastIndexOf(":");
+                    return [value.slice(0, separator), Number(value.slice(separator + 1))];
+                })),
+                methodBridges: Object.fromEntries((parts[4] || "").split(",").filter(Boolean).map(value => value.split("=")))
             }
         })
     };

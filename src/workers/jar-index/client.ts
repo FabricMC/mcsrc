@@ -71,7 +71,8 @@ export class JarIndex {
     }
 
     private indexPromise: Promise<void> | null = null;
-    private classDataCache: ClassData[] | null = null;
+    private memberDataPromise: Promise<MemberData[]> | null = null;
+    private classDataPromise: Promise<ClassData[]> | null = null;
 
     constructor(minecraftJar: MinecraftJar) {
         this.minecraftJar = minecraftJar;
@@ -84,7 +85,8 @@ export class JarIndex {
             }
             delete this._workers;
         }
-        this.classDataCache = null;
+        this.memberDataPromise = null;
+        this.classDataPromise = null;
         this.indexPromise = null;
     }
 
@@ -162,49 +164,42 @@ export class JarIndex {
         return Promise.all(results).then(arrays => arrays.flat());
     }
 
-    async getMemberData(): Promise<MemberData[]> {
-        await this.indexJar();
-
-        let results: Promise<MemberData[]>[] = [];
-
-        for (const worker of this.workers) {
-            results.push(worker.c.getMemberData());
-        }
-
-        return Promise.all(results).then(arrays => arrays.flat());
-    }
-    async getClassData(): Promise<ClassData[]> {
-        if (this.classDataCache) {
-            return this.classDataCache;
-        }
-
-        const dbResult = await db.classData.get(this.minecraftJar.jar.name);
-        if (dbResult) {
-            this.classDataCache = dbResult.classes;
-            return this.classDataCache;
-        }
-
-        try {
-            await this.indexJar();
-
-            let results: Promise<ClassDataString[]>[] = [];
-            for (const worker of this.workers) {
-                results.push(worker.c.getClassData());
-            }
-
-            const classDataStrings = await Promise.all(results).then(arrays => arrays.flat());
-            this.classDataCache = classDataStrings.map(parseClassData);
-
-            await db.classData.put({
-                name: this.minecraftJar.jar.name,
-                classes: this.classDataCache,
+    getMemberData(): Promise<MemberData[]> {
+        if (!this.memberDataPromise) {
+            this.memberDataPromise = this.loadMemberData().catch(error => {
+                this.memberDataPromise = null;
+                throw error;
             });
-
-            return this.classDataCache;
-        } finally {
-            this.destroy();
         }
+        return this.memberDataPromise;
     }
+
+    private async loadMemberData(): Promise<MemberData[]> {
+        await this.indexJar();
+        return (await Promise.all(this.workers.map(worker => worker.c.getMemberData()))).flat();
+    }
+
+    getClassData(): Promise<ClassData[]> {
+        if (!this.classDataPromise) {
+            this.classDataPromise = this.loadClassData().catch(error => {
+                this.classDataPromise = null;
+                throw error;
+            });
+        }
+        return this.classDataPromise;
+    }
+
+    private async loadClassData(): Promise<ClassData[]> {
+        const dbResult = await db.classData.get(this.minecraftJar.jar.name);
+        if (dbResult) return dbResult.classes;
+
+        await this.indexJar();
+        const raw = (await Promise.all(this.workers.map(worker => worker.c.getClassData()))).flat();
+        const classes = raw.map(parseClassData);
+        await db.classData.put({ name: this.minecraftJar.jar.name, classes });
+        return classes;
+    }
+
 }
 
 let bytecodeWorker: ReturnType<typeof createWrorker> | null = null;

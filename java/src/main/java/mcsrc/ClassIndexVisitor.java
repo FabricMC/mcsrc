@@ -26,16 +26,18 @@ final class ClassIndexVisitor extends ClassVisitor {
 
 	@Override
 	public MethodVisitor visitMethod(int access, String name, String desc, String signature, String[] exceptions) {
-		indexMethod(new Entry.Method(this.name, name, desc));
-		return new IndexReferenceMethodVisitor(api, new Entry.Method(this.name, name, desc));
+		indexMethod(new Entry.Method(this.name, name, desc), access);
+		return new IndexReferenceMethodVisitor(api, new Entry.Method(this.name, name, desc), access);
 	}
 
 	private class IndexReferenceMethodVisitor extends MethodVisitor {
 		private final Entry.Method callerEntry;
+        private final boolean bridge;
 
-		IndexReferenceMethodVisitor(int api, Entry.Method callerEntry) {
+		IndexReferenceMethodVisitor(int api, Entry.Method callerEntry, int access) {
             super(api, null);
             this.callerEntry = callerEntry;
+            this.bridge = (access & Opcodes.ACC_BRIDGE) != 0;
 		}
 
 		@Override
@@ -79,6 +81,9 @@ final class ClassIndexVisitor extends ClassVisitor {
 		@Override
 		public void visitMethodInsn(int opcode, String owner, String name, String descriptor, boolean isInterface) {
 			indexMethodReference(callerEntry, new Entry.Method(owner, name, descriptor));
+            if (bridge && owner.equals(callerEntry.owner()) && name.equals(callerEntry.name())) {
+                indexer.addMethodBridge(callerEntry, new Entry.Method(owner, name, descriptor));
+            }
 			super.visitMethodInsn(opcode, owner, name, descriptor, isInterface);
 		}
 
@@ -114,8 +119,8 @@ final class ClassIndexVisitor extends ClassVisitor {
 		}
 	}
 
-	public void indexMethod(Entry.Method methodEntry) {
-		indexer.addMethod(methodEntry);
+	public void indexMethod(Entry.Method methodEntry, int access) {
+		indexer.addMethod(methodEntry, access);
 		indexMethodDescriptor(methodEntry, methodEntry.desc());
 	}
 

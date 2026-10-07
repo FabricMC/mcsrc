@@ -5,19 +5,20 @@ import { getTokenLocation } from '../logic/Tokens';
 import { selectedFile } from "../logic/State";
 import type { DecompileResult } from "../workers/decompile/types";
 import { BehaviorSubject } from "rxjs";
-import { classNameFromClassFilePath, outerClassFilePath, toClassFilePath, type ClassFilePath } from "../utils/Names";
+import { classNameFromClassFilePath, outerClassFilePath, toClassFilePath, type ClassFilePath, type ClassName } from "../utils/Names";
 import { findDeclaration } from "../logic/FindDeclaration.ts";
 
 export type TokenJumpTarget = {
     className: ClassFilePath;
     targetType: 'method' | 'field' | 'class';
     target: string;
+    owner?: ClassName;
 };
 
 export const pendingTokenJump = new BehaviorSubject<TokenJumpTarget | null>(null);
 
-export function requestTokenJump(className: ClassFilePath, targetType: 'method' | 'field' | 'class', target: string) {
-    pendingTokenJump.next({ className, targetType, target });
+export function requestTokenJump(className: ClassFilePath, targetType: 'method' | 'field' | 'class', target: string, owner?: ClassName) {
+    pendingTokenJump.next({ className, targetType, target, owner });
 }
 
 export function clearTokenJump() {
@@ -28,10 +29,12 @@ export function jumpToToken(
     result: DecompileResult,
     targetType: 'method' | 'field' | 'class',
     target: string,
-    editor: editor.ICodeEditor
+    editor: editor.ICodeEditor,
+    owner?: ClassName
 ) {
     for (const token of result.tokens) {
         if (!(token.declaration && token.type == targetType)) continue;
+        if (owner && token.className !== owner) continue;
 
         let tokenIdentifier: string | null = null;
         if (targetType === "method" && "descriptor" in token) {
@@ -48,6 +51,7 @@ export function jumpToToken(
         const { line, column } = getTokenLocation(result, token);
         editor.setSelection(new Range(line, column, line, column + token.length));
         editor.revealLineInCenter(line, 0);
+        editor.focus();
         return;
     }
 

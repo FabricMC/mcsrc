@@ -57,8 +57,14 @@ public final class Indexer {
         classes.put(name, new ClassData(name, superName, interfaces == null ? List.of() : List.of(interfaces), access));
     }
 
-    void addMethod(Entry.Method method) {
-        members.computeIfAbsent(method.owner(), MutableMemberData::new).methods.add(method);
+    void addMethod(Entry.Method method, int access) {
+        MutableMemberData data = members.computeIfAbsent(method.owner(), MutableMemberData::new);
+        data.methods.add(method);
+        data.methodAccess.put(method, access);
+    }
+
+    void addMethodBridge(Entry.Method bridge, Entry.Method target) {
+        members.computeIfAbsent(bridge.owner(), MutableMemberData::new).methodBridges.put(bridge, target);
     }
 
     void addField(Entry.Field field) {
@@ -68,6 +74,8 @@ public final class Indexer {
     private static final class MutableMemberData {
         private final String className;
         private final Set<Entry.Method> methods = new HashSet<>();
+        private final Map<Entry.Method, Integer> methodAccess = new HashMap<>();
+        private final Map<Entry.Method, Entry.Method> methodBridges = new HashMap<>();
         private final Set<Entry.Field> fields = new HashSet<>();
 
         private MutableMemberData(String className) {
@@ -75,7 +83,7 @@ public final class Indexer {
         }
 
         private MemberData snapshot() {
-            return new MemberData(className, methods, fields);
+            return new MemberData(className, methods, fields, methodAccess, methodBridges);
         }
     }
 
@@ -102,7 +110,7 @@ public final class Indexer {
 
         @Override
         public MethodVisitor visitMethod(int access, String name, String descriptor, String signature, String[] exceptions) {
-            indexer.addMethod(new Entry.Method(className, name, descriptor));
+            indexer.addMethod(new Entry.Method(className, name, descriptor), access);
             return null;
         }
     }

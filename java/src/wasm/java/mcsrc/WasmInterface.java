@@ -128,7 +128,11 @@ public final class WasmInterface {
     private static String serialize(MemberData data) {
         String methods = String.join(",", data.methods().stream().map(Entry.Method::str).toList());
         String fields = String.join(",", data.fields().stream().map(Entry.Field::str).toList());
-        return "%s|%s|%s".formatted(data.className(), methods, fields);
+        String access = String.join(",", data.methodAccess().entrySet().stream()
+                .map(entry -> entry.getKey().str() + ":" + entry.getValue()).toList());
+        String bridges = String.join(",", data.methodBridges().entrySet().stream()
+                .map(entry -> entry.getKey().str() + "=" + entry.getValue().str()).toList());
+        return "%s|%s|%s|%s|%s".formatted(data.className(), methods, fields, access, bridges);
     }
 
     private static IndexData deserialize(String[] classes, String[] members) {

@@ -1,3 +1,4 @@
+import { HierarchyGutter } from './HierarchyGutter';
 import Editor, { useMonaco } from '@monaco-editor/react';
 import { useObservable } from '../utils/UseObservable';
 import { currentResult, isDecompiling } from '../logic/Decompiler';
@@ -44,6 +45,7 @@ const Code = () => {
 
     const decompileResult = useObservable(currentResult);
     const classList = useObservable(classesList);
+    const [codeEditor, setCodeEditor] = useState<editor.IStandaloneCodeEditor | null>(null);
     const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
     const hideMinimap = useObservable(isThin);
     const darkMode = useObservable(isDarkMode);
@@ -304,12 +306,14 @@ const Code = () => {
         if (!editorRef.current || !decompileResult || !tokenJump) return;
 
         if (toClassFilePath(decompileResult.className) === tokenJump.className) {
-            requestAnimationFrame(() => {
-                if (editorRef.current && decompileResult) {
-                    jumpToToken(decompileResult, tokenJump.targetType, tokenJump.target, editorRef.current);
+            const frame = requestAnimationFrame(() => {
+                if (pendingTokenJump.value !== tokenJump || selectedFile.value !== tokenJump.className) return;
+                if (editorRef.current?.getModel()?.getValue() === decompileResult.source) {
+                    jumpToToken(decompileResult, tokenJump.targetType, tokenJump.target, editorRef.current, tokenJump.owner);
                     clearTokenJump();
                 }
             });
+            return () => cancelAnimationFrame(frame);
         }
     }, [decompileResult, tokenJump]);
 
@@ -323,6 +327,7 @@ const Code = () => {
         const codeEditor = editorRef.current;
 
         const onMouseDown = codeEditor.onMouseDown((e) => {
+            if (e.target.element?.closest(".hierarchy-glyph")) return;
             if (e.target.type === editor.MouseTargetType.GUTTER_LINE_NUMBERS ||
                 e.target.type === editor.MouseTargetType.GUTTER_GLYPH_MARGIN) {
                 const lineNumber = e.target.position?.lineNumber;
@@ -362,6 +367,7 @@ const Code = () => {
             }}
         >
             {contextHolder}
+            <HierarchyGutter codeEditor={codeEditor} result={decompileResult} />
             <Editor
                 defaultLanguage={"java"}
                 language={decompileResult?.language}
@@ -380,6 +386,7 @@ const Code = () => {
                 }}
                 onMount={(codeEditor) => {
                     editorRef.current = codeEditor;
+                    setCodeEditor(codeEditor);
 
                     // Update context key when cursor position changes
                     // We use this to know when to show the options to copy AW/Mixin strings
