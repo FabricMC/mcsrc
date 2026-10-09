@@ -26,6 +26,27 @@ globalThis.MonacoEnvironment = {
     }
 };
 
+/**
+ * Whether this is WebKit/Safari.
+ *
+ * WebKit's e2e runs depend on the localhost `Cache-Control: no-store` workaround in
+ * vite.config.ts, which a service worker bypasses because it answers from its own cache
+ * regardless of response headers. Chrome on iOS is excluded so it keeps the service worker.
+ */
+function isWebKit(): boolean {
+    return typeof navigator !== "undefined"
+        && navigator.vendor === "Apple Computer, Inc."
+        && !/CriOS/.test(navigator.userAgent);
+}
+
+// Enables installing the site and opening it offline. Registration is optional: an
+// unsupported browser simply ignores it.
+if ("serviceWorker" in navigator && !isWebKit()) {
+    window.addEventListener("load", () => {
+        void navigator.serviceWorker.register("/sw.js");
+    });
+}
+
 createRoot(document.getElementById('root')!).render(
     <StrictMode>
         <App />
