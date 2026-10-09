@@ -6,7 +6,7 @@ public sealed interface Entry permits Entry.Class, Entry.Member, Entry.Field, En
     record Class(String name) implements Entry {
         @Override
         public String reference() {
-            return "s:%s".formatted(name);
+            return "s:" + name;
         }
     }
 
@@ -15,23 +15,23 @@ public sealed interface Entry permits Entry.Class, Entry.Member, Entry.Field, En
 
     record Field(String owner, String name, String desc) implements Member, Entry {
         public String str() {
-            return "%s:%s:%s".formatted(owner, name, desc);
+            return owner + ":" + name + ":" + desc;
         }
 
         @Override
         public String reference() {
-            return "f:%s:%s:%s".formatted(owner, name, desc);
+            return "f:" + str();
         }
     }
 
     record Method(String owner, String name, String desc) implements Member, Entry {
         public String str() {
-            return "%s:%s:%s".formatted(owner, name, desc);
+            return owner + ":" + name + ":" + desc;
         }
 
         @Override
         public String reference() {
-            return "m:%s:%s:%s".formatted(owner, name, desc);
+            return "m:" + str();
         }
     }
 }

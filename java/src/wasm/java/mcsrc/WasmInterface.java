@@ -32,11 +32,12 @@ public final class WasmInterface {
 
     @JSExport
     public static String[] getReference(String key) {
-        return INDEXER.references(key).toArray(String[]::new);
+        return INDEXER.referenceArray(key);
     }
 
     @JSExport
     public static int getReferenceSize() {
+        INDEXER.finish();
         return INDEXER.referenceCount();
     }
 
@@ -50,14 +51,14 @@ public final class WasmInterface {
 
     @JSExport
     public static String[] getMemberData() {
-        return INDEXER.data().members().values().stream()
+        return INDEXER.memberData()
                 .map(WasmInterface::serialize)
                 .toArray(String[]::new);
     }
 
     @JSExport
     public static String[] getClassData() {
-        return INDEXER.data().classes().values().stream()
+        return INDEXER.classData()
                 .map(WasmInterface::serialize)
                 .toArray(String[]::new);
     }

@@ -1,6 +1,11 @@
 package mcsrc;
 
-import org.objectweb.asm.*;
+import org.objectweb.asm.ClassVisitor;
+import org.objectweb.asm.FieldVisitor;
+import org.objectweb.asm.Handle;
+import org.objectweb.asm.MethodVisitor;
+import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.Type;
 
 // Based on code from Enigma
 final class ClassIndexVisitor extends ClassVisitor {
@@ -26,25 +31,32 @@ final class ClassIndexVisitor extends ClassVisitor {
 
 	@Override
 	public MethodVisitor visitMethod(int access, String name, String desc, String signature, String[] exceptions) {
-		indexMethod(new Entry.Method(this.name, name, desc), access);
-		return new IndexReferenceMethodVisitor(api, new Entry.Method(this.name, name, desc), access);
+		Entry.Method method = indexer.addMethod(new Entry.Method(this.name, name, desc), access);
+		int callerId = indexer.referenceId(method);
+		indexMethodDescriptor(callerId, method.desc());
+		return new IndexReferenceMethodVisitor(api, method, callerId, access);
 	}
 
 	private class IndexReferenceMethodVisitor extends MethodVisitor {
 		private final Entry.Method callerEntry;
+		private final int callerId;
         private final boolean bridge;
 
-		IndexReferenceMethodVisitor(int api, Entry.Method callerEntry, int access) {
+		IndexReferenceMethodVisitor(int api, Entry.Method callerEntry, int callerId, int access) {
             super(api, null);
             this.callerEntry = callerEntry;
+			this.callerId = callerId;
             this.bridge = (access & Opcodes.ACC_BRIDGE) != 0;
 		}
 
 		@Override
 		public void visitFieldInsn(int opcode, String owner, String name, String descriptor) {
 			switch (opcode) {
-			case Opcodes.GETSTATIC, Opcodes.PUTSTATIC, Opcodes.GETFIELD, Opcodes.PUTFIELD ->
-					indexFieldReference(callerEntry, new Entry.Field(owner, name, descriptor));
+			case Opcodes.GETSTATIC, Opcodes.PUTSTATIC, Opcodes.GETFIELD, Opcodes.PUTFIELD -> {
+				if (Indexer.isReferenceTarget(owner)) {
+					indexFieldReference(callerId, new Entry.Field(owner, name, descriptor));
+				}
+			}
             }
 
 			super.visitFieldInsn(opcode, owner, name, descriptor);
@@ -57,7 +69,7 @@ final class ClassIndexVisitor extends ClassVisitor {
 					type = type.getElementType();
 				}
 
-				indexClassReference(callerEntry, new Entry.Class(type.getInternalName()));
+				indexer.addReference(type.getInternalName(), callerId);
 			}
 
 			super.visitLdcInsn(value);
@@ -72,7 +84,7 @@ final class ClassIndexVisitor extends ClassVisitor {
 					classType = classType.getElementType();
 				}
 
-				indexClassReference(callerEntry, new Entry.Class(classType.getInternalName()));
+				indexer.addReference(classType.getInternalName(), callerId);
 			}
 
 			super.visitTypeInsn(opcode, type);
@@ -80,7 +92,9 @@ final class ClassIndexVisitor extends ClassVisitor {
 
 		@Override
 		public void visitMethodInsn(int opcode, String owner, String name, String descriptor, boolean isInterface) {
-			indexMethodReference(callerEntry, new Entry.Method(owner, name, descriptor));
+			if (Indexer.isReferenceTarget(owner)) {
+				indexMethodReference(callerId, new Entry.Method(owner, name, descriptor));
+			}
             if (bridge && owner.equals(callerEntry.owner()) && name.equals(callerEntry.name())) {
                 indexer.addMethodBridge(callerEntry, new Entry.Method(owner, name, descriptor));
             }
@@ -94,14 +108,16 @@ final class ClassIndexVisitor extends ClassVisitor {
 				Handle implMethod = (Handle) bootstrapMethodArguments[1];
 				Type instantiatedMethodType = (Type) bootstrapMethodArguments[2];
 
-				switch (getHandleEntry(implMethod)) {
-                    case Entry.Field field -> indexFieldReference(callerEntry, field);
-                    case Entry.Method method -> indexMethodReference(callerEntry, method);
-                }
+				if (Indexer.isReferenceTarget(implMethod.getOwner())) {
+					switch (getHandleEntry(implMethod)) {
+						case Entry.Field field -> indexFieldReference(callerId, field);
+						case Entry.Method method -> indexMethodReference(callerId, method);
+					}
+				}
 
-				indexMethodDescriptor(callerEntry, descriptor);
-				indexMethodDescriptor(callerEntry, samMethodType.getDescriptor());
-				indexMethodDescriptor(callerEntry, instantiatedMethodType.getDescriptor());
+				indexMethodDescriptor(callerId, descriptor);
+				indexMethodDescriptor(callerId, samMethodType.getDescriptor());
+				indexMethodDescriptor(callerId, instantiatedMethodType.getDescriptor());
 			}
 
 			super.visitInvokeDynamicInsn(name, descriptor, bootstrapMethodHandle, bootstrapMethodArguments);
@@ -119,57 +135,47 @@ final class ClassIndexVisitor extends ClassVisitor {
 		}
 	}
 
-	public void indexMethod(Entry.Method methodEntry, int access) {
-		indexer.addMethod(methodEntry, access);
-		indexMethodDescriptor(methodEntry, methodEntry.desc());
+	private void indexMethodDescriptor(int callerId, String descriptor) {
+		for (Type typeDescriptor : Type.getArgumentTypes(descriptor)) {
+			indexMethodType(callerId, typeDescriptor);
 	}
 
-	private void indexMethodDescriptor(Entry.Method entry, String descriptor) {
-		for (Type typeDescriptor : Type.getArgumentTypes(descriptor)) {
-			indexMethodType(entry, typeDescriptor);
+		indexMethodType(callerId, Type.getReturnType(descriptor));
 		}
 
-		indexMethodType(entry, Type.getReturnType(descriptor));
-	}
-
-	private void indexMethodType(Entry.Method method, Type type) {
+	private void indexMethodType(int callerId, Type type) {
 		if (type.getSort() == Type.ARRAY) {
-			indexMethodType(method, type.getElementType());
+			indexMethodType(callerId, type.getElementType());
 			return;
 		}
 
 		if (type.getSort() == Type.OBJECT) {
-			indexer.addReference(type.getInternalName(), method.reference());
+			indexer.addReference(type.getInternalName(), callerId);
 		}
 	}
 
-	public void indexField(Entry.Field field) {
+	private void indexField(Entry.Field field) {
+		field = indexer.addField(field);
 		Type type = Type.getType(field.desc());
-
-		indexer.addField(field);
 
 		if (type.getSort() == Type.ARRAY) {
 			type = type.getElementType();
 		}
 
 		if (type.getSort() == Type.OBJECT) {
-			indexer.addReference(type.getInternalName(), field.reference());
+			indexer.addReference(type.getInternalName(), indexer.referenceId(field));
 		}
 	}
 
-	public void indexClassReference(Entry.Method callerEntry, Entry.Class referencedEntry) {
-		indexer.addReference(referencedEntry.name(), callerEntry.reference());
-	}
-
-	public void indexMethodReference(Entry.Method callerEntry, Entry.Method referencedEntry) {
-		indexer.addReference(referencedEntry.str(), callerEntry.reference());
+	private void indexMethodReference(int callerId, Entry.Method referencedEntry) {
+		indexer.addReference(referencedEntry.str(), callerId);
 
 		if (referencedEntry.name().equals("<init>")) {
-			indexer.addReference(referencedEntry.owner(), callerEntry.reference());
+			indexer.addReference(referencedEntry.owner(), callerId);
 		}
 	}
 
-	public void indexFieldReference(Entry.Method callerEntry, Entry.Field referencedEntry) {
-		indexer.addReference(referencedEntry.str(), callerEntry.reference());
+	private void indexFieldReference(int callerId, Entry.Field referencedEntry) {
+		indexer.addReference(referencedEntry.str(), callerId);
 	}
 }
