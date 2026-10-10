@@ -2,6 +2,7 @@ import * as Comlink from "comlink";
 import { load } from "../../../java/build/generated/teavm/wasm-gc/mcsrc.wasm-runtime.js";
 import indexerWasm from "../../../java/build/generated/teavm/wasm-gc/mcsrc.wasm?url";
 import { openJar } from "../../utils/Jar";
+import { toArrayBuffer } from "../../utils/ArrayBuffer";
 import type { ClassFilePath } from "../../utils/Names";
 import { crc32 } from "./crc32";
 import type { ZipEntryData } from "./zip";
@@ -246,12 +247,6 @@ function toUint8Array(bytes: Int8Array): Uint8Array<ArrayBuffer> {
     const copy = new Uint8Array(bytes.byteLength);
     copy.set(new Uint8Array(bytes.buffer, bytes.byteOffset, bytes.byteLength));
     return copy;
-}
-
-function toArrayBuffer(bytes: Uint8Array): ArrayBuffer {
-    const copy = new Uint8Array(bytes.byteLength);
-    copy.set(bytes);
-    return copy.buffer;
 }
 
 interface Remapper {

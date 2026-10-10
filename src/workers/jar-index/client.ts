@@ -113,7 +113,7 @@ export class JarIndex {
 
             let promises: Promise<number>[] = [];
 
-            let taskQueue: ClassFilePath[] = [...classNames];
+            let nextClass = 0;
             let completed = 0;
 
             for (let i = 0; i < this.workers.length; i++) {
@@ -121,7 +121,8 @@ export class JarIndex {
 
                 promises.push((async () => {
                     while (true) {
-                        const batch = taskQueue.splice(0, batchSize);
+                        const batch = classNames.slice(nextClass, nextClass + batchSize);
+                        nextClass += batch.length;
 
                         if (batch.length === 0) {
                             const indexed = await worker.c.getReferenceSize();
