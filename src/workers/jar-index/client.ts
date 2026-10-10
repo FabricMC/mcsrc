@@ -176,7 +176,11 @@ export class JarIndex {
 
     private async loadMemberData(): Promise<MemberData[]> {
         await this.indexJar();
-        return (await Promise.all(this.workers.map(worker => worker.c.getMemberData()))).flat();
+        // Cache both exports on the page before releasing the worker declarations.
+        await this.getClassData();
+        const members = (await Promise.all(this.workers.map(worker => worker.c.getMemberData()))).flat();
+        await Promise.all(this.workers.map(worker => worker.c.clearDeclarations()));
+        return members;
     }
 
     getClassData(): Promise<ClassData[]> {

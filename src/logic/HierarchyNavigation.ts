@@ -37,11 +37,12 @@ export class HierarchyNavigation {
     private readonly methods = new Map<ClassName, MethodDeclaration[]>();
     private readonly methodsByName = new Map<string, MethodDeclaration[]>();
     private readonly ancestors = new Map<ClassName, Set<ClassName>>();
-    private readonly declaredMethods: Map<ClassName, Set<Method>>;
+    private readonly methodAccess: Map<ClassName, Record<string, number>>;
 
     constructor(classes: ClassData[], members: MemberData[]) {
         this.classes = new Map(classes.map(data => [data.className, data]));
-        this.declaredMethods = new Map(members.map(data => [data.className, new Set(data.methods)]));
+        // Every declared method has access flags, including private and static methods.
+        this.methodAccess = new Map(members.map(data => [data.className, data.methodAccess]));
         for (const data of classes) {
             for (const parent of this.parentNames(data.className)) {
                 const children = this.children.get(parent) ?? [];
@@ -151,7 +152,7 @@ export class HierarchyNavigation {
     recordAccessor(className: ClassName, name: string, descriptor: string): Method | undefined {
         if (!isRecord(this.classes.get(className)?.accessFlags ?? 0)) return undefined;
         const accessor: Method = `${className}:${name}:()${descriptor}`;
-        return this.declaredMethods.get(className)?.has(accessor) ? accessor : undefined;
+        return this.methodAccess.get(className)?.[accessor] !== undefined ? accessor : undefined;
     }
 
     isInterfaceClass(className: ClassName): boolean {
@@ -161,7 +162,7 @@ export class HierarchyNavigation {
     private resolveMethod(className: ClassName, name: string, descriptor: string): MethodDeclaration | undefined {
         for (const owner of [className, ...this.ancestorNames(className)]) {
             const key: Method = `${owner}:${name}:${descriptor}`;
-            if (this.declaredMethods.get(owner)?.has(key)) {
+            if (this.methodAccess.get(owner)?.[key] !== undefined) {
                 const method = this.methods.get(owner)?.find(method => method.name === name && method.descriptor === descriptor);
                 if (!method) return undefined;
                 if (owner !== className && (method.access & PUBLIC_OR_PROTECTED) === 0) {

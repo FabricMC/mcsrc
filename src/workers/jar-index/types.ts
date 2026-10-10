@@ -93,6 +93,11 @@ export class JarIndexer {
         return indexer.getClassData();
     };
 
+    clearDeclarations = async (): Promise<void> => {
+        const indexer = await this.getIndexer();
+        indexer.clearDeclarations();
+    };
+
     getMemberData = async (): Promise<MemberData[]> => {
         const indexer = await this.getIndexer();
         const raw = indexer.getMemberData();
@@ -119,4 +124,5 @@ interface Indexer {
     getBytecode(classData: ArrayBufferLike[]): string;
     getClassData(): ClassDataString[];
     getMemberData(): string[];
+    clearDeclarations(): void;
 }

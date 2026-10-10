@@ -74,6 +74,11 @@ public final class WasmInterface {
     }
 
     @JSExport
+    public static void clearDeclarations() {
+        INDEXER.clearDeclarations();
+    }
+
+    @JSExport
     public static void loadRemapIndex(String[] classData, String[] memberData) {
         if (remapper == null) {
             throw new IllegalStateException("Mappings must be loaded before the remap index");
