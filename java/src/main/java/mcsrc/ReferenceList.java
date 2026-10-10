@@ -31,7 +31,9 @@ final class ReferenceList {
                     uniqueCount++;
                 }
             }
-            ids = Arrays.copyOf(ids, uniqueCount);
+            if (uniqueCount != ids.length) {
+                ids = Arrays.copyOf(ids, uniqueCount);
+            }
             size = uniqueCount;
             compacted = true;
         }

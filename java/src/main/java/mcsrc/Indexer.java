@@ -23,7 +23,7 @@ public final class Indexer {
     private final ArrayList<Entry.Member> callers = new ArrayList<>();
 
     public void index(byte[] classBytes) {
-        new ClassReader(classBytes).accept(new ClassIndexVisitor(this), ClassReader.SKIP_FRAMES);
+        new ClassReader(classBytes).accept(new ClassIndexVisitor(this), ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);
     }
 
     public void indexDeclarations(byte[] classBytes) {
