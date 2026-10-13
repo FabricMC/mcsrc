@@ -5,8 +5,9 @@ import { useObservable } from "../utils/UseObservable";
 import { openCodeTab, openInheritanceViewTab } from "../logic/tabs";
 import { referencesQuery } from "../logic/State";
 import { dottedClassNameFromClassName, outerClassFilePath, toClassFilePath, toClassName, withoutClassExtension, type ClassName } from "../utils/Names";
-import { requestTokenJump } from "./CodeExtensions";
+import { requestStringLiteralJump, requestTokenJump } from "./CodeExtensions";
 import type { ReferenceKey } from "../workers/jar-index/types";
+import { escapeStringLiteral } from "../logic/Search";
 
 type MemberType = "class" | "field" | "method";
 
@@ -22,9 +23,19 @@ function getSearchResultToken(item: SearchResult): SearchResultToken {
         return { type: "class", className: toClassName(item.value) };
     }
 
-    const [className, name, descriptor] = item.value.split(":");
+    const member = item.type === "strings" ? item.value[0] : item.value;
+    if (item.type === "strings" && !member.includes(":")) {
+        return { type: "class", className: toClassName(member) };
+    }
+
+    const [className, name, descriptor] = member.split(":");
+    const type = {
+        "strings": descriptor.startsWith("(") ? "method" : "field",
+        "methods": "method",
+        "fields": "field"
+    }[item.type] as MemberType;
     return {
-        type: item.type === "methods" ? "method" : "field",
+        type,
         className: toClassName(className),
         name,
         descriptor
@@ -112,17 +123,40 @@ function getResultClassFilePath(item: SearchResult) {
         return item.value;
     }
 
-    return outerClassFilePath(toClassFilePath(toClassName(item.value.split(":")[0])));
+    const member = item.type === "strings" ? item.value[0] : item.value;
+    const className = member.includes(":") ? member.split(":")[0] : member;
+    return outerClassFilePath(toClassFilePath(toClassName(className)));
 }
 
 function openSearchResult(item: SearchResult) {
     const classFilePath = getResultClassFilePath(item);
 
-    if (item.type !== "classes") {
-        const [, name, descriptor] = item.value.split(":");
+    if (item.type === "strings") {
+        const [member, literal] = item.value;
+        if (!member.includes(":")) {
+            const className = toClassName(member);
+            requestStringLiteralJump(classFilePath, "class", member, className, literal);
+            openCodeTab(classFilePath);
+            return;
+        }
+
+        const [className, name, descriptor] = member.split(":");
+        const targetType = name === "<clinit>"
+            ? "class"
+            : descriptor.startsWith("(") ? "method" : "field";
+        const target = targetType === "class" ? className : targetType === "method" ? `${name}:${descriptor}` : name;
+        requestStringLiteralJump(classFilePath, targetType, target, toClassName(className), literal);
+    } else if (item.type !== "classes") {
+        const member = item.value;
+        const [className, name, descriptor] = member.split(":");
         const targetType = item.type === "methods" ? "method" : "field";
         const target = targetType === "method" ? `${name}:${descriptor}` : name;
-        requestTokenJump(classFilePath, targetType, target);
+        requestTokenJump(
+            classFilePath,
+            targetType,
+            target,
+            toClassName(className)
+        );
     }
 
     openCodeTab(classFilePath);
@@ -140,10 +174,19 @@ function formatSearchResult(item: SearchResult, mutedColor: string) {
     }
 
     if (item.type === "strings") {
-        const [className, memberName, literal] = item.value.split("|", 3);
+        const [member, literal] = item.value;
+        const escapedLiteral = escapeStringLiteral(literal, false);
+        if (!member.includes(":")) {
+            const owner = member.split("/").pop() || member;
+            return <div style={{ justifyContent: "start" }}>
+                <span style={{ color: mutedColor }}>{owner}: </span><code>{escapedLiteral}</code>
+            </div>;
+        }
+
+        const [className, memberName] = member.split(":", 2);
         const owner = className.split("/").pop() || className;
         return <div style={{ justifyContent: "start" }}>
-            <span style={{ color: mutedColor }}>{owner}.{memberName}: </span><code>{literal}</code>
+            <span style={{ color: mutedColor }}>{owner}.{memberName}: </span><code>{escapedLiteral}</code>
         </div>;
     }
 

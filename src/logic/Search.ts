@@ -1,3 +1,5 @@
+import type { StringData } from "../workers/jar-index/types";
+
 export function getCamelCaseAcronym(str: string): string {
     return str.replace(/[^A-Z]/g, '');
 }
@@ -48,7 +50,30 @@ function getMatchScore(simpleClassName: string, query: string): number | undefin
     return undefined;
 }
 
-export function performLiteralSearch<T extends string>(query: string, values: T[], getSearchText: (item: T) => string): T[] {
+const ESCAPES: Record<string, string | undefined> = {
+    '\b': '\\b',
+    '\t': '\\t',
+    '\n': '\\n',
+    '\f': '\\f',
+    '\r': '\\r',
+    '\\': '\\\\',
+};
+
+// works exactly like vineflower's escaping
+export function escapeStringLiteral(text: string, escapeQuotes: boolean = true): string {
+    return Array.from(text, character => {
+        const escaped = ESCAPES[character];
+        if (escaped) return escaped;
+        if (escapeQuotes && character === '"') return '\\"';
+
+        const code = character.charCodeAt(0);
+        return code <= 0x1f || (code >= 0x7f && code <= 0x9f)
+            ? `\\u${code.toString(16).padStart(4, '0')}`
+            : character;
+    }).join('');
+}
+
+export function performLiteralSearch(query: string, values: StringData[]): StringData[] {
     if (query.length === 0) {
         return [];
     }
@@ -56,14 +81,14 @@ export function performLiteralSearch<T extends string>(query: string, values: T[
     const lowerQuery = query.toLowerCase();
 
     return values
-        .filter(value => getSearchText(value).toLowerCase().includes(lowerQuery))
-        .map(value => {
-            const text = getSearchText(value).toLowerCase();
-            const index = text.indexOf(lowerQuery);
-            const score = text === lowerQuery ? 0 : text.startsWith(lowerQuery) ? 1 : 2 + index;
-            return { value, score };
+        .map(value => ({ value, escaped: escapeStringLiteral(value[1], false).toLowerCase() }))
+        .filter(value => value.escaped.includes(lowerQuery))
+        .map(({ value, escaped }) => {
+            const index = escaped.indexOf(lowerQuery);
+            const score = escaped === lowerQuery ? 0 : escaped.startsWith(lowerQuery) ? 1 : 2 + index;
+            return { value, escaped, score };
         })
-        .sort((a, b) => a.score - b.score || getSearchText(a.value).localeCompare(getSearchText(b.value)))
+        .sort((a, b) => a.score - b.score || a.escaped.localeCompare(b.escaped))
         .slice(0, 100)
         .map(result => result.value);
 }

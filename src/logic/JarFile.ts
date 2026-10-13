@@ -4,7 +4,7 @@ import { performLiteralSearch, performSearch } from './Search';
 import { searchQuery, searchType } from './State';
 import { isClassFilePath, type ClassFilePath } from '../utils/Names';
 import { jarIndex } from '../workers/jar-index/client';
-import type { Field, Method, StringData } from '../workers/jar-index/types';
+import type { Field, Member, Method, StringData } from '../workers/jar-index/types';
 
 export const fileList = minecraftJar.pipe(
     distinctUntilChanged(),
@@ -27,11 +27,7 @@ export type SearchResult =
     | { type: "fields"; value: Field; }
     | { type: "strings"; value: StringData; };
 
-function stringLiteralText(stringData: StringData): string {
-    return stringData.split("|")[2] || stringData;
-}
-
-function memberSearchText(member: Method | Field): string {
+function memberSearchText(member: Member): string {
     return member.split(":")[1] || member;
 }
 
@@ -43,8 +39,7 @@ export const searchResults: Observable<SearchResult[]> = combineLatest([classesL
 
         if (type === "strings") {
             const strings = await index.getStringData();
-            return performLiteralSearch(query, strings, stringLiteralText)
-                .map(value => ({ type, value }));
+            return performLiteralSearch(query, strings).map(value => ({ type, value }));
         }
 
         const memberData = await index.getMemberData();

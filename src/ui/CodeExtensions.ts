@@ -1,24 +1,36 @@
 import type { CancellationToken, IPosition, IRange, languages } from "monaco-editor";
 import { editor, Range, Uri } from "monaco-editor";
 import { openCodeTab } from '../logic/tabs';
-import { getTokenLocation } from '../logic/Tokens';
+import { getTokenLocation, type Token } from '../logic/Tokens';
 import { selectedFile } from "../logic/State";
 import type { DecompileResult } from "../workers/decompile/types";
 import { BehaviorSubject } from "rxjs";
 import { classNameFromClassFilePath, outerClassFilePath, toClassFilePath, type ClassFilePath, type ClassName } from "../utils/Names";
 import { findDeclaration } from "../logic/FindDeclaration.ts";
+import { escapeStringLiteral } from "../logic/Search";
 
 export type TokenJumpTarget = {
     className: ClassFilePath;
     targetType: 'method' | 'field' | 'class';
     target: string;
     owner?: ClassName;
+    stringLiteral?: string;
 };
 
 export const pendingTokenJump = new BehaviorSubject<TokenJumpTarget | null>(null);
 
 export function requestTokenJump(className: ClassFilePath, targetType: 'method' | 'field' | 'class', target: string, owner?: ClassName) {
     pendingTokenJump.next({ className, targetType, target, owner });
+}
+
+export function requestStringLiteralJump(
+    className: ClassFilePath,
+    targetType: "method" | "field" | "class",
+    target: string,
+    owner: ClassName,
+    literal: string
+) {
+    pendingTokenJump.next({ className, targetType, target, owner, stringLiteral: literal });
 }
 
 export function clearTokenJump() {
@@ -30,8 +42,39 @@ export function jumpToToken(
     targetType: 'method' | 'field' | 'class',
     target: string,
     editor: editor.ICodeEditor,
-    owner?: ClassName
+    owner?: ClassName,
+    stringLiteral?: string
 ) {
+    const lambdaOuterMethod = targetType === "method"
+        ? getLambdaOuterMethodName(target.split(":", 1)[0])
+        : null;
+
+    if (lambdaOuterMethod !== null) {
+        const className = owner ?? result.className;
+        if (lambdaOuterMethod === "static") {
+            jumpToToken(result, "class", className, editor, undefined, stringLiteral);
+            return;
+        }
+
+        const enclosingMethod = result.tokens.find(token =>
+            token.declaration
+            && token.type === "method"
+            && token.name === lambdaOuterMethod
+            && token.className === className
+        );
+        if (enclosingMethod) {
+            if (stringLiteral !== undefined) {
+                selectStringLiteralInMember(result, enclosingMethod, stringLiteral, editor);
+                return;
+            }
+            selectToken(result, enclosingMethod, editor);
+            return;
+        }
+
+        jumpToToken(result, "class", className, editor, undefined, stringLiteral);
+        return;
+    }
+
     for (const token of result.tokens) {
         if (!(token.declaration && token.type == targetType)) continue;
         if (owner && token.className !== owner) continue;
@@ -48,6 +91,11 @@ export function jumpToToken(
 
         if (tokenIdentifier !== target) continue;
 
+        if (stringLiteral !== undefined) {
+            selectStringLiteralInMember(result, token, stringLiteral, editor);
+            return;
+        }
+
         const { line, column } = getTokenLocation(result, token);
         editor.setSelection(new Range(line, column, line, column + token.length));
         editor.revealLineInCenter(line, 0);
@@ -56,6 +104,117 @@ export function jumpToToken(
     }
 
     console.warn(`jumpToToken: Target ${targetType} "${target}" not found in ${result.className}`);
+}
+
+function getLambdaOuterMethodName(methodName: string): string | null {
+    return /^lambda\$(.+)\$\d+$/.exec(methodName)?.[1] ?? null;
+}
+
+function selectToken(result: DecompileResult, token: Token, editor: editor.ICodeEditor) {
+    const { line, column } = getTokenLocation(result, token);
+    editor.setSelection(new Range(line, column, line, column + token.length));
+    editor.revealLineInCenter(line, 0);
+}
+
+function selectStringLiteralInMember(result: DecompileResult, member: Token, literal: string, editor: editor.ICodeEditor) {
+    const source = result.source;
+    const start = source.lastIndexOf("\n", member.start - 1) + 1;
+    let end = source.length;
+
+    if (member.type === "method") {
+        const indentation = source.slice(start, member.start).match(/^\s*/)?.[0] ?? "";
+        let lineStart = source.indexOf("\n", member.start) + 1;
+
+        while (lineStart > 0 && lineStart < source.length) {
+            const newline = source.indexOf("\n", lineStart);
+            const lineEnd = newline === -1 ? source.length : newline;
+            const line = source.slice(lineStart, lineEnd).replace(/\r$/, "");
+            if ((line.match(/^\s*/)?.[0] ?? "") === indentation && line.trimStart().startsWith("}")) {
+                end = lineStart;
+                break;
+            }
+            if (newline === -1) break;
+            lineStart = newline + 1;
+        }
+    }
+
+    const match = findStringLiteralInRange(source, { start, end }, literal);
+    const model = editor.getModel();
+
+    if (!match || !model) {
+        console.warn(`jumpToToken: String literal ${JSON.stringify(literal)} not found in ${member.type} "${member.type === "method" ? `${member.name}:${member.descriptor}` : member.type === "field" ? member.name : member.className}" in ${result.className}`);
+        return;
+    }
+
+    const startPosition = model.getPositionAt(match.start);
+    const endPosition = model.getPositionAt(match.end);
+    editor.setSelection(new Range(startPosition.lineNumber, startPosition.column, endPosition.lineNumber, endPosition.column));
+    editor.revealLineInCenter(startPosition.lineNumber, 0);
+}
+
+function findStringLiteralInRange(source: string, range: { start: number, end: number; }, literal: string): { start: number, end: number; } | null {
+    const escapedLiteral = escapeStringLiteral(literal);
+    for (const token of getStringLiteralTokens(source)) {
+        if (token.start < range.start || token.end > range.end) continue;
+
+        if (source.slice(token.start + 1, token.end - 1) === escapedLiteral) {
+            return { start: token.start, end: token.end };
+        }
+    }
+
+    return null;
+}
+
+let cachedStringTokens: { source: string, tokens: { start: number, end: number; }[]; } | null = null;
+
+function getStringLiteralTokens(source: string): { start: number, end: number; }[] {
+    if (cachedStringTokens?.source === source) {
+        return cachedStringTokens.tokens;
+    }
+
+    const lines = source.split(/\r\n|\r|\n/);
+    const tokenizedLines = editor.tokenize(source, "java");
+    const tokens: { start: number, end: number; }[] = [];
+    let lineStart = 0;
+
+    for (let lineIndex = 0; lineIndex < tokenizedLines.length; lineIndex++) {
+        const line = lines[lineIndex] ?? "";
+        const lineTokens = tokenizedLines[lineIndex];
+        let stringStart: number | null = null;
+        let stringEnd = 0;
+
+        for (let tokenIndex = 0; tokenIndex < lineTokens.length; tokenIndex++) {
+            const token = lineTokens[tokenIndex];
+            const tokenStart = token.offset;
+            const tokenEnd = lineTokens[tokenIndex + 1]?.offset ?? line.length;
+            const isString = token.type.includes("string");
+
+            if (isString) {
+                if (line[tokenStart] === '"') {
+                    stringStart ??= lineStart + tokenStart;
+                }
+                stringEnd = lineStart + tokenEnd;
+                continue;
+            }
+
+            if (stringStart !== null) {
+                tokens.push({ start: stringStart, end: stringEnd });
+                stringStart = null;
+            }
+        }
+
+        if (stringStart !== null) {
+            tokens.push({ start: stringStart, end: stringEnd });
+        }
+
+        lineStart += line.length;
+        if (lineIndex < lines.length - 1) {
+            lineStart += source[lineStart] === "\r" && source[lineStart + 1] === "\n" ? 2 : 1;
+        }
+    }
+
+    cachedStringTokens = { source, tokens };
+    return tokens;
 }
 
 export function createDefinitionProvider(

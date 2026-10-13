@@ -65,10 +65,18 @@ public final class WasmInterface {
 
     @JSExport
     public static String[] getStringData() {
-    return INDEXER.data().strings().entrySet().stream()
+        return INDEXER.stringLiterals.entrySet().stream()
             .flatMap(entry -> entry.getValue().stream()
-                .map(value -> entry.getKey() + "|" + value))
+                .flatMap(value -> Arrays.stream(new String[] { stringEntryName(entry.getKey()), value })))
             .toArray(String[]::new);
+    }
+
+    private static String stringEntryName(Entry entry) {
+        return switch (entry) {
+            case Entry.Class classEntry -> classEntry.name();
+            case Entry.Method method -> method.str();
+            case Entry.Field field -> field.str();
+        };
     }
 
     @JSExport

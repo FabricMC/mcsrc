@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { performLiteralSearch, performSearch, getCamelCaseAcronym, matchesCamelCase } from './Search';
+import { escapeStringLiteral } from '../logic/Search';
+import type { Member, StringData } from '../workers/jar-index/types';
+import type { ClassName } from '../utils/Names';
 
 describe('Search Algorithm', () => {
 
@@ -187,15 +190,30 @@ describe('Search Algorithm', () => {
 
     describe('Literal String Matching', () => {
         it('should search the complete literal without CamelCase or path parsing', () => {
-            const strings = [
-                'a/Class|render|textures/gui/player.png',
-                'b/Class|inventory|PlayerInventory',
-                'c/Class|other|other'
+            const strings: StringData[] = [
+                ['a/Class:render:()V' as Member, 'textures/gui/player.png'],
+                ['b/Class:inventory:com/example/PlayerInventory' as Member, 'PlayerInventory'],
+                ['c/Class:other:()V' as Member, 'other']
             ];
 
-            const results = performLiteralSearch('gui/player', strings, value => value.slice(value.indexOf('|', value.indexOf('|') + 1) + 1));
+            const results = performLiteralSearch('gui/player', strings);
 
-            expect(results).toEqual(['a/Class|render|textures/gui/player.png']);
+            expect(results).toEqual([
+                ['a/Class:render:()V' as Member, 'textures/gui/player.png']
+            ]);
+        });
+
+        it('should match both raw newlines and their escaped representation', () => {
+            const strings: StringData[] = [
+                ["com/example/Class" as ClassName, 'line one\nline two'],
+                ["com/example/Class" as ClassName, 'line one\\nstill line one'],
+            ];
+
+            expect(performLiteralSearch('\\n', strings)).toEqual(strings);
+        });
+
+        it('should escape Java string content for searching', () => {
+            expect(escapeStringLiteral('tab\t "quote" \\')).toBe('tab\\t \\"quote\\" \\\\');
         });
     });
 

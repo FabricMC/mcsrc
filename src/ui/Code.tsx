@@ -309,7 +309,7 @@ const Code = () => {
             const frame = requestAnimationFrame(() => {
                 if (pendingTokenJump.value !== tokenJump || selectedFile.value !== tokenJump.className) return;
                 if (editorRef.current?.getModel()?.getValue() === decompileResult.source) {
-                    jumpToToken(decompileResult, tokenJump.targetType, tokenJump.target, editorRef.current, tokenJump.owner);
+                    jumpToToken(decompileResult, tokenJump.targetType, tokenJump.target, editorRef.current, tokenJump.owner, tokenJump.stringLiteral);
                     clearTokenJump();
                 }
             });

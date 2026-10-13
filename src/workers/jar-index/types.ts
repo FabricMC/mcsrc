@@ -9,7 +9,8 @@ const readAhead = 4;
 export type Class = ClassName;
 export type Method = `${ClassName}:${string}:${string}`;
 export type Field = `${ClassName}:${string}:${string}`;
-export type StringData = `${ClassName}|${string}|${string}`;
+export type Member = Method | Field;
+export type StringData = readonly [member: Member | Class, literal: string];
 
 // oxlint-disable-next-line typescript/no-redundant-type-constituents
 export type ReferenceKey = Class | Method;
@@ -122,7 +123,16 @@ export class JarIndexer {
 
     getStringData = async (): Promise<StringData[]> => {
         const indexer = await this.getIndexer();
-        return indexer.getStringData() as StringData[];
+        const raw = indexer.getStringData();
+        if (raw.length % 2 !== 0) {
+            throw new Error("Invalid string data: expected member/literal pairs");
+        }
+
+        const strings: StringData[] = [];
+        for (let i = 0; i < raw.length; i += 2) {
+            strings.push([raw[i] as Member, raw[i + 1]]);
+        }
+        return strings;
     };
 }
 
