@@ -138,31 +138,41 @@ function selectStringLiteralInMember(result: DecompileResult, member: Token, lit
         }
     }
 
-    const match = findStringLiteralInRange(source, { start, end }, literal);
+    const matches = findStringLiteralsInRange(source, { start, end }, literal);
     const model = editor.getModel();
 
-    if (!match || !model) {
+    if (!matches.length || !model) {
         console.warn(`jumpToToken: String literal ${JSON.stringify(literal)} not found in ${member.type} "${member.type === "method" ? `${member.name}:${member.descriptor}` : member.type === "field" ? member.name : member.className}" in ${result.className}`);
         return;
     }
 
-    const startPosition = model.getPositionAt(match.start);
-    const endPosition = model.getPositionAt(match.end);
-    editor.setSelection(new Range(startPosition.lineNumber, startPosition.column, endPosition.lineNumber, endPosition.column));
-    editor.revealLineInCenter(startPosition.lineNumber, 0);
+    editor.setSelections(matches.map(match => {
+        const startPos = model.getPositionAt(match.start);
+        const endPos = model.getPositionAt(match.end);
+        return {
+            selectionStartLineNumber: startPos.lineNumber,
+            selectionStartColumn: startPos.column,
+            positionLineNumber: endPos.lineNumber,
+            positionColumn: endPos.column
+        };
+    }));
+    const firstMatchStartPosition = model.getPositionAt(matches[0].start);
+    editor.revealLineInCenter(firstMatchStartPosition.lineNumber, 0);
+    editor.focus();
 }
 
-function findStringLiteralInRange(source: string, range: { start: number, end: number; }, literal: string): { start: number, end: number; } | null {
+function findStringLiteralsInRange(source: string, range: { start: number, end: number; }, literal: string): { start: number, end: number; }[] {
     const escapedLiteral = escapeStringLiteral(literal);
+    const matches: { start: number, end: number; }[] = [];
     for (const token of getStringLiteralTokens(source)) {
         if (token.start < range.start || token.end > range.end) continue;
 
         if (source.slice(token.start + 1, token.end - 1) === escapedLiteral) {
-            return { start: token.start, end: token.end };
+            matches.push(token);
         }
     }
 
-    return null;
+    return matches;
 }
 
 let cachedStringTokens: { source: string, tokens: { start: number, end: number; }[]; } | null = null;
