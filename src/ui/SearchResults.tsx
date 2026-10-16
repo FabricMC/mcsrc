@@ -162,6 +162,14 @@ function openSearchResult(item: SearchResult) {
     openCodeTab(classFilePath);
 }
 
+function formatStringLiteral(literal: string) {
+    return literal.split(/([\u0001\u0002])/).map((part, index) =>
+        part === "\u0001" || part === "\u0002"
+            ? <span key={index} style={{ backgroundColor: "var(--ant-color-text-quaternary)", whiteSpace: "pre" }}> </span>
+            : escapeStringLiteral(part, false)
+    );
+}
+
 function formatSearchResult(item: SearchResult, mutedColor: string) {
     if (item.type === "classes") {
         const path = withoutClassExtension(item.value);
@@ -175,18 +183,18 @@ function formatSearchResult(item: SearchResult, mutedColor: string) {
 
     if (item.type === "strings") {
         const [member, literal] = item.value;
-        const escapedLiteral = escapeStringLiteral(literal, false);
+        const formattedLiteral = formatStringLiteral(literal);
         if (!member.includes(":")) {
             const owner = member.split("/").pop() || member;
             return <div style={{ justifyContent: "start" }}>
-                <span style={{ color: mutedColor }}>{owner}: </span><code>{escapedLiteral}</code>
+                <span style={{ color: mutedColor }}>{owner}: </span><code>{formattedLiteral}</code>
             </div>;
         }
 
         const [className, memberName] = member.split(":", 2);
         const owner = className.split("/").pop() || className;
         return <div style={{ justifyContent: "start" }}>
-            <span style={{ color: mutedColor }}>{owner}.{memberName}: </span><code>{escapedLiteral}</code>
+            <span style={{ color: mutedColor }}>{owner}.{memberName}: </span><code>{formattedLiteral}</code>
         </div>;
     }
 

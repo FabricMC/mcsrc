@@ -256,19 +256,7 @@ final class ClassIndexVisitor extends ClassVisitor {
 				return;
 			}
 
-			int start = 0;
-			for (int i = 0; i < recipe.length(); i++) {
-				char character = recipe.charAt(i);
-				if (character == '\1' || character == '\2') {
-					if (start < i) {
-						indexer.addString(callerEntry, recipe.substring(start, i));
-					}
-					start = i + 1;
-				}
-			}
-			if (start < recipe.length()) {
-				indexer.addString(callerEntry, recipe.substring(start));
-			}
+			indexer.addString(callerEntry, recipe);
 
 			for (int i = 1; i < bootstrapMethodArguments.length; i++) {
 				if (bootstrapMethodArguments[i] instanceof String string) {

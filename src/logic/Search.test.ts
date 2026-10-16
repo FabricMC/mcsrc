@@ -203,6 +203,16 @@ describe('Search Algorithm', () => {
             ]);
         });
 
+        it('should match concatenation fragments while returning the complete recipe', () => {
+            const concatenation = 'first\u0001middle\u0002last';
+            const strings: StringData[] = [
+                ['a/Class:render:()V' as Member, concatenation],
+            ];
+
+            expect(performLiteralSearch('middle', strings)).toEqual(strings);
+            expect(performLiteralSearch('last', strings)).toEqual(strings);
+        });
+
         it('should match both raw newlines and their escaped representation', () => {
             const strings: StringData[] = [
                 ["com/example/Class" as ClassName, 'line one\nline two'],

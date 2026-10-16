@@ -162,12 +162,15 @@ function selectStringLiteralInMember(result: DecompileResult, member: Token, lit
 }
 
 function findStringLiteralsInRange(source: string, range: { start: number, end: number; }, literal: string): { start: number, end: number; }[] {
-    const escapedLiteral = escapeStringLiteral(literal);
+    const escapedLiterals = literal
+        .split(/[\u0001\u0002]/)
+        .filter(Boolean)
+        .map(part => escapeStringLiteral(part));
     const matches: { start: number, end: number; }[] = [];
     for (const token of getStringLiteralTokens(source)) {
         if (token.start < range.start || token.end > range.end) continue;
 
-        if (source.slice(token.start + 1, token.end - 1) === escapedLiteral) {
+        if (escapedLiterals.includes(source.slice(token.start + 1, token.end - 1))) {
             matches.push(token);
         }
     }
