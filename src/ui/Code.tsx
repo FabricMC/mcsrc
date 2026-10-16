@@ -1,4 +1,5 @@
 import { HierarchyGutter } from './HierarchyGutter';
+import { ClassHistoryGutter } from './ClassHistoryGutter';
 import Editor, { useMonaco } from '@monaco-editor/react';
 import { useObservable } from '../utils/UseObservable';
 import { currentResult, isDecompiling } from '../logic/Decompiler';
@@ -327,7 +328,7 @@ const Code = () => {
         const codeEditor = editorRef.current;
 
         const onMouseDown = codeEditor.onMouseDown((e) => {
-            if (e.target.element?.closest(".hierarchy-glyph")) return;
+            if (e.target.element?.closest(".hierarchy-glyph, .class-history-glyph")) return;
             if (e.target.type === editor.MouseTargetType.GUTTER_LINE_NUMBERS ||
                 e.target.type === editor.MouseTargetType.GUTTER_GLYPH_MARGIN) {
                 const lineNumber = e.target.position?.lineNumber;
@@ -368,6 +369,7 @@ const Code = () => {
         >
             {contextHolder}
             <HierarchyGutter codeEditor={codeEditor} result={decompileResult} />
+            <ClassHistoryGutter codeEditor={codeEditor} result={decompileResult} />
             <Editor
                 defaultLanguage={"java"}
                 language={decompileResult?.language}

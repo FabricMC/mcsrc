@@ -2,7 +2,7 @@ import { Button, Flex, Modal, type CheckboxProps, Form, Tooltip, InputNumber, ty
 import { SettingOutlined, SunOutlined, MoonOutlined, DesktopOutlined, JavaOutlined, FileTextOutlined } from '@ant-design/icons';
 import { Checkbox } from 'antd';
 import { useObservable } from "../utils/UseObservable";
-import { BooleanSetting, enableTabs, displayLambdas, focusSearch, KeybindSetting, type KeybindValue, bytecode, showStructure, NumberSetting, preferWasmDecompiler, compactPackages, theme, autoJarIndex, showInheritanceIcons } from "../logic/Settings";
+import { BooleanSetting, enableTabs, displayLambdas, focusSearch, KeybindSetting, type KeybindValue, bytecode, showStructure, NumberSetting, preferWasmDecompiler, compactPackages, theme, autoJarIndex, showInheritanceIcons, showClassHistoryIcons } from "../logic/Settings";
 import { capturingKeybind, rawKeydownEvent } from "../logic/Keybinds";
 import { BehaviorSubject } from "rxjs";
 import React, { useEffect, useState } from "react";
@@ -34,6 +34,7 @@ const SettingsTab = () => {
                 <ThemeOption />
                 <BooleanOption setting={enableTabs} title="Enable Tabs" />
                 <BooleanOption setting={showInheritanceIcons} title="Inheritance Gutter Icons" tooltip="Show gutter icons for class inheritance and method overrides." />
+                <BooleanOption setting={showClassHistoryIcons} title="Class History Gutter Icons" tooltip="Show gutter icons for class version history." />
                 <BooleanOption setting={compactPackages} title="Compact Packages" tooltip="Collapse packages with one child into one." />
                 <BooleanOption setting={autoJarIndex} title="Auto Jar Index" tooltip="Automatically index class metadata for file icons." />
                 <BooleanOption setting={displayLambdas} title="Lambda Names" tooltip="Display lambda names as inline comments. Does not support permalinking." disabled={bytecodeValue} />

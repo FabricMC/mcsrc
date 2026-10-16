@@ -42,12 +42,15 @@ class JarImpl implements Jar {
 export class HttpStreamReader implements Reader {
     private url: string;
     private onProgress?: (percent: number) => void;
+    private signal?: AbortSignal;
 
     private _lengthCache: number | null = null;
 
-    constructor(url: string, onProgress?: (percent: number) => void) {
+    constructor(url: string, onProgress?: (percent: number) => void, options: { length?: number; signal?: AbortSignal } = {}) {
         this.url = url;
         this.onProgress = onProgress;
+        this.signal = options.signal;
+        this._lengthCache = options.length ?? null;
     }
 
     async length(): Promise<number> {
@@ -55,7 +58,7 @@ export class HttpStreamReader implements Reader {
             return Promise.resolve(this._lengthCache);
         }
 
-        const response = await fetch(this.url, { method: 'HEAD' });
+        const response = await fetch(this.url, { method: 'HEAD', signal: this.signal });
 
         if (!response.ok) {
             throw new Error(`Failed to fetch HEAD for ${this.url}: ${response.status} ${response.statusText}`);
@@ -90,7 +93,8 @@ export class HttpStreamReader implements Reader {
             headers: {
                 'Range': `bytes=${offset}-${offset + size - 1}`,
             },
-            cache: 'no-store'
+            cache: 'no-store',
+            signal: this.signal,
         });
 
         if (request.status !== 206) {

@@ -145,6 +145,7 @@ function installModelGutter({ codeEditor, result, navigation, showIcons, onChoos
 
     const mouse = codeEditor.onMouseDown(event => {
         if (!showIcons || event.target.type !== editor.MouseTargetType.GUTTER_GLYPH_MARGIN || !event.event.leftButton) return;
+        if (event.target.detail.glyphMarginLane !== editor.GlyphMarginLane.Center) return;
         const line = event.target.position?.lineNumber;
         const marker = markers.find(action => action.line === line);
         if (!marker) return;
