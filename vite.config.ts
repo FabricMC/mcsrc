@@ -40,6 +40,7 @@ export default defineConfig({
   },
   build: {
     sourcemap: true,
+    manifest: 'manifest.json',
     chunkSizeWarningLimit: 10000,
     rollupOptions: {
       onwarn(warning, warn) {
