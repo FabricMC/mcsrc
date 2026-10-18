@@ -21,6 +21,10 @@ export function toClassName(value: string): ClassName {
 export function classNameFromDottedClassName(value: DottedClassName | string): ClassName {
     return value.replaceAll(".", "/") as ClassName;
 }
+// net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplate$StructureEntityInfo -> net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplate.StructureEntityInfo
+export function dollarToDottedClassName(value: DottedClassName): DottedClassName {
+    return value.replaceAll("$", ".") as DottedClassName;
+}
 
 // net.minecraft.ChatFormatting -> net.minecraft.ChatFormatting
 export function toDottedClassName(value: string): DottedClassName {

@@ -2,7 +2,7 @@ import type { editor } from "monaco-editor";
 import { findTokenAtPosition } from './CodeUtils';
 import type { DecompileResult } from "../workers/decompile/types";
 import { openInheritanceViewTab } from "../logic/tabs";
-import { dottedClassNameFromClassName, type ClassFilePath, type ClassName } from "../utils/Names";
+import { dottedClassNameFromClassName, dollarToDottedClassName, type ClassFilePath, type ClassName } from "../utils/Names";
 import type { ReferenceKey } from "../workers/jar-index/types";
 import { supportsPermalinking } from "../logic/Settings";
 import { firstValueFrom } from "rxjs";
@@ -171,13 +171,13 @@ export function createCopyQualifiedNameAction(
 
             switch (token.type) {
                 case "class":
-                    await setClipboard(`${dottedClassNameFromClassName(token.className)}`);
+                    await setClipboard(`${dollarToDottedClassName(dottedClassNameFromClassName(token.className))}`);
                     break;
                 case "field":
-                    await setClipboard(`${dottedClassNameFromClassName(token.className)}.${token.name}`);
+                    await setClipboard(`${dollarToDottedClassName(dottedClassNameFromClassName(token.className))}.${token.name}`);
                     break;
                 case "method":
-                    await setClipboard(`${dottedClassNameFromClassName(token.className)}.${token.name}`);
+                    await setClipboard(`${dollarToDottedClassName(dottedClassNameFromClassName(token.className))}.${token.name}`);
                     break;
                 default:
                     messageApi.error("Token is not a class, field, or method.");
