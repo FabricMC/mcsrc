@@ -163,6 +163,7 @@ function openSearchResult(item: SearchResult) {
 }
 
 function formatStringLiteral(literal: string) {
+    /* oxlint-disable-next-line eslint/no-control-regex */
     return literal.split(/([\u0001\u0002])/).map((part, index) =>
         part === "\u0001" || part === "\u0002"
             ? <span key={index} style={{ backgroundColor: "var(--ant-color-text-quaternary)", whiteSpace: "pre" }}> </span>

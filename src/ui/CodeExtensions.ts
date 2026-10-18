@@ -163,6 +163,7 @@ function selectStringLiteralInMember(result: DecompileResult, member: Token, lit
 
 function findStringLiteralsInRange(source: string, range: { start: number, end: number; }, literal: string): { start: number, end: number; }[] {
     const escapedLiterals = literal
+        /* oxlint-disable-next-line eslint/no-control-regex */
         .split(/[\u0001\u0002]/)
         .filter(Boolean)
         .map(part => escapeStringLiteral(part));
