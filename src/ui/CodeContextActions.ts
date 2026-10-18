@@ -152,6 +152,43 @@ export function createCopyMixinAction(
     };
 }
 
+export function createCopyQualifiedNameAction(
+    decompileResultRef: { current: DecompileResult | undefined; },
+    classListRef: { current: ClassFilePath[] | undefined; },
+    messageApi: { error: (msg: string) => void; success: (msg: string) => void; }
+) {
+    return {
+        id: 'copy_qualified_name',
+        label: 'Copy Qualified Name',
+        contextMenuGroupId: '9_cutcopypaste',
+        precondition: IS_DEFINITION_CONTEXT_KEY_NAME,
+        run: async function (editor: editor.ICodeEditor, ...args: any[]): Promise<void> {
+            const token = findTokenAtPosition(editor, decompileResultRef.current, classListRef.current);
+            if (!token) {
+                messageApi.error("Failed to find token for Qualified Name.");
+                return;
+            }
+
+            switch (token.type) {
+                case "class":
+                    await setClipboard(`${dottedClassNameFromClassName(token.className)}`);
+                    break;
+                case "field":
+                    await setClipboard(`${dottedClassNameFromClassName(token.className)}.${token.name}`);
+                    break;
+                case "method":
+                    await setClipboard(`${dottedClassNameFromClassName(token.className)}.${token.name}`);
+                    break;
+                default:
+                    messageApi.error("Token is not a class, field, or method.");
+                    return;
+            }
+
+            messageApi.success("Copied Qualified Name to clipboard.");
+        }
+    };
+}
+
 export function createFindAllReferencesAction(
     decompileResultRef: { current: DecompileResult | undefined; },
     classListRef: { current: ClassFilePath[] | undefined; },

@@ -23,6 +23,7 @@ import {
     createCopyAwAction,
     createCopyAtAction,
     createCopyMixinAction,
+    createCopyQualifiedNameAction,
     createFindAllReferencesAction,
     createViewInheritanceAction,
     createCopyPermalinkAction
@@ -137,6 +138,10 @@ const Code = () => {
             createCopyMixinAction(decompileResultRef, classListRef, messageApi)
         );
 
+        const copyQualifiedName = monaco.editor.addEditorAction(
+            createCopyQualifiedNameAction(decompileResultRef, classListRef, messageApi)
+        );
+
         const viewAllReferences = monaco.editor.addEditorAction(
             createFindAllReferencesAction(decompileResultRef, classListRef, messageApi, (value) => {
                 mobileDrawerOpen.next(true);
@@ -155,6 +160,7 @@ const Code = () => {
             bytecode.dispose();
             viewInheritance.dispose();
             viewAllReferences.dispose();
+            copyQualifiedName.dispose();
             copyMixin.dispose();
             copyAt.dispose();
             copyAw.dispose();
