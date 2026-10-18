@@ -213,13 +213,14 @@ describe('Search Algorithm', () => {
             expect(performLiteralSearch('last', strings)).toEqual(strings);
         });
 
-        it('should match both raw newlines and their escaped representation', () => {
+        it('should escape newlines and tabs', () => {
             const strings: StringData[] = [
                 ["com/example/Class" as ClassName, 'line one\nline two'],
-                ["com/example/Class" as ClassName, 'line one\\nstill line one'],
+                ["com/example/Class" as ClassName, 'section one\tsection two']
             ];
 
-            expect(performLiteralSearch('\\n', strings)).toEqual(strings);
+            expect(performLiteralSearch('\\n', strings)).toEqual([strings[0]]);
+            expect(performLiteralSearch('\\t', strings)).toEqual([strings[1]]);
         });
 
         it('should escape Java string content for searching', () => {

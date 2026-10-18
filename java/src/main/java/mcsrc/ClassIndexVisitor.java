@@ -54,6 +54,7 @@ final class ClassIndexVisitor extends ClassVisitor {
 		indexMethodDescriptor(callerId, method.desc());
 		IndexReferenceMethodVisitor visitor = new IndexReferenceMethodVisitor(api, method, callerId, access);
 		if (isEnum && name.equals("<clinit>")) {
+			// Wrap the visitor to ignore enum constant names in the static initializer
 			return new EnumInitializerVisitor(api, visitor);
 		}
 		return visitor;
