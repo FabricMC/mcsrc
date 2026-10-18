@@ -28,7 +28,7 @@ export const InheritanceView = ({ tab }: { tab: InheritanceViewTab; }) => {
             onChange={(key) => tab.innerTabs.active = key}
             items={items}
             centered
-            styles={{ root: { height: "100%" }, content: { height: "100%" } }}
+            styles={{ root: { height: "100%" }, body: { height: "100%" }, content: { height: "100%" } }}
         />
     );
 };
