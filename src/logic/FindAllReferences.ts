@@ -183,12 +183,6 @@ export function getNextJumpToken(decompileResult: DecompileResult): Token | unde
                     return token;
                 }
 
-                if (!query.includes(":")) {
-                    // If the query is just a class, we can't find a method declaration for it
-                    // Is this even possible?
-                    return undefined;
-                }
-
                 // For methods we can keep looking for a token that matches the query after this
                 referenceTokenIndex = i;
                 break;
@@ -228,6 +222,10 @@ function findReferenceToken(tokens: Token[], queries: ReferenceKey[]): Token | u
         const queryType = getQueryType(query);
         if (token.declaration) {
             return false;
+        }
+
+        if (queryType == "class") {
+            return token.type == "class" && token.className == className;
         }
 
         if (queryType == "method") {
