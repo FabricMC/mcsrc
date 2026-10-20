@@ -1,7 +1,8 @@
 import { load } from "../../../java/build/generated/teavm/wasm-gc/mcsrc.wasm-runtime.js";
 import indexerWasm from '../../../java/build/generated/teavm/wasm-gc/mcsrc.wasm?url';
-import { openJar, type Jar } from "../../utils/Jar.js";
+import { type Jar, openJar } from "../../utils/Jar.js";
 import type { ClassFilePath, ClassName } from "../../utils/Names.js";
+import { parseClassData, parseMemberData } from "./parse.ts";
 import { toArrayBuffer } from "../../utils/ArrayBuffer";
 
 const readAhead = 4;
@@ -19,6 +20,13 @@ export type ReferenceString =
     | `f:${Field}`;
 
 export type ClassDataString = `${string}|${string}|${number}|${string}`;
+
+export interface ClassData {
+    className: ClassName;
+    superName: ClassName | "";
+    accessFlags: number;
+    interfaces: ClassName[];
+}
 
 export type MemberData = {
     className: ClassName;
@@ -91,9 +99,9 @@ export class JarIndexer {
         return indexer.getBytecode(classData);
     };
 
-    getClassData = async (): Promise<ClassDataString[]> => {
+    getClassData = async (): Promise<ClassData[]> => {
         const indexer = await this.getIndexer();
-        return indexer.getClassData();
+        return indexer.getClassData().map(parseClassData);
     };
 
     clearDeclarations = async (): Promise<void> => {
@@ -103,20 +111,7 @@ export class JarIndexer {
 
     getMemberData = async (): Promise<MemberData[]> => {
         const indexer = await this.getIndexer();
-        const raw = indexer.getMemberData();
-        return raw.map(item => {
-            let parts = item.split("|");
-            return {
-                className: parts[0] as ClassName,
-                methods: parts[1] ? parts[1].split(",") as Method[] : [],
-                fields: parts[2] ? parts[2].split(",") as Field[] : [],
-                methodAccess: Object.fromEntries((parts[3] || "").split(",").filter(Boolean).map(value => {
-                    const separator = value.lastIndexOf(":");
-                    return [value.slice(0, separator), Number(value.slice(separator + 1))];
-                })),
-                methodBridges: Object.fromEntries((parts[4] || "").split(",").filter(Boolean).map(value => value.split("=")))
-            }
-        })
+        return indexer.getMemberData().map(parseMemberData);
     };
 }
 

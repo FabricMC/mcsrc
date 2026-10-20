@@ -1,8 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { HierarchyNavigation } from './HierarchyNavigation';
 import { toClassName } from '../utils/Names';
-import type { ClassData } from '../workers/jar-index/client';
-import type { MemberData, Method } from '../workers/jar-index/types';
+import type {ClassData, MemberData, Method} from '../workers/jar-index/types';
 import type { Token } from './Tokens';
 
 function classData(name: string, parents: string[] = []): ClassData {

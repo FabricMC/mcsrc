@@ -1,8 +1,9 @@
 import { BehaviorSubject, catchError, combineLatest, defer, distinctUntilChanged, forkJoin, map, of, shareReplay, startWith, switchMap } from "rxjs";
-import { jarIndex, type ClassData } from "../workers/jar-index/client";
+import { jarIndex } from "../workers/jar-index/client";
 import { HierarchyNavigation } from './HierarchyNavigation';
 import { minecraftJar } from "./MinecraftApi";
 import { classNameFromClassFilePath, isClassFilePath, type ClassName } from "../utils/Names";
+import type {ClassData} from "../workers/jar-index/types";
 
 export class ClassNode {
     readonly name: ClassName;
