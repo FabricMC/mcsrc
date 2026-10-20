@@ -180,7 +180,7 @@ const DiffMainPane = ({ showHeader = true }: { showHeader?: boolean }) => {
         <Flex vertical style={{ flex: 1, height: "100%", minHeight: 0 }}>
             {showHeader && <FilepathHeader />}
             <div className="diff-code-frame">
-                {currentFile ? <DiffCode /> : <DiffPlaceholder />}
+                {currentFile ? <DiffCode key={currentFile} /> : <DiffPlaceholder />}
             </div>
         </Flex>
     );

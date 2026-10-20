@@ -1,3 +1,5 @@
+import { HierarchyGutter } from './HierarchyGutter';
+import { ClassHistoryGutter } from './ClassHistoryGutter';
 import Editor, { useMonaco } from '@monaco-editor/react';
 import { useObservable } from '../utils/UseObservable';
 import { currentResult, isDecompiling } from '../logic/Decompiler';
@@ -21,6 +23,7 @@ import {
     createCopyAwAction,
     createCopyAtAction,
     createCopyMixinAction,
+    createCopyQualifiedNameAction,
     createFindAllReferencesAction,
     createViewInheritanceAction,
     createCopyPermalinkAction
@@ -44,6 +47,7 @@ const Code = () => {
 
     const decompileResult = useObservable(currentResult);
     const classList = useObservable(classesList);
+    const [codeEditor, setCodeEditor] = useState<editor.IStandaloneCodeEditor | null>(null);
     const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
     const hideMinimap = useObservable(isThin);
     const darkMode = useObservable(isDarkMode);
@@ -134,6 +138,10 @@ const Code = () => {
             createCopyMixinAction(decompileResultRef, classListRef, messageApi)
         );
 
+        const copyQualifiedName = monaco.editor.addEditorAction(
+            createCopyQualifiedNameAction(decompileResultRef, classListRef, messageApi)
+        );
+
         const viewAllReferences = monaco.editor.addEditorAction(
             createFindAllReferencesAction(decompileResultRef, classListRef, messageApi, (value) => {
                 mobileDrawerOpen.next(true);
@@ -152,6 +160,7 @@ const Code = () => {
             bytecode.dispose();
             viewInheritance.dispose();
             viewAllReferences.dispose();
+            copyQualifiedName.dispose();
             copyMixin.dispose();
             copyAt.dispose();
             copyAw.dispose();
@@ -304,12 +313,14 @@ const Code = () => {
         if (!editorRef.current || !decompileResult || !tokenJump) return;
 
         if (toClassFilePath(decompileResult.className) === tokenJump.className) {
-            requestAnimationFrame(() => {
-                if (editorRef.current && decompileResult) {
-                    jumpToToken(decompileResult, tokenJump.targetType, tokenJump.target, editorRef.current);
+            const frame = requestAnimationFrame(() => {
+                if (pendingTokenJump.value !== tokenJump || selectedFile.value !== tokenJump.className) return;
+                if (editorRef.current?.getModel()?.getValue() === decompileResult.source) {
+                    jumpToToken(decompileResult, tokenJump.targetType, tokenJump.target, editorRef.current, tokenJump.owner);
                     clearTokenJump();
                 }
             });
+            return () => cancelAnimationFrame(frame);
         }
     }, [decompileResult, tokenJump]);
 
@@ -323,6 +334,7 @@ const Code = () => {
         const codeEditor = editorRef.current;
 
         const onMouseDown = codeEditor.onMouseDown((e) => {
+            if (e.target.element?.closest(".hierarchy-glyph, .class-history-glyph")) return;
             if (e.target.type === editor.MouseTargetType.GUTTER_LINE_NUMBERS ||
                 e.target.type === editor.MouseTargetType.GUTTER_GLYPH_MARGIN) {
                 const lineNumber = e.target.position?.lineNumber;
@@ -362,6 +374,8 @@ const Code = () => {
             }}
         >
             {contextHolder}
+            <HierarchyGutter codeEditor={codeEditor} result={decompileResult} />
+            <ClassHistoryGutter codeEditor={codeEditor} result={decompileResult} />
             <Editor
                 defaultLanguage={"java"}
                 language={decompileResult?.language}
@@ -372,6 +386,7 @@ const Code = () => {
                     tabSize: 3,
                     minimap: { enabled: !hideMinimap },
                     glyphMargin: true,
+                    lineNumbersMinChars: 3,
                     foldingImportsByDefault: true,
                     foldingHighlight: false,
                     scrollBeyondLastLine: false,
@@ -380,6 +395,7 @@ const Code = () => {
                 }}
                 onMount={(codeEditor) => {
                     editorRef.current = codeEditor;
+                    setCodeEditor(codeEditor);
 
                     // Update context key when cursor position changes
                     // We use this to know when to show the options to copy AW/Mixin strings

@@ -3,7 +3,7 @@ import { BehaviorSubject, distinctUntilChanged, map, shareReplay } from "rxjs";
 import { minecraftJar, type MinecraftJar } from "../../logic/MinecraftApi";
 import type { ClassData, JarIndexer, MemberData, ReferenceKey, ReferenceString } from "./types";
 import Dexie, { type EntityTable } from "dexie";
-import {isClassFilePath, type ClassFilePath} from "../../utils/Names";
+import {isClassFilePath} from "../../utils/Names";
 
 // Percent complete is total >= 0
 export const indexProgress = new BehaviorSubject<number>(-1);
@@ -46,14 +46,15 @@ export class JarIndex {
     private _workers: ReturnType<typeof createWrorker>[] | undefined;
     private get workers() {
         if (this._workers) return this._workers;
-        const threads = Math.max(1, (navigator.hardwareConcurrency || 4) - 1);
+        const threads = Math.max(1, Math.min(4, (navigator.hardwareConcurrency || 4) - 1));
         this._workers = Array.from({ length: threads }, () => createWrorker());
         console.log(`Created JarIndex with ${threads} workers`);
         return this._workers;
     }
 
     private indexPromise: Promise<void> | null = null;
-    private classDataCache: ClassData[] | null = null;
+    private memberDataPromise: Promise<MemberData[]> | null = null;
+    private classDataPromise: Promise<ClassData[]> | null = null;
 
     constructor(minecraftJar: MinecraftJar) {
         this.minecraftJar = minecraftJar;
@@ -66,7 +67,8 @@ export class JarIndex {
             }
             delete this._workers;
         }
-        this.classDataCache = null;
+        this.memberDataPromise = null;
+        this.classDataPromise = null;
         this.indexPromise = null;
     }
 
@@ -93,7 +95,7 @@ export class JarIndex {
 
             let promises: Promise<number>[] = [];
 
-            let taskQueue: ClassFilePath[] = [...classNames];
+            let nextClass = 0;
             let completed = 0;
 
             for (let i = 0; i < this.workers.length; i++) {
@@ -101,7 +103,8 @@ export class JarIndex {
 
                 promises.push((async () => {
                     while (true) {
-                        const batch = taskQueue.splice(0, batchSize);
+                        const batch = classNames.slice(nextClass, nextClass + batchSize);
+                        nextClass += batch.length;
 
                         if (batch.length === 0) {
                             const indexed = await worker.c.getReferenceSize();
@@ -144,48 +147,43 @@ export class JarIndex {
         return Promise.all(results).then(arrays => arrays.flat());
     }
 
-    async getMemberData(): Promise<MemberData[]> {
-        await this.indexJar();
-
-        let results: Promise<MemberData[]>[] = [];
-
-        for (const worker of this.workers) {
-            results.push(worker.c.getMemberData());
-        }
-
-        return Promise.all(results).then(arrays => arrays.flat());
-    }
-    async getClassData(): Promise<ClassData[]> {
-        if (this.classDataCache) {
-            return this.classDataCache;
-        }
-
-        const dbResult = await db.classData.get(this.minecraftJar.jar.name);
-        if (dbResult) {
-            this.classDataCache = dbResult.classes;
-            return this.classDataCache;
-        }
-
-        try {
-            await this.indexJar();
-
-            let results: Promise<ClassData[]>[] = [];
-            for (const worker of this.workers) {
-                results.push(worker.c.getClassData());
-            }
-
-            const classDataStrings = await Promise.all(results).then(arrays => arrays.flat());
-            this.classDataCache = classDataStrings;
-
-            await db.classData.put({
-                name: this.minecraftJar.jar.name,
-                classes: this.classDataCache,
+    getMemberData(): Promise<MemberData[]> {
+        if (!this.memberDataPromise) {
+            this.memberDataPromise = this.loadMemberData().catch(error => {
+                this.memberDataPromise = null;
+                throw error;
             });
-
-            return this.classDataCache;
-        } finally {
-            this.destroy();
         }
+        return this.memberDataPromise;
+    }
+
+    private async loadMemberData(): Promise<MemberData[]> {
+        await this.indexJar();
+        // Cache both exports on the page before releasing the worker declarations.
+        await this.getClassData();
+        const members = (await Promise.all(this.workers.map(worker => worker.c.getMemberData()))).flat();
+        await Promise.all(this.workers.map(worker => worker.c.clearDeclarations()));
+        return members;
+    }
+
+    getClassData(): Promise<ClassData[]> {
+        if (!this.classDataPromise) {
+            this.classDataPromise = this.loadClassData().catch(error => {
+                this.classDataPromise = null;
+                throw error;
+            });
+        }
+        return this.classDataPromise;
+    }
+
+    private async loadClassData(): Promise<ClassData[]> {
+        const dbResult = await db.classData.get(this.minecraftJar.jar.name);
+        if (dbResult) return dbResult.classes;
+
+        await this.indexJar();
+        const classes = (await Promise.all(this.workers.map(worker => worker.c.getClassData()))).flat();
+        await db.classData.put({ name: this.minecraftJar.jar.name, classes });
+        return classes;
     }
 }
 

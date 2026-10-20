@@ -7,6 +7,7 @@ import { editorFontZoom } from './logic/Settings.ts';
 
 import "./index.css";
 import MonacoWorker from "monaco-editor/editor/editor.worker.js?worker";
+import JsonWorker from "monaco-editor/language/json/json.worker.js?worker";
 
 // Dont load monaco from 3rd party CDN.
 loader.config({ monaco });
@@ -17,7 +18,10 @@ monaco.editor.EditorZoom.onDidChangeZoomLevel((zoomLevel) => {
 });
 
 globalThis.MonacoEnvironment = {
-    getWorker() {
+    getWorker(_moduleId, label) {
+        if (label === "json") {
+            return new JsonWorker();
+        }
         return new MonacoWorker();
     }
 };

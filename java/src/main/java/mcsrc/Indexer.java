@@ -1,10 +1,12 @@
 package mcsrc;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Stream;
 
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassVisitor;
@@ -13,12 +15,15 @@ import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 
 public final class Indexer {
-    private final Map<String, Set<String>> references = new HashMap<>();
-    private final Map<String, ClassData> classes = new HashMap<>();
-    private final Map<String, MutableMemberData> members = new HashMap<>();
+    private Map<String, ReferenceList> references = new HashMap<>();
+    private Map<String, ClassData> classes = new HashMap<>();
+    private Map<String, MutableMemberData> members = new HashMap<>();
+    private Map<Entry.Member, Integer> referenceIds;
+    private Map<String, String> strings;
+    private final ArrayList<Entry.Member> callers = new ArrayList<>();
 
     public void index(byte[] classBytes) {
-        new ClassReader(classBytes).accept(new ClassIndexVisitor(this), ClassReader.SKIP_FRAMES);
+        new ClassReader(classBytes).accept(new ClassIndexVisitor(this), ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);
     }
 
     public void indexDeclarations(byte[] classBytes) {
@@ -28,11 +33,35 @@ public final class Indexer {
     }
 
     public Set<String> references(String key) {
-        return Set.copyOf(references.getOrDefault(key, Set.of()));
+        return Set.of(referenceArray(key));
+    }
+
+    /** Returns the distinct callers of a class or member, in reference-string format. */
+    public String[] referenceArray(String key) {
+        ReferenceList references = this.references.get(key);
+        if (references == null) {
+            return new String[0];
+        }
+        int[] ids = references.ids();
+        String[] result = new String[ids.length];
+        for (int i = 0; i < ids.length; i++) {
+            result[i] = callers.get(ids[i]).reference();
+        }
+        return result;
     }
 
     public int referenceCount() {
-        return references.values().stream().mapToInt(Set::size).sum();
+        return references.values().stream().mapToInt(list -> list.ids().length).sum();
+    }
+
+    /** Returns class declarations without copying unrelated member data. */
+    public Stream<ClassData> classData() {
+        return classes.values().stream();
+    }
+
+    /** Returns snapshots of the member declarations in each indexed class. */
+    public Stream<MemberData> memberData() {
+        return members.values().stream().map(MutableMemberData::snapshot);
     }
 
     public IndexData data() {
@@ -42,32 +71,104 @@ public final class Indexer {
     }
 
     public void clear() {
-        references.clear();
-        classes.clear();
-        members.clear();
+        references = new HashMap<>();
+        clearDeclarations();
+        callers.clear();
+        callers.trimToSize();
+        referenceIds = null;
+        strings = null;
     }
 
-    void addReference(String key, String value) {
-        if (key.startsWith("net/minecraft") || key.startsWith("com/mojang")) {
-            references.computeIfAbsent(key, ignored -> new HashSet<>()).add(value);
+    /** Releases exported declarations while preserving references and their callers. */
+    public void clearDeclarations() {
+        classes = new HashMap<>();
+        members = new HashMap<>();
+    }
+
+    /** Compacts the index and releases build-only dictionaries. Further indexing is supported. */
+    public void finish() {
+        for (ReferenceList list : references.values()) {
+            list.ids();
+        }
+        callers.trimToSize();
+        referenceIds = null;
+        strings = null;
+    }
+
+    int referenceId(Entry.Member caller) {
+        if (referenceIds == null) {
+            referenceIds = new HashMap<>();
+            for (int i = 0; i < callers.size(); i++) {
+                referenceIds.put(callers.get(i), i);
+            }
+        }
+        Integer id = referenceIds.get(caller);
+        if (id == null) {
+            id = callers.size();
+            callers.add(caller);
+            referenceIds.put(caller, id);
+        }
+        return id;
+    }
+
+    void addReference(String key, int callerId) {
+        if (isReferenceTarget(key)) {
+            references.computeIfAbsent(key, ignored -> new ReferenceList()).add(callerId);
         }
     }
 
+    static boolean isReferenceTarget(String name) {
+        return name.startsWith("net/minecraft") || name.startsWith("com/mojang");
+    }
+
+    private String canonicalString(String value) {
+        if (value == null) {
+            return null;
+        }
+        if (strings == null) {
+            strings = new HashMap<>();
+        }
+        return strings.computeIfAbsent(value, key -> key);
+    }
+
     void addClass(String name, String superName, String[] interfaces, int access) {
-        classes.put(name, new ClassData(name, superName, interfaces == null ? List.of() : List.of(interfaces), access));
+        name = canonicalString(name);
+        List<String> interfaceNames = new ArrayList<>();
+        if (interfaces != null) {
+            for (String interfaceName : interfaces) {
+                interfaceNames.add(canonicalString(interfaceName));
+            }
+        }
+        classes.put(name, new ClassData(name, canonicalString(superName), interfaceNames, access));
     }
 
-    void addMethod(Entry.Method method) {
-        members.computeIfAbsent(method.owner(), MutableMemberData::new).methods.add(method);
+    Entry.Method addMethod(Entry.Method method, int access) {
+        method = canonicalMethod(method);
+        MutableMemberData data = members.computeIfAbsent(method.owner(), MutableMemberData::new);
+        data.methods.add(method);
+        data.methodAccess.put(method, access);
+        return method;
     }
 
-    void addField(Entry.Field field) {
+    private Entry.Method canonicalMethod(Entry.Method method) {
+        return new Entry.Method(canonicalString(method.owner()), canonicalString(method.name()), canonicalString(method.desc()));
+    }
+
+    void addMethodBridge(Entry.Method bridge, Entry.Method target) {
+        members.computeIfAbsent(bridge.owner(), MutableMemberData::new).methodBridges.put(bridge, canonicalMethod(target));
+    }
+
+    Entry.Field addField(Entry.Field field) {
+        field = new Entry.Field(canonicalString(field.owner()), canonicalString(field.name()), canonicalString(field.desc()));
         members.computeIfAbsent(field.owner(), MutableMemberData::new).fields.add(field);
+        return field;
     }
 
     private static final class MutableMemberData {
         private final String className;
         private final Set<Entry.Method> methods = new HashSet<>();
+        private final Map<Entry.Method, Integer> methodAccess = new HashMap<>();
+        private final Map<Entry.Method, Entry.Method> methodBridges = new HashMap<>();
         private final Set<Entry.Field> fields = new HashSet<>();
 
         private MutableMemberData(String className) {
@@ -75,7 +176,7 @@ public final class Indexer {
         }
 
         private MemberData snapshot() {
-            return new MemberData(className, methods, fields);
+            return new MemberData(className, methods, fields, methodAccess, methodBridges);
         }
     }
 
@@ -102,7 +203,7 @@ public final class Indexer {
 
         @Override
         public MethodVisitor visitMethod(int access, String name, String descriptor, String signature, String[] exceptions) {
-            indexer.addMethod(new Entry.Method(className, name, descriptor));
+            indexer.addMethod(new Entry.Method(className, name, descriptor), access);
             return null;
         }
     }

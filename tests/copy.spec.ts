@@ -43,8 +43,8 @@ test.describe('Copy Actions in Code Context Actions', () => {
             await waitForDecompiledContent(page, 'enum ChatFormatting');
 
             await page.getByRole('code').getByText('ChatFormatting').click({ button: 'right' });
-            // Use anyway. Maybe the hook needs some time.
-            await page.waitForTimeout(50);
+            // Monaco enables menu mouse actions 100 ms after opening the menu.
+            await page.waitForTimeout(150);
             await page.getByRole('menuitem', { name: name }).click();
 
             await expect(page.getByText(successMessage)).toBeVisible();
@@ -59,8 +59,8 @@ test.describe('Copy Actions in Code Context Actions', () => {
         await waitForDecompiledContent(page, 'class LevelRenderer');
 
         await page.getByRole('code').getByText('LevelRenderer').first().click({ button: 'right' });
-        // Use anyway. Maybe the hook needs some time.
-        await page.waitForTimeout(50);
+        // Monaco enables menu mouse actions 100 ms after opening the menu.
+        await page.waitForTimeout(150);
         await page.getByRole('menuitem', { name: 'Copy Permalink' }).click();
 
         await expect(page.getByText('Copied Permalink')).toBeVisible();

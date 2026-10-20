@@ -32,11 +32,12 @@ public final class WasmInterface {
 
     @JSExport
     public static String[] getReference(String key) {
-        return INDEXER.references(key).toArray(String[]::new);
+        return INDEXER.referenceArray(key);
     }
 
     @JSExport
     public static int getReferenceSize() {
+        INDEXER.finish();
         return INDEXER.referenceCount();
     }
 
@@ -50,14 +51,14 @@ public final class WasmInterface {
 
     @JSExport
     public static String[] getMemberData() {
-        return INDEXER.data().members().values().stream()
+        return INDEXER.memberData()
                 .map(WasmInterface::serialize)
                 .toArray(String[]::new);
     }
 
     @JSExport
     public static String[] getClassData() {
-        return INDEXER.data().classes().values().stream()
+        return INDEXER.classData()
                 .map(WasmInterface::serialize)
                 .toArray(String[]::new);
     }
@@ -70,6 +71,11 @@ public final class WasmInterface {
     @JSExport
     public static void clearIndex() {
         INDEXER.clear();
+    }
+
+    @JSExport
+    public static void clearDeclarations() {
+        INDEXER.clearDeclarations();
     }
 
     @JSExport
@@ -118,17 +124,59 @@ public final class WasmInterface {
     }
 
     private static String serialize(ClassData data) {
-        return "%s|%s|%d|%s".formatted(
-                data.name(),
-                data.superName() == null ? "" : data.superName(),
-                data.access(),
-                String.join(",", data.interfaces()));
+        String superName = data.superName() == null ? "" : data.superName();
+        return data.name() + "|" + superName + "|" + data.access() + "|" + String.join(",", data.interfaces());
     }
 
     private static String serialize(MemberData data) {
-        String methods = String.join(",", data.methods().stream().map(Entry.Method::str).toList());
-        String fields = String.join(",", data.fields().stream().map(Entry.Field::str).toList());
-        return "%s|%s|%s".formatted(data.className(), methods, fields);
+        // Sections: className|methods|fields|methodAccess|methodBridges; entries are comma-separated.
+        StringBuilder result = new StringBuilder(data.className()).append('|');
+
+        // Methods: owner:name:descriptor, e.g. Example:get:()I
+        String separator = "";
+        for (Entry.Method method : data.methods()) {
+            result.append(separator);
+            appendMethod(result, method);
+            separator = ",";
+        }
+
+        // Fields: owner:name:descriptor, e.g. Example:value:I
+        result.append('|');
+        separator = "";
+        for (Entry.Field field : data.fields()) {
+            result.append(separator)
+                    .append(field.owner()).append(':')
+                    .append(field.name()).append(':')
+                    .append(field.desc());
+            separator = ",";
+        }
+
+        // Method access flags: owner:name:descriptor:access, e.g. Example:get:()I:1 (public)
+        result.append('|');
+        separator = "";
+        for (Map.Entry<Entry.Method, Integer> entry : data.methodAccess().entrySet()) {
+            result.append(separator);
+            appendMethod(result, entry.getKey());
+            result.append(':').append(entry.getValue());
+            separator = ",";
+        }
+
+        // Bridge to implementation: e.g. Example:get:()Ljava/lang/Object;=Example:get:()Ljava/lang/String;
+        result.append('|');
+        separator = "";
+        for (Map.Entry<Entry.Method, Entry.Method> entry : data.methodBridges().entrySet()) {
+            result.append(separator);
+            appendMethod(result, entry.getKey());
+            result.append('=');
+            appendMethod(result, entry.getValue());
+            separator = ",";
+        }
+
+        return result.toString();
+    }
+
+    private static void appendMethod(StringBuilder result, Entry.Method method) {
+        result.append(method.owner()).append(':').append(method.name()).append(':').append(method.desc());
     }
 
     private static IndexData deserialize(String[] classes, String[] members) {

@@ -1,6 +1,6 @@
 import { DiffEditor, useMonaco } from '@monaco-editor/react';
 import { useObservable } from '../../utils/UseObservable';
-import { getLeftDiff, getRightDiff } from '../../logic/Diff';
+import { getDiffChanges, getLeftDiff, getRightDiff } from '../../logic/Diff';
 import { updateLineChanges } from '../../logic/LineChanges';
 import { useEffect, useRef, useState } from 'react';
 import { editor, Range } from 'monaco-editor';
@@ -25,12 +25,19 @@ const DiffCode = () => {
     const leftResult = useObservable(getLeftDiff().result);
     const rightResult = useObservable(getRightDiff().result);
     const editorRef = useRef<editor.IStandaloneDiffEditor | null>(null);
+    const modelsRef = useRef<editor.IDiffEditorModel | null>(null);
     const [diffEditor, setDiffEditor] = useState<editor.IStandaloneDiffEditor | null>(null);
     const [originalEditor, setOriginalEditor] = useState<editor.IStandaloneCodeEditor | null>(null);
     const [modifiedEditor, setModifiedEditor] = useState<editor.IStandaloneCodeEditor | null>(null);
     const [editorsReady, setEditorsReady] = useState(false);
     const loading = useObservable(isDecompiling);
     const currentPath = useObservable(selectedFile);
+    const changes = useObservable(getDiffChanges());
+    const currentClass = currentPath && classNameFromClassFilePath(currentPath);
+    const changeState = currentPath && changes?.get(currentPath)?.state;
+    const leftReady = !!currentClass && leftResult?.className === currentClass;
+    const rightReady = !!currentClass && rightResult?.className === currentClass;
+    const resultsReady = !!currentClass && (leftReady || changeState === "added") && (rightReady || changeState === "deleted");
     const isUnified = useObservable(unifiedDiff.observable);
     const darkMode = useObservable(isDarkMode);
 
@@ -46,25 +53,29 @@ const DiffCode = () => {
 
     const monaco = useMonaco();
 
-    function handleOnEditorMount(editor: editor.IStandaloneDiffEditor) {
-        const checkEditors = () => {
-            const original = editor.getOriginalEditor();
-            const modified = editor.getModifiedEditor();
-            if (original && modified) {
-                setOriginalEditor(original);
-                setModifiedEditor(modified);
-                setEditorsReady(true);
+    useEffect(() => {
+        if (!resultsReady) {
+            setDiffEditor(null);
+        }
+    }, [resultsReady]);
 
-                return true;
-            }
-            return false;
+    useEffect(() => {
+        return () => {
+            const models = modelsRef.current;
+            modelsRef.current = null;
+
+            // Monaco must dispose the diff editor before its text models.
+            queueMicrotask(() => {
+                models?.original.dispose();
+                models?.modified.dispose();
+            });
         };
+    }, [resultsReady]);
 
-        const interval = setInterval(() => {
-            if (checkEditors()) {
-                clearInterval(interval);
-            }
-        }, 100);
+    function handleOnEditorMount(editor: editor.IStandaloneDiffEditor) {
+        setOriginalEditor(editor.getOriginalEditor());
+        setModifiedEditor(editor.getModifiedEditor());
+        setEditorsReady(true);
     }
 
     useEffect(() => {
@@ -121,8 +132,8 @@ const DiffCode = () => {
 
     // Scroll to top when source changes, or to specific line if specified
     useEffect(() => {
-        if (editorRef.current && leftResult && rightResult) {
-            const editor = editorRef.current;
+        if (diffEditor && resultsReady) {
+            const editor = diffEditor;
             lineHighlightRef.current?.clear();
 
             const getActiveSelectionEditor = (editor: editor.IStandaloneDiffEditor) => {
@@ -152,7 +163,7 @@ const DiffCode = () => {
                 executeScroll();
             });
         }
-    }, [leftResult, rightResult, selectedLine, selectionSide]);
+    }, [diffEditor, leftResult, rightResult, selectedLine, selectionSide, resultsReady]);
 
     // Handle gutter clicks for line linking
     useEffect(() => {
@@ -209,7 +220,7 @@ const DiffCode = () => {
         <Spin
             indicator={<LoadingOutlined spin />}
             size={"large"}
-            spinning={!!loading}
+            spinning={!!loading || !resultsReady || !diffEditor}
             description="Decompiling..."
             styles={{
                 root: {
@@ -222,15 +233,17 @@ const DiffCode = () => {
             }}
         >
             {contextHolder}
-            <DiffEditor
+            {resultsReady && <DiffEditor
+                loading={null}
                 language="java"
                 theme={darkMode ? "vs-dark" : "vs"}
-                original={leftResult?.source}
-                modified={rightResult?.source}
+                original={leftReady ? leftResult?.source : ""}
+                modified={rightReady ? rightResult?.source : ""}
                 keepCurrentModifiedModel={true}
                 keepCurrentOriginalModel={true}
                 onMount={(editor) => {
                     editorRef.current = editor;
+                    modelsRef.current = editor.getModel();
                     setDiffEditor(editor);
 
                     handleOnEditorMount(editor);
@@ -244,7 +257,7 @@ const DiffCode = () => {
                     editContext: IS_ANDROID_CHROME ? false : undefined,
                     selectOnLineNumbers: false // To avoid blue flash when selecting lines
                     //tabSize: 3,
-                }} />
+                }} />}
         </Spin>
     );
 };
