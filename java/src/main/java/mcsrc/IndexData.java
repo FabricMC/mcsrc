@@ -8,7 +8,7 @@ public record IndexData(Map<String, ClassData> classes, Map<String, MemberData> 
         members = Map.copyOf(members);
     }
 
-  public static IndexData empty() {
+    public static IndexData empty() {
         return new IndexData(Map.of(), Map.of());
     }
 }

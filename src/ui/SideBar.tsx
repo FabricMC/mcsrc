@@ -43,7 +43,8 @@ const SideBar = () => {
     const searchTypeMenuItems: MenuProps["items"] = [
         { key: "classes", label: "Classes" },
         { key: "methods", label: "Methods" },
-        { key: "fields", label: "Fields" }
+        { key: "fields", label: "Fields" },
+        { key: "strings", label: "Strings" }
     ];
 
     const onSearchTypeMenuClick: MenuProps["onClick"] = ({ key }) => {

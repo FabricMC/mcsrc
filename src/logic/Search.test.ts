@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { performSearch, getCamelCaseAcronym, matchesCamelCase } from './Search';
+import { performLiteralSearch, performSearch, getCamelCaseAcronym, matchesCamelCase } from './Search';
+import { escapeStringLiteral } from '../logic/Search';
+import type { Member, StringData } from '../workers/jar-index/types';
+import type { ClassName } from '../utils/Names';
 
 describe('Search Algorithm', () => {
 
@@ -182,6 +185,46 @@ describe('Search Algorithm', () => {
             const classes = ['com/example/Player'];
             const results = performSearch('', classes);
             expect(results).toHaveLength(0);
+        });
+    });
+
+    describe('Literal String Matching', () => {
+        it('should search the complete literal without CamelCase or path parsing', () => {
+            const strings: StringData[] = [
+                ['a/Class:render:()V' as Member, 'textures/gui/player.png'],
+                ['b/Class:inventory:com/example/PlayerInventory' as Member, 'PlayerInventory'],
+                ['c/Class:other:()V' as Member, 'other']
+            ];
+
+            const results = performLiteralSearch('gui/player', strings);
+
+            expect(results).toEqual([
+                ['a/Class:render:()V' as Member, 'textures/gui/player.png']
+            ]);
+        });
+
+        it('should match concatenation fragments while returning the complete recipe', () => {
+            const concatenation = 'first\u0001middle\u0002last';
+            const strings: StringData[] = [
+                ['a/Class:render:()V' as Member, concatenation],
+            ];
+
+            expect(performLiteralSearch('middle', strings)).toEqual(strings);
+            expect(performLiteralSearch('last', strings)).toEqual(strings);
+        });
+
+        it('should escape newlines and tabs', () => {
+            const strings: StringData[] = [
+                ["com/example/Class" as ClassName, 'line one\nline two'],
+                ["com/example/Class" as ClassName, 'section one\tsection two']
+            ];
+
+            expect(performLiteralSearch('\\n', strings)).toEqual([strings[0]]);
+            expect(performLiteralSearch('\\t', strings)).toEqual([strings[1]]);
+        });
+
+        it('should escape Java string content for searching', () => {
+            expect(escapeStringLiteral('tab\t "quote" \\')).toBe('tab\\t \\"quote\\" \\\\');
         });
     });
 
