@@ -1,23 +1,70 @@
-import { BehaviorSubject } from "rxjs";
+import { BehaviorSubject, combineLatest } from "rxjs";
 import { pairwise } from "rxjs/operators";
-import { Tab, CodeTab } from "./tabs";
+import { Tab, CodeTab, InheritanceViewTab } from "./tabs";
 import { getInitialState } from "./Permalink";
+import { loadSavedTabState, persistTabState, type SavedTab } from "./TabPersistence";
+import { enableTabs } from "./Settings";
 import { DEFAULT_VERSION, getVersionFromPermalink, type Version } from "./vineflower/versions";
-import type { ClassFilePath } from "../utils/Names";
+import { toClassFilePath, type ClassFilePath } from "../utils/Names";
 import type { ReferenceKey } from "../workers/jar-index/types";
 
 const initialState = getInitialState();
+
+const createTabFromSaved = (saved: SavedTab): Tab =>
+    saved.type === "CodeTab"
+        ? new CodeTab(toClassFilePath(saved.key))
+        : new InheritanceViewTab(saved.key);
+
+const serializeTabs = (tabs: Tab[]): SavedTab[] => tabs.flatMap(tab => {
+    if (tab instanceof CodeTab)
+        return { type: "CodeTab" as const, key: tab.key };
+
+    if (tab instanceof InheritanceViewTab)
+        return { type: "InheritanceViewTab" as const, key: tab.key };
+    return [];
+});
+
+const buildInitialTabState = () => {
+    const savedTabState = loadSavedTabState();
+    const saved = savedTabState && enableTabs.value ? savedTabState.state : null;
+    const tabs: Tab[] = [];
+
+    for (const savedTab of saved?.openTabs ?? []) {
+        const tab = createTabFromSaved(savedTab);
+        if (!tabs.some(t => t.key === tab.key)) tabs.push(tab);
+    }
+
+    // The file from the URL always gets a tab, even if it wasn't part of the saved tabs
+    if (initialState.file && !tabs.some(t => t.key === initialState.file)) {
+        tabs.unshift(new CodeTab(initialState.file));
+    }
+
+    const findTab = (key: string | null | undefined) => key ? tabs.find(t => t.key === key) ?? null : null;
+
+    // A history entry's active tab wins over the URL, for direct loads the URL wins
+    const preferredKeys = savedTabState?.fromHistory
+        ? [savedTabState.state.activeTabKey, initialState.file, saved?.activeTabKey]
+        : [initialState.file, saved?.activeTabKey];
+    const active = preferredKeys.reduce<Tab | null>((tab, key) => tab ?? findTab(key), null) ?? tabs[0] ?? null;
+
+    return { tabs: enableTabs.value || !active ? tabs : [active], active };
+};
+
+const { tabs: initialTabs, active: initialActive } = buildInitialTabState();
 
 /// All of the user controled global state should be defined here:
 
 export const selectedMinecraftVersion = new BehaviorSubject<string | null>(initialState.minecraftVersion);
 
 export const mobileDrawerOpen = new BehaviorSubject(false);
-export const selectedFile = new BehaviorSubject<ClassFilePath | undefined>(initialState.file);
-const initialTab = initialState.file ? new CodeTab(initialState.file) : null;
-export const openTab = new BehaviorSubject<Tab | null>(initialTab);
-export const openTabs = new BehaviorSubject<Tab[]>(initialTab ? [initialTab] : []);
-export const tabHistory = new BehaviorSubject<string[]>(initialState.file ? [initialState.file] : []);
+export const selectedFile = new BehaviorSubject<ClassFilePath | undefined>(
+    initialActive instanceof CodeTab ? initialActive.key : undefined
+);
+export const openTab = new BehaviorSubject<Tab | null>(null);
+export const openTabs = new BehaviorSubject<Tab[]>(initialTabs);
+export const tabHistory = new BehaviorSubject<string[]>(
+    initialTabs.filter(t => t !== initialActive).map(t => t.key)
+);
 export type SearchType = "classes" | "methods" | "fields";
 export const searchType = new BehaviorSubject<SearchType>("classes");
 export const searchQuery = new BehaviorSubject("");
@@ -48,3 +95,8 @@ selectedFile.pipe(pairwise()).subscribe(([previousFile, currentFile]) => {
         vineflowerVersion.next(DEFAULT_VERSION);
     }
 });
+
+initialActive?.open();
+
+combineLatest([openTabs, openTab]).subscribe(([tabs, activeTab]) =>
+    persistTabState({ openTabs: serializeTabs(tabs), activeTabKey: activeTab?.key ?? null }));

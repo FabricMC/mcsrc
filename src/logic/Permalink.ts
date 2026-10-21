@@ -150,7 +150,7 @@ if (typeof window !== "undefined") {
         ]) => {
             if (!file && !diffView) {
                 window.location.hash = '';
-                window.history.replaceState({}, '', '/');
+                window.history.replaceState(window.history.state ?? {}, '', '/');
                 document.title = "mcsrc.dev";
                 return;
             }
@@ -161,7 +161,7 @@ if (typeof window !== "undefined") {
 
             if (!supported) {
                 window.location.hash = '';
-                window.history.replaceState({}, '', '/');
+                window.history.replaceState(window.history.state ?? {}, '', '/');
                 document.title = title;
                 return;
             }
@@ -197,7 +197,7 @@ if (typeof window !== "undefined") {
                 }
             }
 
-            window.history.replaceState({}, '', url);
+            window.history.replaceState(window.history.state ?? {}, '', url);
             document.title = title;
         });
     });
