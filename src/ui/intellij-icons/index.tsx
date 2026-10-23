@@ -19,6 +19,7 @@ import PackageDarkSvg from './package_dark.svg?react';
 import HierarchyDarkSvg from './hierarchy_dark.svg?react';
 import MethodDarkSvg from './method_dark.svg?react';
 import MethodAbstractDarkSvg from './methodAbstract_dark.svg?react';
+import FieldDarkSvg from './field_dark.svg?react';
 
 import AnnotationSvg from './annotation.svg?react';
 import ClassAbstractSvg from './classAbstract.svg?react';
@@ -33,6 +34,7 @@ import PackageSvg from './package.svg?react';
 import HierarchySvg from './hierarchy.svg?react';
 import MethodSvg from './method.svg?react';
 import MethodAbstractSvg from './methodAbstract.svg?react';
+import FieldSvg from './field.svg?react';
 
 type SVGFC = React.FC<SVGProps<SVGSVGElement>>;
 const stack = (...svgs: SVGFC[]): SVGFC => (props) => (
@@ -75,6 +77,7 @@ export const PackageIcon = icon(PackageSvg, PackageDarkSvg);
 export const HierarchyIcon = icon(HierarchySvg, HierarchyDarkSvg);
 export const MethodIcon = icon(MethodSvg, MethodDarkSvg);
 export const MethodAbstractIcon = icon(MethodAbstractSvg, MethodAbstractDarkSvg);
+export const FieldIcon = icon(FieldSvg, FieldDarkSvg);
 
 // https://asm.ow2.io/javadoc/org/objectweb/asm/Opcodes.html
 // https://asm.ow2.io/javadoc/constant-values.html
