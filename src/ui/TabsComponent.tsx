@@ -108,6 +108,8 @@ export const TabsComponent = () => {
         // Only proceed with drag for left click (button 0)
         if (e.button !== 0) return;
 
+        openUnknownTypeTab(key);
+
         mouseMovementDelta.current = 0;
         lastMousePos.current = { x: e.clientX, y: e.clientY };
 
