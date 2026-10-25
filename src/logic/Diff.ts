@@ -33,7 +33,7 @@ export function getLeftDiff(): DiffSide {
         leftDiff.entries = leftDiff.jar.pipe(
             switchMap(jar => from(getEntriesWithCRC(jar)))
         );
-        leftDiff.result = decompileResultPipeline(leftDiff.jar);
+        leftDiff.result = decompileResultPipeline(leftDiff.jar, true);
     }
     return leftDiff;
 }
