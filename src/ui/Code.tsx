@@ -15,6 +15,7 @@ import { getNextJumpToken, nextReferenceNavigation } from '../logic/FindAllRefer
 import { setupJavaBytecodeLanguage } from '../utils/JavaBytecode';
 import { applyJavadocCodeExtensions } from '../javadoc/JavadocCodeExtensions';
 import { activeJavadocFile } from '../javadoc/Javadoc';
+import JavadocInlineEditor from '../javadoc/JavadocInlineEditor';
 import { selectedInheritanceClassName } from '../logic/Inheritance';
 import { createHoverProvider } from './CodeHoverProvider';
 import { findTokenAtPosition } from './CodeUtils';
@@ -373,6 +374,9 @@ const Code = () => {
             }}
         >
             {contextHolder}
+            {javadocFile && codeEditor && decompileResult && (
+                <JavadocInlineEditor codeEditor={codeEditor} result={decompileResult} />
+            )}
             <HierarchyGutter codeEditor={codeEditor} result={decompileResult} />
             <ClassHistoryGutter codeEditor={codeEditor} result={decompileResult} />
             <Editor

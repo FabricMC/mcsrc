@@ -1,4 +1,3 @@
-import JavadocModal from "../javadoc/JavadocModal";
 import ProgressModal from "./ProgressModal";
 import AboutModal from "./AboutModal";
 import SettingsModal from "./SettingsModal";
@@ -12,7 +11,6 @@ const Modals = () => {
         <>
             <IndexProgressNotification />
             <ProgressModal />
-            <JavadocModal />
             <AboutModal />
             <SettingsModal />
             <LauncherMetaModal />

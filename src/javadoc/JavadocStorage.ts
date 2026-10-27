@@ -31,6 +31,13 @@ export interface JavadocDirectorySource {
 
 export type JavadocSource = JavadocFileSource | JavadocDirectorySource;
 
+export interface AnnotaterConfig {
+    /** Path to the Enigma mappings subdirectory, relative to the project root. */
+    mappings: string;
+    /** Minecraft version ID. */
+    version: string;
+}
+
 interface JavadocMappingsBridge {
     readJavadocs(data: ArrayBuffer): string;
     beginJavadocDirectory(): void;
@@ -57,6 +64,40 @@ interface JavadocMappingsBridge {
 }
 
 let bridge: JavadocMappingsBridge | null = null;
+
+export async function readAnnotaterDirectory(handle: FileSystemDirectoryHandle): Promise<{
+    source: JavadocDirectorySource;
+    version: string;
+}> {
+    const configHandle = await handle.getFileHandle("config.json");
+    const configFile = await configHandle.getFile();
+    const config = parseAnnotaterConfig(await configFile.text());
+
+    let directory = handle;
+    for (const part of config.mappings.split("/")) {
+        directory = await directory.getDirectoryHandle(part);
+    }
+
+    const source = await readJavadocDirectory(directory);
+    return { source, version: config.version };
+}
+
+function parseAnnotaterConfig(json: string): AnnotaterConfig {
+    const config: unknown = JSON.parse(json);
+
+    if (typeof config !== "object" || config === null
+        || !("version" in config) || typeof config.version !== "string" || !config.version.trim()
+        || !("mappings" in config) || typeof config.mappings !== "string") {
+        throw new Error('config.json must contain a Minecraft "version" and a relative "mappings" directory path.');
+    }
+
+    const path = config.mappings.split("/");
+    if (path.some(part => !part || part === "." || part === ".." || /[\\:]/.test(part))) {
+        throw new Error('The "mappings" path must point to a subdirectory, using forward slashes.');
+    }
+
+    return { mappings: config.mappings, version: config.version.trim() };
+}
 
 export async function readJavadocFile(handle: FileSystemFileHandle): Promise<JavadocFileSource> {
     const selectedFile = await handle.getFile();

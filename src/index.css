@@ -187,3 +187,16 @@ html, body, #root {
   background: var(--ant-color-primary-bg);
   color: var(--ant-color-primary-text);
 }
+
+.javadoc-inline-editor {
+  box-sizing: border-box;
+  border: 1px solid;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.javadoc-inline-toolbar {
+  padding: 6px 10px;
+  font-family: sans-serif;
+  line-height: normal;
+}

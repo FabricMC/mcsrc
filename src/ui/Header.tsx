@@ -5,6 +5,8 @@ import VersionSelector from "./VersionSelector";
 import { diffView } from "../logic/State";
 import { activeJavadocFile } from "../javadoc/Javadoc";
 import { useObservable } from "../utils/UseObservable";
+import { showAnnotaterShortcut } from "../logic/Settings";
+import JavadocFilePicker from "../javadoc/JavadocFilePicker";
 
 const Header = () => {
     return (
@@ -21,6 +23,7 @@ const Header = () => {
 
 const HeaderBody = () => {
     const javadocMode = useObservable(activeJavadocFile) !== null;
+    const showAnnotaterShortcutValue = useObservable(showAnnotaterShortcut.observable);
 
     return (
         <Flex justify="center" align="center" gap={6} style={{ width: "max-content", minWidth: "100%" }}>
@@ -40,6 +43,7 @@ const HeaderBody = () => {
                     Compare
                 </Button>
             </Tooltip>
+            {showAnnotaterShortcutValue && <JavadocFilePicker annotaterShortcut />}
             <div style={{ flex: "0 0 auto" }}>
                 <SettingsModalButton />
             </div>
