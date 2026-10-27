@@ -30,7 +30,10 @@ export function applyJavadocCodeExtensions(monaco: monaco, editor: editor.IStand
 
                     const domNode = document.createElement('div');
                     editor.applyFontInfo(domNode);
-                    const lineCount = renderJavadoc(domNode, mdValue, token);
+                    const lineStart = decompile.source.lastIndexOf("\n", token.start - 1) + 1;
+                    const indentation = /^[\t ]*/.exec(decompile.source.slice(lineStart))![0];
+                    const tabSize = editor.getModel()?.getOptions().tabSize ?? 4;
+                    const lineCount = renderJavadoc(domNode, mdValue, indentation, tabSize);
 
                     const location = getTokenLocation(decompile, token);
                     const zoneId = accessor.addZone({
@@ -107,14 +110,13 @@ export function applyJavadocCodeExtensions(monaco: monaco, editor: editor.IStand
     };
 }
 
-function renderJavadoc(domNode: HTMLDivElement, markdown: string, token: Token): number {
-    const nestingLevel = (token.className.match(/\$/g) || []).length + (token.type == 'method' || token.type == 'field' ? 1 : 0);
-    const depth = nestingLevel * 6;
-    const indent = " ".repeat(depth) + "/// ";
+function renderJavadoc(domNode: HTMLDivElement, markdown: string, indentation: string, tabSize: number): number {
+    const indent = indentation + "/// ";
     const lines = markdown.split("\n");
 
     domNode.style.color = "#6A9955";
     domNode.style.whiteSpace = "pre";
+    domNode.style.tabSize = String(tabSize);
     domNode.textContent = lines.map(line => indent + line).join("\n");
     return lines.length;
 }
