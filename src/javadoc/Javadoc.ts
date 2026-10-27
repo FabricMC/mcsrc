@@ -28,8 +28,7 @@ export function deactivateJavadocFile() {
     publishJavadocChange();
 }
 
-export async function saveTokenJavadoc(token: Token, javadoc: JavadocString | undefined) {
-    const file = activeJavadocFile.value;
+export async function saveTokenJavadoc(token: Token, javadoc: JavadocString | undefined, file = activeJavadocFile.value) {
     if (!file) throw new Error("No Javadoc mapping file selected");
 
     const target = getJavadocTarget(token);

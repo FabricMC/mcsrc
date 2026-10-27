@@ -6,7 +6,8 @@ import { animationFrames, map, of, startWith, takeWhile, type Subscription } fro
 import { getTokenLocation, type Token } from "../logic/Tokens";
 import type { DecompileResult } from "../workers/decompile/types";
 import { useObservable } from "../utils/UseObservable";
-import { activeJavadocToken, getJavadocForToken, saveTokenJavadoc } from "./Javadoc";
+import { activeJavadocToken, getJavadocForToken } from "./Javadoc";
+import { getJavadocDraft } from "./JavadocAutosave";
 import JavadocMarkdownEditor from "./JavadocMarkdownEditor";
 
 interface InlineHost {
@@ -182,11 +183,16 @@ const InlineForm = ({ token, onResize, onClose, closing }: {
     onClose: () => void;
     closing: boolean;
 }) => {
-    const [value, setValue] = useState(() => getJavadocForToken(token) ?? "");
-    const [saving, setSaving] = useState(false);
+    const [draft] = useState(() => getJavadocDraft(token, reportSaveError));
+    const status = useObservable(draft.status);
     const containerRef = useRef<HTMLElement | null>(null);
     const { token: colors } = theme.useToken();
-    const [messageApi, contextHolder] = message.useMessage();
+
+    useEffect(() => {
+        return () => {
+            void draft.flush();
+        };
+    }, [draft]);
 
     useLayoutEffect(() => {
         const container = containerRef.current;
@@ -199,17 +205,9 @@ const InlineForm = ({ token, onResize, onClose, closing }: {
         return () => observer.disconnect();
     }, [onResize]);
 
-    const handleSave = async () => {
-        setSaving(true);
-        try {
-            await saveTokenJavadoc(token, value);
-            if (activeJavadocToken.value === token) onClose();
-        } catch (error) {
-            messageApi.error("Failed to save javadoc.");
-            console.error("Error saving javadoc:", error);
-        } finally {
-            setSaving(false);
-        }
+    const handleClose = () => {
+        void draft.flush();
+        onClose();
     };
 
     return (
@@ -221,7 +219,6 @@ const InlineForm = ({ token, onResize, onClose, closing }: {
             onMouseDown={event => event.stopPropagation()}
             onKeyDown={event => event.stopPropagation()}
         >
-            {contextHolder}
             <Flex align="center" justify="space-between" gap={8} className="javadoc-inline-toolbar">
                 <Typography.Text strong>Javadoc</Typography.Text>
                 <Typography.Text type="secondary" ellipsis>
@@ -229,16 +226,27 @@ const InlineForm = ({ token, onResize, onClose, closing }: {
                 </Typography.Text>
             </Flex>
             <JavadocMarkdownEditor
-                value={value}
-                onChange={next => setValue(next ?? "")}
-                readOnly={saving || closing}
+                value={draft.value}
+                onChange={next => draft.update(next ?? "")}
+                readOnly={closing}
             />
             <Flex justify="flex-end" gap={8} className="javadoc-inline-toolbar">
-                <Button size="small" onClick={onClose} disabled={saving || closing}>Cancel</Button>
-                <Button size="small" type="primary" onClick={handleSave} loading={saving} disabled={closing}>Save</Button>
+                <Typography.Text type={status === "error" ? "danger" : "secondary"} role="status">
+                    {status === "saved" && "Saved"}
+                    {status === "unsaved" && "Unsaved changes"}
+                    {status === "saving" && "Saving…"}
+                    {status === "error" && "Save failed"}
+                </Typography.Text>
+                {status === "error" && <Button size="small" onClick={() => void draft.flush()}>Retry</Button>}
+                <Button size="small" onClick={handleClose} disabled={closing}>Close</Button>
             </Flex>
         </section>
     );
 };
+
+function reportSaveError(error: unknown) {
+    message.error("Failed to save javadoc. Your draft has been kept; reopen the editor to retry.");
+    console.error("Error saving javadoc:", error);
+}
 
 export default JavadocInlineEditor;

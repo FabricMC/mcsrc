@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { useObservable } from "../utils/UseObservable";
 import { diffView, selectedMinecraftVersion } from "../logic/State";
 import { activateJavadocFile, activeJavadocFile } from "./Javadoc";
+import { flushJavadocDrafts } from "./JavadocAutosave";
 import {
     createJavadocFile,
     readAnnotaterDirectory,
@@ -65,6 +66,7 @@ const JavadocFilePicker = () => {
         setLoading(true);
 
         try {
+            await flushJavadocDrafts();
             let source: JavadocSource;
             if (key === "open") {
                 const [handle] = await window.showOpenFilePicker({

@@ -29,6 +29,7 @@ export function applyJavadocCodeExtensions(monaco: monaco, editor: editor.IStand
                     }
 
                     const domNode = document.createElement('div');
+                    editor.applyFontInfo(domNode);
                     const lineCount = renderJavadoc(domNode, mdValue, token);
 
                     const location = getTokenLocation(decompile, token);
@@ -44,6 +45,11 @@ export function applyJavadocCodeExtensions(monaco: monaco, editor: editor.IStand
     };
     const javadocSubscription = combineLatest([javadocRevision, activeJavadocToken]).subscribe(refreshJavadocs);
     const modelChangeListener = editor.onDidChangeModel(refreshJavadocs);
+    const configurationChangeListener = editor.onDidChangeConfiguration(event => {
+        if (event.hasChanged(monaco.editor.EditorOption.fontInfo)) {
+            refreshJavadocs();
+        }
+    });
 
     const codeLense = monaco.languages.registerCodeLensProvider("java", {
         provideCodeLenses: function(model: editor.ITextModel, token: CancellationToken): languages.ProviderResult<languages.CodeLensList> {
@@ -92,6 +98,7 @@ export function applyJavadocCodeExtensions(monaco: monaco, editor: editor.IStand
             editJavadocCommand.dispose();
             codeLense.dispose();
             modelChangeListener.dispose();
+            configurationChangeListener.dispose();
             javadocSubscription.unsubscribe();
             editor.changeViewZones((accessor) => {
                 viewZoneIds.forEach(id => accessor.removeZone(id));
