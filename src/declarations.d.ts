@@ -19,6 +19,7 @@ interface SaveFilePickerOptions {
 }
 
 interface DirectoryPickerOptions {
+    id?: string;
     mode?: "read" | "readwrite";
 }
 

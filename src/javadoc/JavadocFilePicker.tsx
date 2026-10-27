@@ -4,6 +4,8 @@ import { useState } from "react";
 import { createPortal } from "react-dom";
 import { useObservable } from "../utils/UseObservable";
 import { diffView, selectedMinecraftVersion } from "../logic/State";
+import { showAnnotaterShortcut } from "../logic/Settings";
+import AnnotaterIcon from "../ui/annotater.svg?react";
 import { activateJavadocFile, activeJavadocFile } from "./Javadoc";
 import { flushJavadocDrafts } from "./JavadocAutosave";
 import {
@@ -19,7 +21,7 @@ const filePickerSupported = "showOpenFilePicker" in window && "showSaveFilePicke
 const directoryPickerSupported = "showDirectoryPicker" in window;
 const pickerSupported = filePickerSupported || directoryPickerSupported;
 
-const JavadocFilePicker = () => {
+const JavadocFilePicker = ({ annotaterShortcut = false }: { annotaterShortcut?: boolean }) => {
     const selectedFile = useObservable(activeJavadocFile);
     const [loading, setLoading] = useState(false);
     const [unsupportedAttempt, setUnsupportedAttempt] = useState(0);
@@ -75,7 +77,7 @@ const JavadocFilePicker = () => {
                 });
                 source = await readJavadocFile(handle);
             } else if (key === "annotater") {
-                const handle = await window.showDirectoryPicker({ mode: "readwrite" });
+                const handle = await window.showDirectoryPicker({ id: "annotater", mode: "readwrite" });
                 const project = await readAnnotaterDirectory(handle);
                 source = project.source;
                 diffView.next(false);
@@ -91,6 +93,9 @@ const JavadocFilePicker = () => {
             }
 
             activateJavadocFile(source);
+            if (key === "annotater") {
+                showAnnotaterShortcut.value = true;
+            }
             messageApi.success("Javadoc mappings opened.");
         } catch (error) {
             if (!(error instanceof DOMException && error.name === "AbortError")) {
@@ -102,6 +107,23 @@ const JavadocFilePicker = () => {
             setLoading(false);
         }
     };
+
+    if (annotaterShortcut) {
+        return (
+            <>
+                {contextHolder}
+                <Tooltip title="Open Annotater directory…">
+                    <Button
+                        aria-label="Open Annotater directory"
+                        disabled={loading}
+                        loading={loading}
+                        icon={<AnnotaterIcon width="18" height="18" aria-hidden="true" />}
+                        onClick={() => openMappings("annotater")}
+                    />
+                </Tooltip>
+            </>
+        );
+    }
 
     const button = (
         <Dropdown
@@ -140,7 +162,7 @@ const JavadocFilePicker = () => {
                         data-testid="annotater-directory"
                         disabled={loading}
                         loading={loading}
-                        icon={<FolderOpenOutlined />}
+                        icon={<AnnotaterIcon width="18" height="18" aria-hidden="true" />}
                         onClick={() => openMappings("annotater")}
                     >
                         Open Annotater directory…

@@ -157,6 +157,7 @@ export type ThemeMode = 'light' | 'dark' | 'system';
 export const theme = new StringSetting<ThemeMode>('theme', 'system', ['light', 'dark', 'system'] as const);
 
 export const agreedEula = new BooleanSetting('eula', false);
+export const showAnnotaterShortcut = new BooleanSetting('show_annotater_shortcut', false);
 export const enableTabs = new BooleanSetting('enable_tabs', true);
 export const showInheritanceIcons = new BooleanSetting('show_inheritance_icons', true);
 export const showClassHistoryIcons = new BooleanSetting('show_class_history_icons', true);
