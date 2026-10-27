@@ -3,7 +3,7 @@ import type { TreeDataNode, TreeProps } from "antd";
 import { useMemo } from "react";
 import { useObservable } from "../utils/UseObservable";
 import { currentResult } from "../logic/Decompiler";
-import { parseDescriptor } from "./CodeHoverProvider";
+import { formatDescriptor } from "../utils/JavaDescriptors";
 import { getTokenLocation, type MemberToken, type Token } from "../logic/Tokens";
 import { selectedLines } from "../logic/State";
 
@@ -16,7 +16,7 @@ const formatClassDisplayName = (className: string) => {
 
 const formatMethodDisplayName = (token: MemberToken, classDisplayName: string) => {
     const methodName = token.name === "<init>" ? classDisplayName : token.name;
-    const signature = parseDescriptor(token.descriptor);
+    const signature = formatDescriptor(token.descriptor);
     return `${methodName}${signature}`;
 };
 

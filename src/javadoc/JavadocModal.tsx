@@ -28,7 +28,12 @@ const ModalBody = ({ token, onValueChange }: { token: Token; onValueChange: (val
                 ) : null}
             </div>
             <div style={{ height: "440px", width: "100%", boxSizing: "border-box" }}>
-                <JavadocMarkdownEditor key={getTokenKey(token)} value={initialValue} onChange={onValueChange} />
+                <JavadocMarkdownEditor key={getTokenKey(token)} value={initialValue} token={token} onChange={onValueChange} />
+            </div>
+            <div style={{ padding: "6px 10px", textAlign: "right", fontSize: "12px" }}>
+                <a href="https://docs.oracle.com/en/java/javase/24/javadoc/using-markdown-documentation-comments.html" target="_blank" rel="noopener noreferrer">
+                    Markdown Javadoc docs ↗
+                </a>
             </div>
         </div>
     );

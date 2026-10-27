@@ -1,30 +1,39 @@
 import { Editor, useMonaco } from "@monaco-editor/react";
 import { useObservable } from "../utils/UseObservable";
 import { currentResult } from "../logic/Decompiler";
-import { useEffect, useRef } from "react";
+import { useEffect, useState } from "react";
 import type { editor } from "monaco-editor";
-import { JavdocCompletionProvider } from "./JavadocCmpletionProvider";
+import { JavadocCompletionProvider } from "./JavadocCompletionProvider";
+import { JavadocTagCompletionProvider } from "./JavadocTagCompletionProvider";
+import { jarIndex } from "../workers/jar-index/client";
+import type { Token } from "../logic/Tokens";
 
 const JavadocMarkdownEditor = ({
     value,
+    token,
     onChange
 }: {
     value: string;
+    token: Token;
     onChange: (newValue: string | undefined) => void;
 }) => {
     const monaco = useMonaco();
     const decompileResult = useObservable(currentResult);
-    const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
+    const index = useObservable(jarIndex);
+    const [model, setModel] = useState<editor.ITextModel | null>(null);
 
     useEffect(() => {
-        if (!monaco || !decompileResult) return;
+        if (!monaco || !decompileResult || !model) return;
 
-        const completionItemProvider = monaco.languages.registerCompletionItemProvider('markdown', new JavdocCompletionProvider(decompileResult));
+        const provider = new JavadocCompletionProvider(decompileResult, token.className, index, model);
+        const completionItemProvider = monaco.languages.registerCompletionItemProvider('markdown', provider);
+        const tagCompletionProvider = monaco.languages.registerCompletionItemProvider('markdown', new JavadocTagCompletionProvider(decompileResult, token, model));
 
         return () => {
             completionItemProvider.dispose();
+            tagCompletionProvider.dispose();
         };
-    }, [monaco, decompileResult]);
+    }, [monaco, decompileResult, token, index, model]);
 
     return (
         <Editor
@@ -39,9 +48,11 @@ const JavadocMarkdownEditor = ({
                 fontSize: 14,
                 lineHeight: 21,
                 wordWrap: "off",
+                suggest: { insertMode: "replace", showWords: false },
+                wordBasedSuggestions: "off",
             }}
             onMount={(codeEditor) => {
-                editorRef.current = codeEditor;
+                setModel(codeEditor.getModel());
             }}
         />
     );

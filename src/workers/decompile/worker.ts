@@ -242,8 +242,11 @@ export class DecompileWorker {
                 visitMethod(start, length, declaration, className, name, descriptor) {
                     currentTokens!.push({ type: "method", start, length, className: toClassName(className), declaration, name, descriptor });
                 },
-                visitParameter(start, length, declaration, className, _methodName, _methodDescriptor, _index, _name) {
-                    currentTokens!.push({ type: "parameter", start, length, className: toClassName(className), declaration });
+                visitParameter(start, length, declaration, className, methodName, methodDescriptor, index, name) {
+                    currentTokens!.push({
+                        type: "parameter", start, length, className: toClassName(className), declaration,
+                        methodName, methodDescriptor, index, name,
+                    });
                 },
                 visitLocal(start, length, declaration, className, _methodName, _methodDescriptor, _index, _name) {
                     currentTokens!.push({ type: "local", start, length, className: toClassName(className), declaration });

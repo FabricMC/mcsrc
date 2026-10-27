@@ -5,7 +5,7 @@ import type { editor } from 'monaco-editor';
 import type { HierarchyNavigation, HierarchyTarget } from '../../logic/HierarchyNavigation';
 import { performSearch } from '../../logic/Search';
 import { dottedClassNameFromClassName } from '../../utils/Names';
-import { parseDescriptor } from '../CodeHoverProvider';
+import { formatDescriptor } from '../../utils/JavaDescriptors';
 import { navigateToHierarchyTarget, type HierarchyChooser } from './HierarchyGutterController';
 import { ClassDataIcon, ClassIcon, InterfaceIcon, MethodAbstractIcon, MethodIcon } from '../intellij-icons';
 
@@ -28,7 +28,7 @@ function targetLabel(target: HierarchyTarget): string {
         return dottedClassNameFromClassName(target.className).replaceAll('$', '.');
     }
     const className = target.className.slice(target.className.lastIndexOf('/') + 1).replaceAll('$', '.');
-    const signature = parseDescriptor(target.descriptor!);
+    const signature = formatDescriptor(target.descriptor!);
     const parameterTypes = signature.slice(0, signature.indexOf(')') + 1);
     const parameters = parameterTypes.replace(/(?:[\w$]+\.)+([\w$]+)/g, '$1').replaceAll('$', '.');
     return `${className}.${target.name}${parameters}`;
