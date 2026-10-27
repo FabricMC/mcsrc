@@ -7,6 +7,7 @@ import {
 import { getTokenLocation, type Token } from "../logic/Tokens";
 import { activeJavadocToken, getJavadocForToken, javadocRevision } from "./Javadoc";
 import type { DecompileResult } from "../workers/decompile/types";
+import { combineLatest } from "rxjs";
 
 type monaco = typeof import("monaco-editor");
 
@@ -23,7 +24,7 @@ export function applyJavadocCodeExtensions(monaco: monaco, editor: editor.IStand
                 .filter(token => token.declaration)
                 .forEach(token => {
                     const mdValue = getJavadocForToken(token);
-                    if (mdValue == null) {
+                    if (mdValue == null || activeJavadocToken.value === token) {
                         return;
                     }
 
@@ -41,7 +42,7 @@ export function applyJavadocCodeExtensions(monaco: monaco, editor: editor.IStand
                 });
         });
     };
-    const javadocRevisionSub = javadocRevision.subscribe(refreshJavadocs);
+    const javadocSubscription = combineLatest([javadocRevision, activeJavadocToken]).subscribe(refreshJavadocs);
     const modelChangeListener = editor.onDidChangeModel(refreshJavadocs);
 
     const codeLense = monaco.languages.registerCodeLensProvider("java", {
@@ -91,7 +92,7 @@ export function applyJavadocCodeExtensions(monaco: monaco, editor: editor.IStand
             editJavadocCommand.dispose();
             codeLense.dispose();
             modelChangeListener.dispose();
-            javadocRevisionSub.unsubscribe();
+            javadocSubscription.unsubscribe();
             editor.changeViewZones((accessor) => {
                 viewZoneIds.forEach(id => accessor.removeZone(id));
             });
