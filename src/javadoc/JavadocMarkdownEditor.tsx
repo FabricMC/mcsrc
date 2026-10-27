@@ -82,6 +82,7 @@ const JavadocMarkdownEditor = ({
             options={{
                 ariaLabel: "Javadoc Markdown",
                 readOnly,
+                fixedOverflowWidgets: true,
                 minimap: { enabled: false },
                 scrollBeyondLastLine: false,
                 fontSize: 14,
