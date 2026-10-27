@@ -9,7 +9,7 @@ import type { MemberData, Method, Field } from '../workers/jar-index/types';
 
 vi.mock('monaco-editor', () => ({
     languages: {
-        CompletionItemKind: { Class: 5, Method: 1, Field: 3 },
+        CompletionItemKind: { Class: 5, Method: 1, Field: 3, Constructor: 0 },
         CompletionItemInsertTextRule: { InsertAsSnippet: 4 },
     },
 }));
@@ -45,11 +45,12 @@ async function complete(markdown: string, owner = 'example/Owner') {
     const { model, position } = documentAtCursor(markdown);
     const members = [
         memberData('example/Owner', ['run:(I)V', 'run:([Ljava/lang/String;)V']),
-        memberData('example/Parent', ['inherited:()I'], ['VALUE:I']),
-        memberData('example/Owner$Nested', ['nestedOnly:()V']),
+        memberData('example/Parent', ['<init>:()V', 'inherited:()I'], ['VALUE:I']),
+        memberData('example/Owner$Nested', ['<init>:(I)V', 'nestedOnly:()V']),
         memberData('other/Remote', ['remote:()V']),
         memberData('example/Remote', ['localRemote:()V']),
         memberData('unimported/Unimported'),
+        memberData('example/Constructed', ['<init>:()V', '<init>:(I)V', '<init>:([Ljava/lang/String;)V', '<clinit>:()V']),
     ];
     const index = {
         getClassData: async () => members.map(data => ({
@@ -208,5 +209,60 @@ describe('Javadoc completion', () => {
             insert: { startLineNumber: 1, startColumn: 2, endLineNumber: 1, endColumn: 5 },
             replace: { startLineNumber: 1, startColumn: 2, endLineNumber: 1, endColumn: 8 },
         });
+    });
+});
+
+
+describe('Constructor reference completion', () => {
+    it('falls back to source declarations when no JAR index is available', async () => {
+        const { model, position } = documentAtCursor('[#|]');
+        const className = toClassName('example/SourceOnly');
+        const result = {
+            source: 'class SourceOnly { SourceOnly(int value) {} }',
+            tokens: [
+                { type: 'method', name: '<init>', descriptor: '(I)V', className, declaration: true, start: 19, length: 10 },
+                { type: 'method', name: '<clinit>', descriptor: '()V', className, declaration: true, start: 0, length: 0 },
+            ],
+        } as unknown as DecompileResult;
+        const provider = new JavadocCompletionProvider(result, className, undefined, model);
+        const completions = await provider.provideCompletionItems(model, position, {} as languages.CompletionContext, { isCancellationRequested: false } as CancellationToken);
+        expect(completions.suggestions.map(item => item.insertText)).toEqual(['#SourceOnly(int)$0']);
+    });
+
+    it('offers constructor overloads with source names and the constructor icon', async () => {
+        const { suggestions, provider } = await complete('[Constructed#|]');
+        expect(suggestions.map(item => item.insertText)).toEqual([
+            'Constructed#Constructed()$0',
+            'Constructed#Constructed(int)$0',
+            'Constructed#Constructed(java.lang.String\\\\[\\\\])$0',
+        ]);
+        expect(suggestions.map(item => item.label)).toEqual([
+            { label: 'Constructed()', description: 'example.Constructed' },
+            { label: 'Constructed(int)', description: 'example.Constructed' },
+            { label: 'Constructed(String[])', description: 'example.Constructed' },
+        ]);
+        expect(suggestions.every(item => item.kind === languages.CompletionItemKind.Constructor)).toBe(true);
+        expect(provider.resolveCompletionItem(suggestions[0]).documentation).toEqual({ value: 'Stored documentation', isTrusted: false });
+    });
+
+    it('supports local and fully qualified constructor references in @see', async () => {
+        const local = await complete('@see #|', 'example/Constructed');
+        expect(local.suggestions.map(item => item.insertText)).toContain('#Constructed(int)$0');
+        const qualified = await complete('@see example.Constructed#|');
+        expect(qualified.suggestions.map(item => item.insertText)).toContain('example.Constructed#Constructed(java.lang.String[])$0');
+    });
+
+    it('uses the simple constructor name for nested classes', async () => {
+        const { suggestions } = await complete('[Nested#|]');
+        expect(suggestions.map(item => item.insertText)).toContain('Nested#Nested(int)$0');
+    });
+
+    it('never inherits constructors or suggests static initializers', async () => {
+        const owner = await complete('[#|]');
+        expect(owner.suggestions.some(item => item.kind === languages.CompletionItemKind.Constructor)).toBe(false);
+        const parent = await complete('[Parent#|]');
+        expect(parent.suggestions.map(item => item.insertText)).toContain('Parent#Parent()$0');
+        const constructed = await complete('[Constructed#|]');
+        expect(constructed.suggestions.some(item => item.insertText.includes('<clinit>'))).toBe(false);
     });
 });

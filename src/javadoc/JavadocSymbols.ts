@@ -112,6 +112,9 @@ export class JavadocSymbols {
             visited.add(owner);
             for (const member of this.members.get(owner) ?? []) {
                 const inherited = owner !== className;
+                if (member.name === '<clinit>' || (inherited && member.name === '<init>')) {
+                    continue;
+                }
                 if (inherited && !this.isInheritedMemberVisible(member, className)) {
                     continue;
                 }
@@ -208,7 +211,7 @@ export class JavadocSymbols {
             const [, name, descriptor] = key.split(':');
             const type = descriptor.startsWith('(') ? 'method' : 'field';
             const access = data.methodAccess[key];
-            if (name.startsWith('<') || (access !== undefined && (access & BRIDGE_OR_SYNTHETIC) !== 0)) {
+            if (name === '<clinit>' || (access !== undefined && (access & BRIDGE_OR_SYNTHETIC) !== 0)) {
                 continue;
             }
             members.push({ type, className: data.className, name, descriptor, declaration: true, start: 0, length: 0 });

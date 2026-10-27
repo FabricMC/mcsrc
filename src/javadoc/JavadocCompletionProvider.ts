@@ -113,28 +113,38 @@ export class JavadocCompletionProvider implements languages.CompletionItemProvid
 
     private createMemberSuggestion(candidate: InheritedMember, classReference: string, context: ReferenceContext): ReferenceCompletionItem {
         const { member, inherited } = candidate;
-        let label = member.name;
-        let reference = `${classReference}#${member.name}`;
+        const constructor = member.type === 'method' && member.name === '<init>';
+        const name = constructor ? simpleName(member.className) : member.name;
+        let label = name;
+        let reference = `${classReference}#${name}`;
+        let kind = languages.CompletionItemKind.Field;
         let detail: string;
         if (member.type === 'method') {
             const descriptor = parseMethodDescriptor(member.descriptor);
             const parameterTypes = descriptor.parameterTypes.map(type => type.replaceAll('$', '.'));
             const returnType = descriptor.returnType.replaceAll('$', '.');
-            label += `(${parameterTypes.map(shortType).join(', ')}) → ${shortType(returnType)}`;
+            label += `(${parameterTypes.map(shortType).join(', ')})`;
             reference += `(${parameterTypes.join(', ')})`;
-            detail = `${member.name}(${parameterTypes.join(', ')}) → ${returnType}`;
+            detail = `${name}(${parameterTypes.join(', ')})`;
+            if (constructor) {
+                kind = languages.CompletionItemKind.Constructor;
+            } else {
+                kind = languages.CompletionItemKind.Method;
+                label += ` → ${shortType(returnType)}`;
+                detail += ` → ${returnType}`;
+            }
         } else {
             const fieldType = parseFieldDescriptor(member.descriptor).replaceAll('$', '.');
             detail = `${fieldType} — ${sourceName(member.className)}`;
         }
         return {
             label: { label, description: sourceName(member.className) },
-            kind: member.type === 'method' ? languages.CompletionItemKind.Method : languages.CompletionItemKind.Field,
+            kind,
             detail,
             insertText: createReferenceSnippet(reference, context.reference),
             insertTextRules: languages.CompletionItemInsertTextRule.InsertAsSnippet,
             filterText: escapeReference(reference, context.reference.syntax),
-            sortText: `${inherited ? '1' : '0'}:${member.name}:${member.descriptor}`,
+            sortText: `${inherited ? '1' : '0'}:${name}:${member.descriptor}`,
             range: context.range,
             target: member,
         };
