@@ -33,12 +33,13 @@ function captureScrollAnchor(list: HTMLElement, retainedEntries: ClassHistoryEnt
     return null;
 }
 
-export function ClassHistoryList({ versions, className, currentVersion, onSelect, active }: {
+export function ClassHistoryList({ versions, className, currentVersion, onSelect, active, disabled = false }: {
     versions: VersionListEntry[];
     className: ClassName;
     currentVersion: string;
     onSelect: (version: string) => void;
     active: boolean;
+    disabled?: boolean;
 }) {
     const { token } = theme.useToken();
     const [entries, setEntries] = useState<ClassHistoryEntry[]>(() => versions.map(version => ({ version: version.id, status: 'queued' })));
@@ -119,6 +120,12 @@ export function ClassHistoryList({ versions, className, currentVersion, onSelect
         let status = entry.fingerprint === null ? 'Not present' : '';
         if (change) status = changeLabels[change];
         if (entry.status === 'error') status = 'Failed to load';
+        let label = entry.version;
+        if (isCurrent) {
+            label = `${entry.version}, current version`;
+        } else if (!disabled) {
+            label = `Compare ${currentVersion} with ${entry.version}`;
+        }
 
         return {
             key: entry.version,
@@ -130,8 +137,8 @@ export function ClassHistoryList({ versions, className, currentVersion, onSelect
                 data-version={entry.version}
                 className={isCurrent ? 'class-history-current' : undefined}
                 style={{ height: 30 }}
-                disabled={isCurrent}
-                aria-label={isCurrent ? `${entry.version}, current version` : `Compare ${currentVersion} with ${entry.version}`}
+                disabled={isCurrent || disabled}
+                aria-label={label}
                 onClick={() => onSelect(entry.version)}
             >
                 <Flex align="center" justify="space-between" gap={12} style={{ width: '100%', minWidth: 0 }}>

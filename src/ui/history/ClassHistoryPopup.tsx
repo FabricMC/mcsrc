@@ -7,6 +7,8 @@ import { diffLeftSelectedMinecraftVersion, diffSelectionSide, diffView, selected
 import { openCodeTab } from '../../logic/tabs';
 import { toClassFilePath, type ClassName } from '../../utils/Names';
 import { ClassHistoryList } from './ClassHistoryList';
+import { activeJavadocFile } from '../../javadoc/Javadoc';
+import { useObservable } from '../../utils/UseObservable';
 
 export interface HistoryChooser {
     className: ClassName;
@@ -17,6 +19,7 @@ export interface HistoryChooser {
 }
 
 export function ClassHistoryPopup({ chooser, onClose }: { chooser: HistoryChooser; onClose: () => void }) {
+    const javadocMode = useObservable(activeJavadocFile) !== null;
     // Popup motion changes row coordinates without triggering a resize.
     const [ready, setReady] = useState(false);
 
@@ -53,7 +56,7 @@ export function ClassHistoryPopup({ chooser, onClose }: { chooser: HistoryChoose
                 <Button size="small" type="text" icon={<CloseOutlined />} onClick={onClose} aria-label="Close class history" />
             </Flex>
             <ClassHistoryList versions={chooser.versions} className={chooser.className}
-                currentVersion={chooser.currentVersion} onSelect={compareVersion} active={ready} />
+                currentVersion={chooser.currentVersion} onSelect={compareVersion} active={ready} disabled={javadocMode} />
         </Flex>}
     >
         <span style={{ position: 'fixed', left: chooser.x, top: chooser.y, width: 1, height: 1 }} />

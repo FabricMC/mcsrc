@@ -82,13 +82,12 @@ const AdvancedTab = () => {
                 Launcher meta
             </Button>
             <JavadocFilePicker />
-            <Button
-                disabled={!javadocFile}
+            {javadocFile && <Button
                 icon={<CloseOutlined />}
                 onClick={deactivateJavadocFile}
             >
                 Exit Javadoc mode
-            </Button>
+            </Button>}
         </Flex>
     );
 };
