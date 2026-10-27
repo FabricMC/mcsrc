@@ -21,6 +21,7 @@ vi.mock("../../java/build/generated/teavm/wasm-gc/mcsrc.wasm-runtime.js", () => 
 vi.mock("../../java/build/generated/teavm/wasm-gc/mcsrc.wasm?url", () => ({ default: "test.wasm" }));
 
 import {
+    readAnnotaterDirectory,
     readJavadocDirectory,
     readJavadocFile,
     writeJavadocSource,
@@ -44,6 +45,7 @@ class FakeFile {
             kind: this.kind,
             name: this.name,
             getFile: async () => ({
+                text: async () => new TextDecoder().decode(this.content),
                 arrayBuffer: async () => this.content.buffer.slice(
                     this.content.byteOffset,
                     this.content.byteOffset + this.content.byteLength,
@@ -134,6 +136,71 @@ describe("JavadocStorage", () => {
         expect(source.format).toBe("enigma");
         expect(bridge.resetJavadocs).toHaveBeenCalledOnce();
         expect(bridge.readJavadocs).not.toHaveBeenCalled();
+    });
+
+    it("reads Annotater config and loads only its configured mappings subdirectory", async () => {
+        const mappings = new FakeDirectory("enigma").add(new FakeFile("Owner.mapping", "CLASS Owner\n"));
+        const root = new FakeDirectory("project")
+            .add(new FakeFile("config.json", JSON.stringify({ mappings: "docs/enigma", version: "26.1" })))
+            .add(new FakeDirectory("docs").add(mappings))
+            .add(new FakeFile("Ignored.mapping", "invalid"));
+
+        const project = await readAnnotaterDirectory(root.asHandle());
+
+        expect(project.version).toBe("26.1");
+        expect(project.source.handle.name).toBe("enigma");
+        expect(project.source.files.get("Owner")).toEqual(["Owner.mapping"]);
+        expect(bridge.readJavadocDirectoryFile).toHaveBeenCalledOnce();
+    });
+
+    it.each([
+        null,
+        [],
+        {},
+        { mappings: "docs" },
+        { mappings: "docs", version: " " },
+        { mappings: 1, version: "26.1" },
+        { mappings: "docs", version: 26.1 },
+    ])("rejects invalid Annotater config %j before loading mappings", async config => {
+        const root = new FakeDirectory("project")
+            .add(new FakeFile("config.json", JSON.stringify(config)));
+
+        await expect(readAnnotaterDirectory(root.asHandle())).rejects.toThrow("config.json must contain");
+
+        expect(bridge.beginJavadocDirectory).not.toHaveBeenCalled();
+    });
+
+    it.each(["", "/docs", "../docs", "docs/../other", "./docs", "docs//enigma", "docs/", "docs\\enigma", "C:/docs"])(
+        "rejects invalid Annotater mappings path %j",
+        async mappings => {
+            const root = new FakeDirectory("project")
+                .add(new FakeFile("config.json", JSON.stringify({ mappings, version: "26.1" })));
+
+            await expect(readAnnotaterDirectory(root.asHandle())).rejects.toThrow('The "mappings" path');
+
+            expect(bridge.beginJavadocDirectory).not.toHaveBeenCalled();
+        },
+    );
+
+    it("rejects missing or malformed Annotater config without loading mappings", async () => {
+        const root = new FakeDirectory("project");
+
+        await expect(readAnnotaterDirectory(root.asHandle())).rejects.toMatchObject({ name: "NotFoundError" });
+
+        root.add(new FakeFile("config.json", "invalid json"));
+        await expect(readAnnotaterDirectory(root.asHandle())).rejects.toThrow(SyntaxError);
+
+        expect(bridge.beginJavadocDirectory).not.toHaveBeenCalled();
+    });
+
+    it("does not create a missing Annotater mappings directory", async () => {
+        const root = new FakeDirectory("project")
+            .add(new FakeFile("config.json", JSON.stringify({ mappings: "missing", version: "26.1" })));
+
+        await expect(readAnnotaterDirectory(root.asHandle())).rejects.toMatchObject({ name: "NotFoundError" });
+
+        expect(root.entries.has("missing")).toBe(false);
+        expect(bridge.beginJavadocDirectory).not.toHaveBeenCalled();
     });
 
     it("recursively reads mapping files and preserves their paths", async () => {
