@@ -74,6 +74,12 @@ describe('Javadoc reference context', () => {
         '[#run(java.lang.String\\[\\]|)]',
         '```java\n[Ignored]\n```\n[Block|]',
         '`literal` [Block|]',
+        '@see |',
+        '@see Rem|ote',
+        '@see other.Remote#rem|ote()',
+        '@see #run(java.lang.String[]|)',
+        '@see #run(int, |java.lang.String)',
+        '@see [Rem|ote]',
     ])('recognises reference %s', markdown => {
         const { model, position } = documentAtCursor(markdown);
         expect(getJavadocReference(model, position)).not.toBeNull();
@@ -90,9 +96,69 @@ describe('Javadoc reference context', () => {
         '[Block|]: https://example.com',
         '![image|]',
         '[Finished] prose| ]',
+        '@see Remote custom lab|el',
+        '@see "quoted tex|t"',
+        '@see |"quoted text"',
+        '@see <a href="https://example.com">lab|el</a>',
+        '@see |<a href="https://example.com">label</a>',
+        '@see |[Remote]',
+        '    @see Rem|ote',
+        'Prose @see Rem|ote',
+        '```java\n@see Rem|ote\n```',
+        '~~~java\n@see Rem|ote\n~~~',
     ])('ignores Markdown context %s', markdown => {
         const { model, position } = documentAtCursor(markdown);
         expect(getJavadocReference(model, position)).toBeNull();
+    });
+});
+
+describe('@see reference completion', () => {
+    it('completes classes without adding Markdown brackets', async () => {
+        const { suggestions } = await complete('@see |');
+        expect(suggestions.find(item => item.detail === 'other.Remote')?.insertText).toBe('Remote$0');
+        expect(suggestions.find(item => item.detail === 'unimported.Unimported')?.insertText).toBe('unimported.Unimported$0');
+    });
+
+    it('completes imported and qualified member owners', async () => {
+        for (const owner of ['Remote', 'other.Remote']) {
+            const { suggestions } = await complete(`@see ${owner}#|`);
+            expect(suggestions.map(item => item.insertText)).toEqual([`${owner}#remote()$0`]);
+        }
+    });
+
+    it('offers overloads, inherited methods, and fields with unescaped array types', async () => {
+        const { suggestions } = await complete('@see #|');
+        expect(suggestions.map(item => item.insertText)).toEqual(expect.arrayContaining([
+            '#run(int)$0', '#run(java.lang.String[])$0', '#inherited()$0', '#VALUE$0',
+        ]));
+    });
+
+    it('replaces only the reference, preserving its custom label', async () => {
+        const { suggestions } = await complete('@see #ru|n(int) custom label');
+        const suggestion = suggestions.find(item => item.insertText === '#run(int)$0');
+        expect(suggestion?.range).toEqual({
+            insert: { startLineNumber: 1, startColumn: 6, endLineNumber: 1, endColumn: 9 },
+            replace: { startLineNumber: 1, startColumn: 6, endLineNumber: 1, endColumn: 15 },
+        });
+    });
+
+    it('preserves the member suffix when completing a class name', async () => {
+        const { suggestions } = await complete('@see Rem|ote#remote() custom label');
+        const suggestion = suggestions.find(item => item.detail === 'other.Remote');
+        expect(suggestion?.insertText).toBe('Remote$0');
+        expect(suggestion?.range).toEqual({
+            insert: { startLineNumber: 1, startColumn: 6, endLineNumber: 1, endColumn: 9 },
+            replace: { startLineNumber: 1, startColumn: 6, endLineNumber: 1, endColumn: 12 },
+        });
+    });
+
+    it('replaces a full method signature including spaces between arguments', async () => {
+        const { suggestions } = await complete('@see #run(int, |String[]) label');
+        const suggestion = suggestions.find(item => item.insertText === '#run(int)$0');
+        expect(suggestion?.range).toEqual({
+            insert: { startLineNumber: 1, startColumn: 6, endLineNumber: 1, endColumn: 16 },
+            replace: { startLineNumber: 1, startColumn: 6, endLineNumber: 1, endColumn: 25 },
+        });
     });
 });
 

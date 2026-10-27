@@ -2,6 +2,12 @@ declare module "*/mcsrc.wasm-runtime.js" {
     export async function load(src: string);
 }
 
+declare module "monaco-editor/languages/definitions/markdown/markdown.js" {
+    import type { languages } from "monaco-editor";
+    export const conf: languages.LanguageConfiguration;
+    export const language: languages.IMonarchLanguage;
+}
+
 interface FilePickerAcceptType {
     description?: string;
     accept: Record<string, string[]>;

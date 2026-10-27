@@ -1,6 +1,7 @@
 import type { editor, IPosition } from 'monaco-editor';
 
 export interface JavadocReference {
+    syntax: 'markdown' | 'see';
     prefix: string;
     startColumn: number;
     endColumn: number;
@@ -8,8 +9,44 @@ export interface JavadocReference {
     hasMemberSuffix: boolean;
 }
 
+function getSeeReference(line: string, cursor: number): JavadocReference | null {
+    const tag = /^ {0,3}@see[\t ]+/.exec(line);
+    if (!tag || cursor < tag[0].length) return null;
+
+    const start = tag[0].length;
+    if (/["<[]/u.test(line[start] ?? '')) return null;
+
+    let end = start;
+    let parentheses = 0;
+    while (end < line.length) {
+        const character = line[end];
+        if (character === '(') parentheses++;
+        if (character === ')') parentheses--;
+        if (!/[\p{ID_Continue}$.#(),[\]]/u.test(character) && !(parentheses > 0 && /[\t ]/.test(character))) {
+            break;
+        }
+        end++;
+    }
+    if (cursor > end) return null;
+
+    const prefix = line.slice(start, cursor);
+    if (!/^[\p{ID_Continue}$.]*(?:#[\p{ID_Continue}$]*(?:\([\p{ID_Continue}$.,[\]\s]*\)?)?)?$/u.test(prefix)) {
+        return null;
+    }
+    // Quoted text, HTML links, and Markdown links are not bare Java references.
+    if (end === start && line[start] && !/[\t ]/.test(line[start])) return null;
+
+    const memberSeparator = line.indexOf('#', cursor);
+    const hasMemberSuffix = !prefix.includes('#') && memberSeparator >= cursor && memberSeparator < end;
+    return {
+        syntax: 'see', prefix, startColumn: start + 1,
+        endColumn: (hasMemberSuffix ? memberSeparator : end) + 1,
+        hasClosingBracket: false, hasMemberSuffix,
+    };
+}
+
 /** Tracks code spans, fences, and the current reference bracket for documentation completions. */
-export function getMarkdownContext(model: editor.ITextModel, position: IPosition): { openBracket: number; inCode: boolean } {
+export function getMarkdownContext(model: Pick<editor.ITextModel, 'getValue' | 'getLineContent' | 'getOffsetAt'>, position: IPosition): { openBracket: number; inCode: boolean } {
     const text = model.getValue();
     let fence: { marker: string; length: number } | undefined;
     let codeSpanLength = 0;
@@ -81,14 +118,20 @@ export function getMarkdownContext(model: editor.ITextModel, position: IPosition
 /** Finds a Java reference while leaving Markdown code and ordinary links alone. */
 export function getJavadocReference(model: editor.ITextModel, position: IPosition): JavadocReference | null {
     const { openBracket, inCode } = getMarkdownContext(model, position);
-    if (inCode || openBracket < 0) {
+    if (inCode) {
         return null;
     }
     const line = model.getLineContent(position.lineNumber);
+    const cursor = position.column - 1;
+    const seeTag = /^ {0,3}@see[\t ]+/.exec(line);
+    if (seeTag && line[seeTag[0].length] !== '[') {
+        return getSeeReference(line, cursor);
+    }
+    if (openBracket < 0) return null;
+
     if (line[openBracket - 1] === '!') {
         return null;
     }
-    const cursor = position.column - 1;
     const prefix = line.slice(openBracket + 1, cursor);
     if (!/^[\w.$]*(?:#[\w$]*(?:\([\w.$,\\[\]\s]*\)?)?)?$/.test(prefix)) {
         return null;
@@ -119,5 +162,5 @@ export function getJavadocReference(model: editor.ITextModel, position: IPositio
     const memberSeparator = line.indexOf('#', cursor);
     const hasMemberSuffix = !prefix.includes('#') && memberSeparator >= cursor && memberSeparator < end;
     const replacementEnd = hasMemberSuffix ? memberSeparator : end;
-    return { prefix, startColumn: openBracket + 2, endColumn: replacementEnd + 1, hasClosingBracket, hasMemberSuffix };
+    return { syntax: 'markdown', prefix, startColumn: openBracket + 2, endColumn: replacementEnd + 1, hasClosingBracket, hasMemberSuffix };
 }

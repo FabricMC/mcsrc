@@ -7,7 +7,11 @@ import { JavadocCompletionProvider } from "./JavadocCompletionProvider";
 import { JavadocTagCompletionProvider } from "./JavadocTagCompletionProvider";
 import { jarIndex } from "../workers/jar-index/client";
 import type { Token } from "../logic/Tokens";
+import { applyJavadocValidation } from "./JavadocValidationMarkers";
+import { getJavadocDeclaration } from "./JavadocDeclaration";
+import { registerJavadocCodeActions } from "./JavadocCodeActions";
 import { isDarkMode } from "../logic/Browser";
+import { JAVADOC_MARKDOWN_LANGUAGE } from "./JavadocMarkdownLanguage";
 
 const MIN_EDITOR_HEIGHT = 84;
 const MAX_EDITOR_HEIGHT = 320;
@@ -47,8 +51,8 @@ const JavadocMarkdownEditor = ({
         if (!monaco || !decompileResult || !model) return;
 
         const provider = new JavadocCompletionProvider(decompileResult, token.className, index, model);
-        const completionItemProvider = monaco.languages.registerCompletionItemProvider('markdown', provider);
-        const tagCompletionProvider = monaco.languages.registerCompletionItemProvider('markdown', new JavadocTagCompletionProvider(decompileResult, token, model));
+        const completionItemProvider = monaco.languages.registerCompletionItemProvider(JAVADOC_MARKDOWN_LANGUAGE, provider);
+        const tagCompletionProvider = monaco.languages.registerCompletionItemProvider(JAVADOC_MARKDOWN_LANGUAGE, new JavadocTagCompletionProvider(decompileResult, token, model));
 
         return () => {
             completionItemProvider.dispose();
@@ -56,10 +60,22 @@ const JavadocMarkdownEditor = ({
         };
     }, [monaco, decompileResult, token, index, model]);
 
+    useEffect(() => {
+        if (!monaco || !decompileResult || !model) return;
+
+        const declaration = getJavadocDeclaration(decompileResult, token);
+        const validation = applyJavadocValidation(monaco, model, declaration);
+        const codeActions = registerJavadocCodeActions(monaco, model, declaration);
+        return () => {
+            codeActions.dispose();
+            validation.dispose();
+        };
+    }, [monaco, decompileResult, token, model]);
+
     return (
         <Editor
             height={height}
-            defaultLanguage="markdown"
+            defaultLanguage={JAVADOC_MARKDOWN_LANGUAGE}
             defaultValue={value}
             onChange={onChange}
             theme={darkMode ? "vs-dark" : "vs"}

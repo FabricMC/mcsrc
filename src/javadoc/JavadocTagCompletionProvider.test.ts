@@ -3,7 +3,7 @@ import type { editor, Position } from 'monaco-editor';
 import type { ParameterToken, Token } from '../logic/Tokens';
 import type { DecompileResult } from '../workers/decompile/types';
 import { toClassName } from '../utils/Names';
-import { getJavadocDeclaration } from './JavadocDeclaration';
+import { getDeclaredExceptions, getJavadocDeclaration } from './JavadocDeclaration';
 import { JavadocTagCompletionProvider } from './JavadocTagCompletionProvider';
 
 vi.mock('monaco-editor', () => ({
@@ -95,10 +95,11 @@ describe('Javadoc tag completion', () => {
         expect(suggestions.map(item => item.label)).toEqual(['count']);
     });
 
-    it('offers a bulk snippet with a Tab stop for every missing description', () => {
+    it('offers individual parameter completions without a bulk snippet', () => {
         const suggestions = complete('@param count documented\n@pa|');
-        const snippet = suggestions.find(item => item.label === '@param (all missing parameters)');
-        expect(snippet?.insertText).toBe('@param <T> ${1:description}\n@param value ${2:description}$0');
+        const parameters = suggestions.filter(item => String(item.label).startsWith('@param'));
+        expect(parameters.map(item => item.label)).toEqual(['@param <T>', '@param value']);
+        expect(parameters.every(item => !item.insertText.includes('\n'))).toBe(true);
     });
 
     it.each([
@@ -131,5 +132,75 @@ describe('Javadoc tag completion', () => {
 
     it.each(['```java\n@|\n```', '    @|', 'Contact user@|', '`@|`'])('leaves prose and code alone: %s', markdown => {
         expect(complete(markdown)).toEqual([]);
+    });
+});
+
+
+describe('Declared exception completion', () => {
+    const declaration = target(`public <E extends Exception> void |convert(
+        @Annotation(values = {"(", ")"}) int count
+    ) throws @TypeAnnotation java.io.IOException,
+        E;`);
+
+    it('reads multiline, qualified, annotated, and generic exception types', () => {
+        expect(getDeclaredExceptions(declaration.result, declaration.token)).toEqual(['java.io.IOException', 'E']);
+    });
+
+    it('reads constructor exceptions and legacy array return syntax', () => {
+        const constructor = target('public |Owner() throws IOException {}', 'method', '()V', '<init>');
+        expect(getDeclaredExceptions(constructor.result, constructor.token)).toEqual(['IOException']);
+        const method = target('public String |convert() [] throws IOException {}');
+        expect(getDeclaredExceptions(method.result, method.token)).toEqual(['IOException']);
+    });
+
+    it('does not read exceptions from method bodies or subsequent declarations', () => {
+        const method = target('void |convert() { throw new IOException(); } void other() throws OtherException {}');
+        expect(getDeclaredExceptions(method.result, method.token)).toEqual([]);
+    });
+
+    it('offers declared exceptions after @throws and @exception', () => {
+        for (const tag of ['throws', 'exception']) {
+            const suggestions = complete(`@${tag} |`, declaration);
+            expect(suggestions.map(item => item.label)).toEqual(['java.io.IOException', 'E']);
+            expect(suggestions[0].insertText).toBe('java.io.IOException ${1:description}$0');
+        }
+    });
+
+    it('offers complete throws snippets when completing a block tag', () => {
+        const suggestions = complete('@thr|', declaration);
+        expect(suggestions.find(item => item.label === '@throws java.io.IOException')?.insertText)
+            .toBe('@throws java.io.IOException ${1:description}$0');
+        expect(suggestions.map(item => item.label)).toContain('@throws');
+    });
+
+    it('excludes documented exceptions using either tag and short or qualified names', () => {
+        expect(complete('@throws IOException documented\n@exception E documented\n@throws |', declaration)).toEqual([]);
+        const shortName = target('void |convert() throws IOException {}');
+        expect(complete('@throws java.io.IOException documented\n@throws |', shortName)).toEqual([]);
+    });
+
+    it('preserves an existing description and replaces a qualified exception suffix', () => {
+        const suggestion = complete('@throws java.io.IO|Exception existing description', declaration)[0];
+        expect(suggestion.insertText).toBe('java.io.IOException$0');
+        expect(suggestion.range).toEqual({
+            insert: { startLineNumber: 1, startColumn: 9, endLineNumber: 1, endColumn: 19 },
+            replace: { startLineNumber: 1, startColumn: 9, endLineNumber: 1, endColumn: 28 },
+        });
+    });
+
+    it('ignores documented exceptions inside examples and the line being edited', () => {
+        const suggestions = complete('```java\n@throws java.io.IOException example\n```\n@throws java.io.IO|Exception description', declaration);
+        expect(suggestions.map(item => item.label)).toContain('java.io.IOException');
+    });
+
+    it('does not offer exceptions inside code, prose, parameter tags, or exception descriptions', () => {
+        for (const markdown of ['```java\n@throws |\n```', '    @throws |', 'Example @throws |', '@param |', '@throws IOException description |']) {
+            expect(complete(markdown, declaration).map(item => item.label)).not.toContain('java.io.IOException');
+        }
+    });
+
+    it('keeps generic throws snippets available for undeclared exceptions', () => {
+        expect(complete('@|').map(item => item.label)).toContain('@throws');
+        expect(complete('@throws |')).toEqual([]);
     });
 });

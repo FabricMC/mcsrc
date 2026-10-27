@@ -18,12 +18,16 @@ interface ReferenceContext {
     range: CompletionRange;
 }
 
-function escapeReference(reference: string): string {
+function escapeReference(reference: string, syntax: JavadocReference['syntax']): string {
+    if (syntax === 'see') return reference;
+
     return reference.replace(/[[\]]/g, '\\$&');
 }
 
 function createReferenceSnippet(text: string, reference: JavadocReference): string {
-    const escaped = escapeSnippet(escapeReference(text));
+    const escaped = escapeSnippet(escapeReference(text, reference.syntax));
+    if (reference.syntax === 'see') return `${escaped}$0`;
+
     const closingBracket = reference.hasClosingBracket || reference.hasMemberSuffix ? '' : ']';
     return `${escaped}$0${closingBracket}`;
 }
@@ -33,7 +37,7 @@ function shortType(type: string): string {
 }
 
 export class JavadocCompletionProvider implements languages.CompletionItemProvider {
-    readonly triggerCharacters = ['[', '#', '.', '(', ','];
+    readonly triggerCharacters = ['[', '#', '.', '(', ',', ' '];
     private readonly symbols: JavadocSymbols;
     private readonly model: editor.ITextModel;
 
@@ -129,7 +133,7 @@ export class JavadocCompletionProvider implements languages.CompletionItemProvid
             detail,
             insertText: createReferenceSnippet(reference, context.reference),
             insertTextRules: languages.CompletionItemInsertTextRule.InsertAsSnippet,
-            filterText: escapeReference(reference),
+            filterText: escapeReference(reference, context.reference.syntax),
             sortText: `${inherited ? '1' : '0'}:${member.name}:${member.descriptor}`,
             range: context.range,
             target: member,

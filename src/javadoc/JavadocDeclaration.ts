@@ -168,3 +168,20 @@ export function getJavadocDeclaration(result: DecompileResult, token: Token): Ja
     }
     return declaration;
 }
+
+/** Reads the throws clause of a method or constructor without scanning its body. */
+export function getDeclaredExceptions(result: DecompileResult, token: Token): string[] {
+    if (token.type !== 'method') return [];
+
+    const source = stripAnnotations(maskCommentsAndLiterals(result.source));
+    const afterName = skipWhitespace(source, token.start + token.length);
+    if (source[afterName] !== '(') return [];
+
+    const parameterEnd = closingDelimiter(source, afterName, '(', ')');
+    if (parameterEnd < 0) return [];
+
+    const clause = /^\s*(?:\[\s*\]\s*)*throws\s+([^;{]+)/.exec(source.slice(parameterEnd + 1));
+    if (!clause) return [];
+
+    return splitParameters(clause[1]).map(exception => exception.replace(/\s+/g, ''));
+}

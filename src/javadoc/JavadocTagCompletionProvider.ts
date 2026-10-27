@@ -1,20 +1,21 @@
 import { languages, type editor, type Position } from 'monaco-editor';
 import type { Token } from '../logic/Tokens';
 import type { DecompileResult } from '../workers/decompile/types';
-import { getJavadocDeclaration, type JavadocDeclaration } from './JavadocDeclaration';
+import { getDeclaredExceptions, getJavadocDeclaration, type JavadocDeclaration } from './JavadocDeclaration';
 import { getMarkdownContext } from './JavadocReference';
+import { readJavadocBlockTags } from './JavadocBlockTags';
 import { escapeSnippet, getCompletionRange, type CompletionRange } from './JavadocCompletionUtils';
 
 interface TagContext {
-    kind: 'tag' | 'parameter';
+    kind: 'tag' | 'parameter' | 'exception';
     range: CompletionRange;
     hasDescription: boolean;
-    indentation: string;
 }
 
 interface DocumentedTags {
     tags: Set<string>;
     parameters: Set<string>;
+    exceptions: Set<string>;
 }
 
 interface TagSuggestion {
@@ -55,12 +56,16 @@ function getTagContext(model: editor.ITextModel, position: Position): TagContext
     const cursor = position.column - 1;
     const beforeCursor = line.slice(0, cursor);
     const parameterMatch = /^ {0,3}@param[ \t]+([<\p{ID_Continue}$>]*)$/u.exec(beforeCursor);
+    const exceptionMatch = /^ {0,3}@(throws|exception)[ \t]+([\p{ID_Continue}$.]*)$/u.exec(beforeCursor);
     const tagMatch = /^ {0,3}@(\w*)$/.exec(beforeCursor);
     let kind: TagContext['kind'];
     let prefix: string;
     if (parameterMatch) {
         kind = 'parameter';
         prefix = parameterMatch[1];
+    } else if (exceptionMatch) {
+        kind = 'exception';
+        prefix = exceptionMatch[2];
     } else if (tagMatch) {
         kind = 'tag';
         prefix = `@${tagMatch[1]}`;
@@ -71,38 +76,54 @@ function getTagContext(model: editor.ITextModel, position: Position): TagContext
         return null;
     }
     const startColumn = position.column - prefix.length;
-    const suffix = /^[\p{ID_Continue}$<>]*/u.exec(line.slice(cursor))![0];
+    const suffixPattern = kind === 'exception' ? /^[\p{ID_Continue}$.]*/u : /^[\p{ID_Continue}$<>]*/u;
+    const suffix = suffixPattern.exec(line.slice(cursor))![0];
     const endColumn = position.column + suffix.length;
     return {
         kind,
         range: getCompletionRange(position, startColumn, endColumn),
         hasDescription: line.slice(endColumn - 1).trim().length > 0,
-        indentation: line.slice(0, startColumn - 1),
     };
 }
 
 function collectDocumentedTags(model: editor.ITextModel, currentLine: number): DocumentedTags {
-    const documented: DocumentedTags = { tags: new Set(), parameters: new Set() };
-    const lines = model.getValue().split('\n');
-    for (let index = 0; index < lines.length; index++) {
-        if (index + 1 === currentLine) {
-            continue;
+    const documented: DocumentedTags = { tags: new Set(), parameters: new Set(), exceptions: new Set() };
+    for (const tag of readJavadocBlockTags(model.getValue())) {
+        if (tag.line === currentLine) continue;
+
+        documented.tags.add(tag.name);
+        if (tag.name === 'param' && tag.parameter) {
+            documented.parameters.add(tag.parameter);
         }
-        const line = lines[index];
-        const tag = /^ {0,3}@(\w+)(?:[ \t]+(\S+))?/.exec(line);
-        if (!tag) {
-            continue;
-        }
-        const position = { lineNumber: index + 1, column: line.indexOf('@') + 2 };
-        if (getMarkdownContext(model, position).inCode) {
-            continue;
-        }
-        documented.tags.add(tag[1]);
-        if (tag[1] === 'param' && tag[2]) {
-            documented.parameters.add(tag[2]);
+        if (tag.name === 'throws' || tag.name === 'exception') {
+            const exception = /^\S+/.exec(tag.description)?.[0];
+            if (exception) documented.exceptions.add(exception);
         }
     }
     return documented;
+}
+
+function isExceptionDocumented(exception: string, documented: Set<string>): boolean {
+    for (const name of documented) {
+        if (name === exception || name === exception.split('.').at(-1) || exception === name.split('.').at(-1)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+function createExceptionSuggestions(exceptions: string[], context: TagContext): TagSuggestion[] {
+    if (context.kind === 'tag' && context.hasDescription) return [];
+
+    return exceptions.map(exception => {
+        const label = context.kind === 'exception' ? exception : `@throws ${exception}`;
+        const description = context.hasDescription ? '' : ' ${1:description}';
+        return {
+            label,
+            insertText: `${escapeSnippet(label)}${description}$0`,
+            detail: 'Document a declared exception',
+        };
+    });
 }
 
 function createParameterSuggestions(parameters: string[], context: TagContext): TagSuggestion[] {
@@ -120,15 +141,6 @@ function createParameterSuggestions(parameters: string[], context: TagContext): 
             label,
             insertText: `${escapeSnippet(label)}${description}$0`,
             detail: parameter.startsWith('<') ? 'Document a type parameter' : 'Document a parameter',
-        });
-    }
-    if (context.kind === 'tag' && parameters.length > 1) {
-        const lines = parameters.map((parameter, index) => `@param ${escapeSnippet(parameter)} \${${index + 1}:description}`);
-        suggestions.push({
-            label: '@param (all missing parameters)',
-            insertText: `${lines.join(`\n${context.indentation}`)}$0`,
-            detail: 'Tab between parameter descriptions',
-            filterText: '@param',
         });
     }
     return suggestions;
@@ -162,13 +174,15 @@ function createTagSuggestions(token: Token, declaration: JavadocDeclaration, doc
 }
 
 export class JavadocTagCompletionProvider implements languages.CompletionItemProvider {
-    readonly triggerCharacters = ['@', ' ', '<'];
+    readonly triggerCharacters = ['@', ' ', '<', '.'];
     private readonly declaration: JavadocDeclaration;
     private readonly token: Token;
     private readonly model: editor.ITextModel;
+    private readonly exceptions: string[];
 
     constructor(result: DecompileResult, token: Token, model: editor.ITextModel) {
         this.declaration = getJavadocDeclaration(result, token);
+        this.exceptions = getDeclaredExceptions(result, token);
         this.token = token;
         this.model = model;
     }
@@ -184,7 +198,14 @@ export class JavadocTagCompletionProvider implements languages.CompletionItemPro
         const documented = collectDocumentedTags(model, position.lineNumber);
         const missingParameters = [...this.declaration.typeParameters, ...this.declaration.parameters]
             .filter(parameter => !documented.parameters.has(parameter));
-        const suggestions = createParameterSuggestions(missingParameters, context);
+        const missingExceptions = this.exceptions.filter(exception => !isExceptionDocumented(exception, documented.exceptions));
+        const suggestions: TagSuggestion[] = [];
+        if (context.kind !== 'exception') {
+            suggestions.push(...createParameterSuggestions(missingParameters, context));
+        }
+        if (context.kind !== 'parameter') {
+            suggestions.push(...createExceptionSuggestions(missingExceptions, context));
+        }
         if (context.kind === 'tag') {
             suggestions.push(...createTagSuggestions(this.token, this.declaration, documented, context));
         }
