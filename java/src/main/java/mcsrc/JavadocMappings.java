@@ -4,6 +4,7 @@ import net.fabricmc.mappingio.MappedElementKind;
 import net.fabricmc.mappingio.MappingReader;
 import net.fabricmc.mappingio.MappingUtil;
 import net.fabricmc.mappingio.MappingVisitor;
+import net.fabricmc.mappingio.adapter.ForwardingMappingVisitor;
 import net.fabricmc.mappingio.format.MappingFormat;
 import net.fabricmc.mappingio.format.enigma.EnigmaFileReader;
 import net.fabricmc.mappingio.format.enigma.EnigmaFileWriter;
@@ -45,9 +46,10 @@ public final class JavadocMappings {
         }
 
         MemoryMappingTree nextTree = new MemoryMappingTree();
+        MappingVisitor visitor = withoutMethodVariables(nextTree);
         switch (format) {
-            case TINY_2_FILE -> Tiny2FileReader.read(new StringReader(text), nextTree);
-            case ENIGMA_FILE -> EnigmaFileReader.read(new StringReader(text), nextTree);
+            case TINY_2_FILE -> Tiny2FileReader.read(new StringReader(text), visitor);
+            case ENIGMA_FILE -> EnigmaFileReader.read(new StringReader(text), visitor);
             default -> throw new IOException("Unsupported Javadoc mapping format: " + format);
         }
 
@@ -94,7 +96,7 @@ public final class JavadocMappings {
         MemoryMappingTree fileTree = new MemoryMappingTree();
 
         try {
-            EnigmaFileReader.read(new StringReader(new String(file, StandardCharsets.UTF_8)), fileTree);
+            EnigmaFileReader.read(new StringReader(new String(file, StandardCharsets.UTF_8)), withoutMethodVariables(fileTree));
         } catch (IOException | RuntimeException e) {
             throw new IOException("Invalid Enigma mapping file " + path + ": " + e.getMessage(), e);
         }
@@ -263,6 +265,20 @@ public final class JavadocMappings {
         return result;
     }
 
+    private static MappingVisitor withoutMethodVariables(MappingVisitor next) {
+        return new ForwardingMappingVisitor(next) {
+            @Override
+            public boolean visitMethodArg(int argPosition, int lvIndex, String srcName) {
+                return false;
+            }
+
+            @Override
+            public boolean visitMethodVar(int lvtRowIndex, int lvIndex, int startOpIdx, int endOpIdx, String srcName) {
+                return false;
+            }
+        };
+    }
+
     private static MemoryMappingTree newEnigmaTree() {
         MemoryMappingTree result = new MemoryMappingTree();
         result.visitNamespaces(MappingUtil.NS_SOURCE_FALLBACK, List.of(MappingUtil.NS_TARGET_FALLBACK));
@@ -303,10 +319,7 @@ public final class JavadocMappings {
     }
 
     private static boolean isMeaningful(MappingTree.MethodMapping method) {
-        if (hasContent(method)) {
-            return true;
-        }
-        return method.getArgs().stream().anyMatch(JavadocMappings::hasContent);
+        return hasContent(method);
     }
 
     private static boolean hasContent(MappingTree.ElementMapping element) {
