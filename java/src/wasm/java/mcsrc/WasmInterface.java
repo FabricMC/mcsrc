@@ -8,6 +8,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import net.fabricmc.mappingio.format.MappingFormat;
+
 import org.teavm.jso.JSExport;
 import org.teavm.jso.core.JSMap;
 import org.teavm.jso.core.JSString;
@@ -16,6 +18,7 @@ import org.teavm.jso.typedarrays.Int8Array;
 
 public final class WasmInterface {
     private static final Indexer INDEXER = new Indexer();
+    private static final JavadocMappings JAVADOC_MAPPINGS = new JavadocMappings();
     private static ClassFileRemapper remapper;
 
     private WasmInterface() {
@@ -112,57 +115,78 @@ public final class WasmInterface {
 
     @JSExport
     public static String readJavadocs(ArrayBuffer mappings) throws IOException {
-        return JavadocMappings.read(toBytes(mappings));
+        return switch (JAVADOC_MAPPINGS.read(toBytes(mappings))) {
+            case TINY_2_FILE -> "tiny2";
+            case ENIGMA_FILE -> "enigma";
+            default -> throw new IllegalStateException("Unsupported Javadoc mapping format");
+        };
     }
 
     @JSExport
     public static void beginJavadocDirectory() {
-        JavadocMappings.beginDirectory();
+        JAVADOC_MAPPINGS.beginDirectory();
     }
 
     @JSExport
     public static String readJavadocDirectoryFile(ArrayBuffer mappings, String path) throws IOException {
-        return JavadocMappings.readDirectoryFile(toBytes(mappings), path);
+        return JAVADOC_MAPPINGS.readDirectoryFile(toBytes(mappings), path);
     }
 
     @JSExport
     public static void finishJavadocDirectory() {
-        JavadocMappings.finishDirectory();
+        JAVADOC_MAPPINGS.finishDirectory();
     }
 
     @JSExport
     public static void abortJavadocDirectory() {
-        JavadocMappings.abortDirectory();
+        JAVADOC_MAPPINGS.abortDirectory();
     }
 
     @JSExport
     public static Int8Array writeJavadocs(String format) throws IOException {
-        return toInt8Array(JavadocMappings.write(format));
+        return toInt8Array(JAVADOC_MAPPINGS.write(javadocFormat(format)));
     }
 
     @JSExport
     public static Int8Array writeJavadocClass(String owner) throws IOException {
-        return toInt8Array(JavadocMappings.writeClass(owner));
+        return toInt8Array(JAVADOC_MAPPINGS.writeClass(owner));
     }
 
     @JSExport
     public static Int8Array createJavadocs(String format) throws IOException {
-        return toInt8Array(JavadocMappings.create(format));
+        return toInt8Array(new JavadocMappings().write(javadocFormat(format)));
     }
 
     @JSExport
     public static void resetJavadocs() {
-        JavadocMappings.reset();
+        JAVADOC_MAPPINGS.reset();
     }
 
     @JSExport
     public static String getJavadoc(int kind, String owner, String name, String descriptor) {
-        return JavadocMappings.get(kind, owner, name, descriptor);
+        return JAVADOC_MAPPINGS.get(javadocElementKind(kind), owner, name, descriptor);
     }
 
     @JSExport
     public static void setJavadoc(int kind, String owner, String name, String descriptor, String comment) throws IOException {
-        JavadocMappings.set(kind, owner, name, descriptor, comment);
+        JAVADOC_MAPPINGS.set(javadocElementKind(kind), owner, name, descriptor, comment);
+    }
+
+    private static MappingFormat javadocFormat(String format) throws IOException {
+        return switch (format) {
+            case "tiny2" -> MappingFormat.TINY_2_FILE;
+            case "enigma" -> MappingFormat.ENIGMA_FILE;
+            default -> throw new IOException("Unsupported Javadoc mapping format: " + format);
+        };
+    }
+
+    private static JavadocMappings.ElementKind javadocElementKind(int kind) {
+        return switch (kind) {
+            case 0 -> JavadocMappings.ElementKind.CLASS;
+            case 1 -> JavadocMappings.ElementKind.FIELD;
+            case 2 -> JavadocMappings.ElementKind.METHOD;
+            default -> throw new IllegalArgumentException("Unsupported Javadoc element kind: " + kind);
+        };
     }
 
     private static ClassFileRemapper requireRemapper() {

@@ -22,24 +22,27 @@ import java.util.List;
 import java.util.Set;
 
 public final class JavadocMappings {
-    public static final int CLASS = 0;
-    public static final int FIELD = 1;
-    public static final int METHOD = 2;
-
-    private static final String OFFICIAL_NAMESPACE = "official";
-    private static MemoryMappingTree tree;
-    private static MemoryMappingTree pendingDirectoryTree;
-    private static Set<String> pendingDirectoryOwners;
-
-    private JavadocMappings() {
+    public enum ElementKind {
+        CLASS,
+        FIELD,
+        METHOD
     }
 
-    public static String read(byte[] bytes) throws IOException {
-        if (bytes.length == 0) throw new IOException("Javadoc mapping file is empty");
+    private static final String OFFICIAL_NAMESPACE = "official";
+    private MemoryMappingTree tree = newTree();
+    private MemoryMappingTree pendingDirectoryTree;
+    private Set<String> pendingDirectoryOwners;
+
+    public MappingFormat read(byte[] bytes) throws IOException {
+        if (bytes.length == 0) {
+            throw new IOException("Javadoc mapping file is empty");
+        }
 
         String text = new String(bytes, StandardCharsets.UTF_8);
         MappingFormat format = MappingReader.detectFormat(new StringReader(text));
-        if (format == null) throw new IOException("Unsupported Javadoc mapping format");
+        if (format == null) {
+            throw new IOException("Unsupported Javadoc mapping format");
+        }
 
         MemoryMappingTree nextTree = new MemoryMappingTree();
         switch (format) {
@@ -53,11 +56,13 @@ public final class JavadocMappings {
         }
 
         tree = nextTree;
-        return format == MappingFormat.TINY_2_FILE ? "tiny2" : "enigma";
+        return format;
     }
 
-    public static String[] readDirectory(byte[][] files, String[] paths) throws IOException {
-        if (files.length != paths.length) throw new IllegalArgumentException("File and path counts differ");
+    public String[] readDirectory(byte[][] files, String[] paths) throws IOException {
+        if (files.length != paths.length) {
+            throw new IllegalArgumentException("File and path counts differ");
+        }
 
         String[] owners = new String[files.length];
         beginDirectory();
@@ -76,12 +81,12 @@ public final class JavadocMappings {
         return owners;
     }
 
-    public static void beginDirectory() {
+    public void beginDirectory() {
         pendingDirectoryTree = newEnigmaTree();
         pendingDirectoryOwners = new HashSet<>();
     }
 
-    public static String readDirectoryFile(byte[] file, String path) throws IOException {
+    public String readDirectoryFile(byte[] file, String path) throws IOException {
         if (pendingDirectoryTree == null || pendingDirectoryOwners == null) {
             throw new IllegalStateException("No Enigma directory import is active");
         }
@@ -106,8 +111,12 @@ public final class JavadocMappings {
             }
         }
 
-        if (owner == null) throw new IOException("Enigma mapping file " + path + " is empty");
-        if (!pendingDirectoryOwners.add(owner)) throw new IOException("Duplicate Enigma mapping for " + owner);
+        if (owner == null) {
+            throw new IOException("Enigma mapping file " + path + " is empty");
+        }
+        if (!pendingDirectoryOwners.add(owner)) {
+            throw new IOException("Duplicate Enigma mapping for " + owner);
+        }
 
         String expectedPath = owner + ".mapping";
 
@@ -123,31 +132,30 @@ public final class JavadocMappings {
         return owner;
     }
 
-    public static void finishDirectory() {
-        if (pendingDirectoryTree == null) throw new IllegalStateException("No Enigma directory import is active");
+    public void finishDirectory() {
+        if (pendingDirectoryTree == null) {
+            throw new IllegalStateException("No Enigma directory import is active");
+        }
 
         tree = pendingDirectoryTree;
         abortDirectory();
     }
 
-    public static void abortDirectory() {
+    public void abortDirectory() {
         pendingDirectoryTree = null;
         pendingDirectoryOwners = null;
     }
 
-    public static byte[] create(String format) throws IOException {
-        return write(format, newTree());
-    }
-
-    public static void reset() {
+    public void reset() {
         tree = newTree();
+        abortDirectory();
     }
 
-    public static String get(int kind, String owner, String name, String descriptor) {
-        if (tree == null) return null;
-
+    public String get(ElementKind kind, String owner, String name, String descriptor) {
         MappingTree.ClassMapping clazz = tree.getClass(owner);
-        if (clazz == null) return null;
+        if (clazz == null) {
+            return null;
+        }
 
         return switch (kind) {
             case CLASS -> clazz.getComment();
@@ -159,29 +167,34 @@ public final class JavadocMappings {
                 MappingTree.MethodMapping method = clazz.getMethod(name, descriptor);
                 yield method == null ? null : method.getComment();
             }
-            default -> throw new IllegalArgumentException("Unsupported Javadoc element kind: " + kind);
         };
     }
 
-    public static void set(int kind, String owner, String name, String descriptor, String comment) throws IOException {
-        if (tree == null) throw new IllegalStateException("No Javadoc mappings are active");
-        if (comment != null && comment.isEmpty()) comment = null;
+    public void set(ElementKind kind, String owner, String name, String descriptor, String comment) throws IOException {
+        if (comment != null && comment.isEmpty()) {
+            comment = null;
+        }
 
         MappingTree.ClassMapping clazz = tree.getClass(owner);
         if (comment == null) {
-            if (clazz == null) return;
+            if (clazz == null) {
+                return;
+            }
 
             switch (kind) {
                 case CLASS -> clazz.setComment(null);
                 case FIELD -> {
                     MappingTree.FieldMapping field = clazz.getField(name, descriptor);
-                    if (field != null) field.setComment(null);
+                    if (field != null) {
+                        field.setComment(null);
+                    }
                 }
                 case METHOD -> {
                     MappingTree.MethodMapping method = clazz.getMethod(name, descriptor);
-                    if (method != null) method.setComment(null);
+                    if (method != null) {
+                        method.setComment(null);
+                    }
                 }
-                default -> throw new IllegalArgumentException("Unsupported Javadoc element kind: " + kind);
             }
 
             pruneEmptyEntries(clazz, kind, name, descriptor);
@@ -205,21 +218,17 @@ public final class JavadocMappings {
                     tree.visitElementContent(MappedElementKind.METHOD);
                     tree.visitComment(MappedElementKind.METHOD, comment);
                 }
-                default -> throw new IllegalArgumentException("Unsupported Javadoc element kind: " + kind);
             }
         } finally {
             tree.visitEnd();
         }
     }
 
-    public static byte[] write(String format) throws IOException {
-        if (tree == null) throw new IllegalStateException("No Javadoc mappings are active");
+    public byte[] write(MappingFormat format) throws IOException {
         return write(format, tree);
     }
 
-    public static byte[] writeClass(String owner) throws IOException {
-        if (tree == null) throw new IllegalStateException("No Javadoc mappings are active");
-
+    public byte[] writeClass(String owner) throws IOException {
         String outerOwner = outerClassName(owner);
         MemoryMappingTree classTree = newEnigmaTree();
 
@@ -229,16 +238,18 @@ public final class JavadocMappings {
             }
         }
 
-        if (classTree.getClasses().isEmpty()) return new byte[0];
+        if (classTree.getClasses().isEmpty()) {
+            return new byte[0];
+        }
 
-        return write("enigma", classTree);
+        return write(MappingFormat.ENIGMA_FILE, classTree);
     }
 
-    private static byte[] write(String format, MemoryMappingTree source) throws IOException {
+    private static byte[] write(MappingFormat format, MemoryMappingTree source) throws IOException {
         StringWriter output = new StringWriter();
         MappingVisitor writer = switch (format) {
-            case "tiny2" -> new Tiny2FileWriter(output, false);
-            case "enigma" -> new EnigmaFileWriter(output);
+            case TINY_2_FILE -> new Tiny2FileWriter(output, false);
+            case ENIGMA_FILE -> new EnigmaFileWriter(output);
             default -> throw new IOException("Unsupported Javadoc mapping format: " + format);
         };
         source.accept(writer, VisitOrder.createByName().classesBySrcNameShortFirst());
@@ -259,21 +270,31 @@ public final class JavadocMappings {
         return result;
     }
 
-    private static void pruneEmptyEntries(MappingTree.ClassMapping clazz, int kind, String name, String descriptor) {
-        if (kind == FIELD) {
+    private void pruneEmptyEntries(MappingTree.ClassMapping clazz, ElementKind kind, String name, String descriptor) {
+        if (kind == ElementKind.FIELD) {
             MappingTree.FieldMapping field = clazz.getField(name, descriptor);
-            if (field != null && !isMeaningful(field)) clazz.removeField(name, descriptor);
-        } else if (kind == METHOD) {
+            if (field != null && !isMeaningful(field)) {
+                clazz.removeField(name, descriptor);
+            }
+        } else if (kind == ElementKind.METHOD) {
             MappingTree.MethodMapping method = clazz.getMethod(name, descriptor);
-            if (method != null && !isMeaningful(method)) clazz.removeMethod(name, descriptor);
+            if (method != null && !isMeaningful(method)) {
+                clazz.removeMethod(name, descriptor);
+            }
         }
 
-        if (!isMeaningful(clazz)) tree.removeClass(clazz.getSrcName());
+        if (!isMeaningful(clazz)) {
+            tree.removeClass(clazz.getSrcName());
+        }
     }
 
     private static boolean isMeaningful(MappingTree.ClassMapping clazz) {
-        if (hasContent(clazz)) return true;
-        if (clazz.getFields().stream().anyMatch(JavadocMappings::isMeaningful)) return true;
+        if (hasContent(clazz)) {
+            return true;
+        }
+        if (clazz.getFields().stream().anyMatch(JavadocMappings::isMeaningful)) {
+            return true;
+        }
         return clazz.getMethods().stream().anyMatch(JavadocMappings::isMeaningful);
     }
 
@@ -282,15 +303,21 @@ public final class JavadocMappings {
     }
 
     private static boolean isMeaningful(MappingTree.MethodMapping method) {
-        if (hasContent(method)) return true;
+        if (hasContent(method)) {
+            return true;
+        }
         return method.getArgs().stream().anyMatch(JavadocMappings::hasContent);
     }
 
     private static boolean hasContent(MappingTree.ElementMapping element) {
-        if (element.getComment() != null) return true;
+        if (element.getComment() != null) {
+            return true;
+        }
 
         for (int namespace = 0; namespace < element.getTree().getMaxNamespaceId(); namespace++) {
-            if (element.getDstName(namespace) != null) return true;
+            if (element.getDstName(namespace) != null) {
+                return true;
+            }
         }
 
         return false;
@@ -301,8 +328,12 @@ public final class JavadocMappings {
 
         while (true) {
             int separator = name.indexOf('$', start);
-            if (separator < 0) return name;
-            if (separator == 0 || name.charAt(separator - 1) != '/') return name.substring(0, separator);
+            if (separator < 0) {
+                return name;
+            }
+            if (separator == 0 || name.charAt(separator - 1) != '/') {
+                return name.substring(0, separator);
+            }
             start = separator + 1;
         }
     }
