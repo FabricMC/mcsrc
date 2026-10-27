@@ -2,7 +2,7 @@ import type { editor } from "monaco-editor";
 import { findTokenAtPosition } from './CodeUtils';
 import type { DecompileResult } from "../workers/decompile/types";
 import { openInheritanceViewTab } from "../logic/tabs";
-import { dottedClassNameFromClassName, type ClassFilePath, type ClassName } from "../utils/Names";
+import { dottedClassNameFromClassName, dollarToDottedClassName, type ClassFilePath, type ClassName } from "../utils/Names";
 import type { ReferenceKey } from "../workers/jar-index/types";
 import { supportsPermalinking } from "../logic/Settings";
 import { firstValueFrom } from "rxjs";
@@ -148,6 +148,43 @@ export function createCopyMixinAction(
             }
 
             messageApi.success("Copied Mixin target to clipboard.");
+        }
+    };
+}
+
+export function createCopyQualifiedNameAction(
+    decompileResultRef: { current: DecompileResult | undefined; },
+    classListRef: { current: ClassFilePath[] | undefined; },
+    messageApi: { error: (msg: string) => void; success: (msg: string) => void; }
+) {
+    return {
+        id: 'copy_qualified_name',
+        label: 'Copy Qualified Name',
+        contextMenuGroupId: '9_cutcopypaste',
+        precondition: IS_DEFINITION_CONTEXT_KEY_NAME,
+        run: async function (editor: editor.ICodeEditor, ...args: any[]): Promise<void> {
+            const token = findTokenAtPosition(editor, decompileResultRef.current, classListRef.current);
+            if (!token) {
+                messageApi.error("Failed to find token for Qualified Name.");
+                return;
+            }
+
+            switch (token.type) {
+                case "class":
+                    await setClipboard(`${dollarToDottedClassName(dottedClassNameFromClassName(token.className))}`);
+                    break;
+                case "field":
+                    await setClipboard(`${dollarToDottedClassName(dottedClassNameFromClassName(token.className))}.${token.name}`);
+                    break;
+                case "method":
+                    await setClipboard(`${dollarToDottedClassName(dottedClassNameFromClassName(token.className))}.${token.name}`);
+                    break;
+                default:
+                    messageApi.error("Token is not a class, field, or method.");
+                    return;
+            }
+
+            messageApi.success("Copied Qualified Name to clipboard.");
         }
     };
 }

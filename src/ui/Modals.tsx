@@ -5,6 +5,7 @@ import SettingsModal from "./SettingsModal";
 import StructureModal from "./StructureModal";
 import { JarDecompilerModal, JarDecompilerProgressModal } from "./JarDecompilerModal";
 import IndexProgressNotification from "./IndexProgressNotification";
+import LauncherMetaModal from "./meta/LauncherMetaModal";
 
 const Modals = () => {
     return (
@@ -14,6 +15,7 @@ const Modals = () => {
             <JavadocModal />
             <AboutModal />
             <SettingsModal />
+            <LauncherMetaModal />
             <StructureModal />
             <JarDecompilerModal />
             <JarDecompilerProgressModal />

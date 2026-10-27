@@ -1,14 +1,15 @@
 import { Button, Flex, Modal, type CheckboxProps, Form, Tooltip, InputNumber, type InputNumberProps, Space, Tabs } from "antd";
-import { SettingOutlined, SunOutlined, MoonOutlined, DesktopOutlined, JavaOutlined, CloseOutlined } from '@ant-design/icons';
+import { SettingOutlined, SunOutlined, MoonOutlined, DesktopOutlined, JavaOutlined, CloseOutlined, FileTextOutlined } from '@ant-design/icons';
 import { Checkbox } from 'antd';
 import { useObservable } from "../utils/UseObservable";
-import { BooleanSetting, enableTabs, displayLambdas, focusSearch, KeybindSetting, type KeybindValue, bytecode, showStructure, NumberSetting, preferWasmDecompiler, compactPackages, theme, autoJarIndex } from "../logic/Settings";
+import { BooleanSetting, enableTabs, displayLambdas, focusSearch, KeybindSetting, type KeybindValue, bytecode, showStructure, NumberSetting, preferWasmDecompiler, compactPackages, theme, autoJarIndex, showInheritanceIcons, showClassHistoryIcons } from "../logic/Settings";
 import { capturingKeybind, rawKeydownEvent } from "../logic/Keybinds";
 import { BehaviorSubject } from "rxjs";
 import React, { useEffect, useState } from "react";
 import { modalOpen } from "./JarDecompilerModal";
 import JavadocFilePicker from "../javadoc/JavadocFilePicker";
 import { activeJavadocFile, deactivateJavadocFile } from "../javadoc/Javadoc";
+import { openLauncherMeta } from "../logic/LauncherMeta";
 
 export const settingsModalOpen = new BehaviorSubject<boolean>(false);
 
@@ -35,6 +36,8 @@ const SettingsTab = () => {
             <Form className="settings-form" layout="horizontal" labelCol={{ span: 9 }} wrapperCol={{ span: 16 }}>
                 <ThemeOption />
                 <BooleanOption setting={enableTabs} title="Enable Tabs" />
+                <BooleanOption setting={showInheritanceIcons} title="Inheritance Gutter Icons" tooltip="Show gutter icons for class inheritance and method overrides." />
+                <BooleanOption setting={showClassHistoryIcons} title="Class History Gutter Icons" tooltip="Show gutter icons for class version history." />
                 <BooleanOption setting={compactPackages} title="Compact Packages" tooltip="Collapse packages with one child into one." />
                 <BooleanOption setting={autoJarIndex} title="Auto Jar Index" tooltip="Automatically index class metadata for file icons." />
                 <BooleanOption setting={displayLambdas} title="Lambda Names" tooltip="Display lambda names as inline comments. Does not support permalinking." disabled={bytecodeValue} />
@@ -68,6 +71,15 @@ const AdvancedTab = () => {
                 }}
             >
                 Decompile All
+            </Button>
+            <Button
+                icon={<FileTextOutlined />}
+                onClick={() => {
+                    settingsModalOpen.next(false);
+                    openLauncherMeta();
+                }}
+            >
+                Launcher meta
             </Button>
             <JavadocFilePicker />
             <Button
@@ -130,7 +142,7 @@ export const BooleanOption: React.FC<BooleanOptionProps> = ({ setting, title, to
         setting.value = e.target.checked;
     };
 
-    const checkbox = <Checkbox checked={value} onChange={onChange} disabled={disabled} />;
+    const checkbox = <Checkbox aria-label={title} checked={value} onChange={onChange} disabled={disabled} />;
 
     return (
         <Form.Item label={title}>

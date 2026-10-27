@@ -149,22 +149,20 @@ if (typeof window !== "undefined") {
             vineflowerVersion
         ]) => {
             if (!file && !diffView) {
-                document.title = "mcsrc.dev";
                 window.location.hash = '';
                 window.history.replaceState({}, '', '/');
+                document.title = "mcsrc.dev";
                 return;
             }
 
-            if (file) {
-                const className = withoutClassExtension(file.split('/').pop() || file);
-                document.title = className;
-            } else {
-                document.title = "mcsrc.dev";
-            }
+            const title = file
+                ? withoutClassExtension(file.split('/').pop() || file)
+                : "mcsrc.dev";
 
             if (!supported) {
                 window.location.hash = '';
                 window.history.replaceState({}, '', '/');
+                document.title = title;
                 return;
             }
 
@@ -200,6 +198,7 @@ if (typeof window !== "undefined") {
             }
 
             window.history.replaceState({}, '', url);
+            document.title = title;
         });
     });
 }

@@ -1,5 +1,6 @@
-import { BehaviorSubject, combineLatest, distinctUntilChanged, map, of, shareReplay, switchMap } from "rxjs";
+import { BehaviorSubject, catchError, combineLatest, defer, distinctUntilChanged, forkJoin, map, of, shareReplay, startWith, switchMap } from "rxjs";
 import { jarIndex, type ClassData } from "../workers/jar-index/client";
+import { HierarchyNavigation } from './HierarchyNavigation';
 import { minecraftJar } from "./MinecraftApi";
 import { classNameFromClassFilePath, isClassFilePath, type ClassName } from "../utils/Names";
 
@@ -58,6 +59,24 @@ export class InheritanceIndex {
 }
 
 
+
+export const hierarchyNavigation = jarIndex.pipe(
+    switchMap(index => defer(() => forkJoin({
+        classes: index.getClassData(),
+        members: index.getMemberData(),
+    })).pipe(
+        map(({ classes, members }) => ({
+            jarName: index.minecraftJar.jar.name,
+            index: new HierarchyNavigation(classes, members),
+        })),
+        catchError(error => {
+            console.error('Failed to load hierarchy navigation', error);
+            return of(null);
+        }),
+        startWith(null),
+    )),
+    shareReplay({ bufferSize: 1, refCount: true }),
+);
 
 export const selectedInheritanceClassName = new BehaviorSubject<ClassName | null>(null);
 

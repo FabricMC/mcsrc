@@ -219,7 +219,6 @@ export const TabsComponent = () => {
                         key: tab.key,
                         label: (
                             <div
-                                onMouseDown={(e) => { handleMouseDown(e, tab.key); }}
                                 onContextMenu={(e) => { handleContextMenu(e, tab.key); }}
                                 ref={(el) => { tabRefs.current[tab.key] = el; }}
                                 style={{ userSelect: "none", display: "inline" }}
@@ -234,7 +233,7 @@ export const TabsComponent = () => {
                     renderTabBar={(tabBarProps, DefaultTabBar) => (
                         <DefaultTabBar {...tabBarProps}>
                             {(node) => (
-                                <div style={borderStyle(String(node.key))}>
+                                <div style={borderStyle(String(node.key))} onMouseDown={(e) => handleMouseDown(e, node.key!)}>
                                     {node}
                                 </div>
                             )}

@@ -1,4 +1,4 @@
-import { Button, Divider, Dropdown, Flex, Input } from "antd";
+import { Button, Checkbox, Divider, Dropdown, Flex, Input } from "antd";
 import Header from "./Header";
 import FileList from "./FileList";
 import type { InputProps, InputRef } from "antd/es/input";
@@ -7,15 +7,19 @@ import { useObservable } from "../utils/UseObservable";
 import { isSearching } from "../logic/JarFile";
 import SearchResults from "./SearchResults";
 import ReferenceResults from "./ReferenceResults";
-import { formatReferenceQuery, isViewingReferences } from "../logic/FindAllReferences";
-import { ArrowLeftOutlined, CaretDownOutlined, SearchOutlined } from "@ant-design/icons";
+import { formatReferenceQuery, isViewingReferences, methodReferenceKeys } from "../logic/FindAllReferences";
+import { includeMethodHierarchy } from "../logic/Settings";
+import { ArrowLeftOutlined, CaretDownOutlined } from "@ant-design/icons";
 import { focusSearchEvent } from "../logic/Keybinds";
 import { useEffect, useRef } from "react";
 import { searchQuery, referencesQuery, searchType, type SearchType } from "../logic/State";
+import { ClassIcon, FieldIcon, MethodIcon } from "./intellij-icons";
 
 const SideBar = () => {
     const showReference = useObservable(isViewingReferences);
     const currentReferenceQuery = useObservable(referencesQuery);
+    const hierarchyKeys = useObservable(methodReferenceKeys) ?? [];
+    const includeHierarchy = useObservable(includeMethodHierarchy.observable);
     const currentSearchType = useObservable(searchType);
     const focusSearch = useObservable(focusSearchEvent);
     const searchRef = useRef<InputRef>(null);
@@ -37,11 +41,20 @@ const SideBar = () => {
         searchQuery.next(e.target.value);
     };
 
-    const searchTypeMenuItems: MenuProps["items"] = [
-        { key: "classes", label: "Classes" },
-        { key: "methods", label: "Methods" },
-        { key: "fields", label: "Fields" }
+    type SearchTypeData = {
+        key: SearchType;
+        label: string;
+        Icon: typeof ClassIcon;
+    };
+
+    const searchTypeMenuItems: SearchTypeData[] = [
+        { key: "classes", label: "Classes", Icon: ClassIcon },
+        { key: "methods", label: "Methods", Icon: MethodIcon },
+        { key: "fields", label: "Fields", Icon: FieldIcon }
     ];
+
+    const selectedSearchType = searchTypeMenuItems.find(type => type.key === currentSearchType);
+    const SearchTypeIcon = selectedSearchType?.Icon ?? ClassIcon;
 
     const onSearchTypeMenuClick: MenuProps["onClick"] = ({ key }) => {
         searchType.next(key as SearchType);
@@ -62,6 +75,13 @@ const SideBar = () => {
                     <div style={{ fontSize: "12px", textAlign: "center" }}>
                         References of: {currentReferenceQuery ? formatReferenceQuery(currentReferenceQuery) : ""}
                     </div>
+                    {hierarchyKeys.length > 1 && <Checkbox
+                        checked={includeHierarchy}
+                        onChange={event => {
+                            includeMethodHierarchy.value = event.target.checked;
+                        }}
+                        style={{ marginTop: 8, alignSelf: "center" }}
+                    >Include method hierarchy</Checkbox>}
                 </>
             ) : (
                 <Input
@@ -74,7 +94,12 @@ const SideBar = () => {
                     addonAfter={
                         <Dropdown
                             menu={{
-                                items: searchTypeMenuItems,
+                                items: searchTypeMenuItems.map(({ key, label, Icon }) => ({
+                                    key,
+                                    label,
+                                    style: { paddingInline: "6px" },
+                                    icon: <Icon style={{ fontSize: "20px", marginRight: "6px" }} />
+                                })),
                                 selectable: true,
                                 selectedKeys: [currentSearchType],
                                 onClick: onSearchTypeMenuClick
@@ -84,11 +109,14 @@ const SideBar = () => {
                             <Button
                                 type="text"
                                 size="small"
-                                icon={<><SearchOutlined /><CaretDownOutlined style={{ fontSize: "10px", verticalAlign: "0.1em", marginLeft: "-2px" }} /></>}
+                                icon={<SearchTypeIcon style={{ fontSize: "20px" }} />}
                                 aria-label="Search type"
-                                title={`Search type: ${currentSearchType}`}
-                                style={{ width: 38 }}
-                            />
+                                title={`Search type: ${selectedSearchType?.label ?? "Unknown"}`}
+                                style={{ gap: "4px" }}
+                            >
+                                {selectedSearchType?.label ?? "Unknown"}
+                                <CaretDownOutlined style={{ fontSize: "10px" }} />
+                            </Button>
                         </Dropdown>
                     }
                 />

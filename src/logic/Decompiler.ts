@@ -37,7 +37,7 @@ export function decompileResultPipeline(jar: Observable<MinecraftJar>): Observab
         displayLambdas.observable,
     ]).pipe(
         distinctUntilChanged(),
-        throttleTime(250),
+        throttleTime(250, undefined, { leading: true, trailing: true }),
         switchMap(([file, jar, bytecode, displayLambdas]) => {
             if (!file) {
                 return of();
