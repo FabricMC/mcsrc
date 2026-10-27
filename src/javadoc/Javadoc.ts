@@ -7,6 +7,7 @@ import {
     setStoredJavadoc,
     writeJavadocSource,
     type JavadocSource,
+    type JavadocTarget,
 } from "./JavadocStorage";
 
 export type JavadocString = string;
@@ -34,16 +35,16 @@ export async function saveTokenJavadoc(token: Token, javadoc: JavadocString | un
     const target = getJavadocTarget(token);
     if (!target) throw new Error("This token cannot have Javadoc");
 
-    const previous = getStoredJavadoc(...target);
+    const previous = getStoredJavadoc(target);
     const next = javadoc || null;
     if (previous === next) return;
 
-    setStoredJavadoc(...target, next);
+    setStoredJavadoc(target, next);
 
     try {
-        await writeJavadocSource(file, target[1]);
+        await writeJavadocSource(file, target.owner);
     } catch (error) {
-        setStoredJavadoc(...target, previous);
+        setStoredJavadoc(target, previous);
         throw error;
     }
 
@@ -56,22 +57,32 @@ export function observeJavadocForToken(token: Token): Observable<JavadocString |
 
 export function getJavadocForToken(token: Token): JavadocString | null {
     const target = getJavadocTarget(token);
-    return target ? getStoredJavadoc(...target) : null;
+    return target ? getStoredJavadoc(target) : null;
 }
 
-function getJavadocTarget(token: Token): [
-    JavadocElementKind,
-    string,
-    string,
-    string,
-] | null {
+function getJavadocTarget(token: Token): JavadocTarget | null {
     switch (token.type) {
         case "class":
-            return [JavadocElementKind.Class, token.className, "", ""];
+            return {
+                kind: JavadocElementKind.Class,
+                owner: token.className,
+                name: "",
+                descriptor: "",
+            };
         case "field":
-            return [JavadocElementKind.Field, token.className, token.name, token.descriptor];
+            return {
+                kind: JavadocElementKind.Field,
+                owner: token.className,
+                name: token.name,
+                descriptor: token.descriptor,
+            };
         case "method":
-            return [JavadocElementKind.Method, token.className, token.name, token.descriptor];
+            return {
+                kind: JavadocElementKind.Method,
+                owner: token.className,
+                name: token.name,
+                descriptor: token.descriptor,
+            };
         default:
             return null;
     }

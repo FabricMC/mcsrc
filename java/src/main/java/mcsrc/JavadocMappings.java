@@ -120,13 +120,6 @@ public final class JavadocMappings {
             throw new IOException("Duplicate Enigma mapping for " + owner);
         }
 
-        String expectedPath = owner + ".mapping";
-
-        if (!expectedPath.equals(path)) {
-            throw new IOException("Enigma mapping path " + path
-                    + " does not match class " + owner + " (expected " + expectedPath + ")");
-        }
-
         for (MappingTree.ClassMapping clazz : fileTree.getClasses()) {
             pendingDirectoryTree.addClass(clazz);
         }
@@ -289,12 +282,12 @@ public final class JavadocMappings {
     private void pruneEmptyEntries(MappingTree.ClassMapping clazz, ElementKind kind, String name, String descriptor) {
         if (kind == ElementKind.FIELD) {
             MappingTree.FieldMapping field = clazz.getField(name, descriptor);
-            if (field != null && !isMeaningful(field)) {
+            if (field != null && !hasContent(field)) {
                 clazz.removeField(name, descriptor);
             }
         } else if (kind == ElementKind.METHOD) {
             MappingTree.MethodMapping method = clazz.getMethod(name, descriptor);
-            if (method != null && !isMeaningful(method)) {
+            if (method != null && !hasContent(method)) {
                 clazz.removeMethod(name, descriptor);
             }
         }
@@ -308,18 +301,10 @@ public final class JavadocMappings {
         if (hasContent(clazz)) {
             return true;
         }
-        if (clazz.getFields().stream().anyMatch(JavadocMappings::isMeaningful)) {
+        if (clazz.getFields().stream().anyMatch(JavadocMappings::hasContent)) {
             return true;
         }
-        return clazz.getMethods().stream().anyMatch(JavadocMappings::isMeaningful);
-    }
-
-    private static boolean isMeaningful(MappingTree.FieldMapping field) {
-        return hasContent(field);
-    }
-
-    private static boolean isMeaningful(MappingTree.MethodMapping method) {
-        return hasContent(method);
+        return clazz.getMethods().stream().anyMatch(JavadocMappings::hasContent);
     }
 
     private static boolean hasContent(MappingTree.ElementMapping element) {
@@ -344,7 +329,7 @@ public final class JavadocMappings {
             if (separator < 0) {
                 return name;
             }
-            if (separator == 0 || name.charAt(separator - 1) != '/') {
+            if (separator > 0 && name.charAt(separator - 1) != '/') {
                 return name.substring(0, separator);
             }
             start = separator + 1;

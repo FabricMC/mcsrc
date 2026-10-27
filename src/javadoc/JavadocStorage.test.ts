@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { toClassName } from "../utils/Names";
 
 const bridge = vi.hoisted(() => ({
     readJavadocs: vi.fn(),
@@ -87,12 +88,13 @@ class FakeDirectory {
             name: this.name,
             async *values() {
                 for (const entry of directory.entries.values()) {
-                    yield entry instanceof FakeDirectory ? entry.asHandle() : entry.asHandle();
+                    yield entry.asHandle();
                 }
             },
             async getDirectoryHandle(name: string, options?: { create?: boolean }) {
                 const existing = directory.entries.get(name);
                 if (existing instanceof FakeDirectory) return existing.asHandle();
+                if (existing) throw new DOMException("Entry is a file", "TypeMismatchError");
                 if (!options?.create) throw new DOMException("Missing directory", "NotFoundError");
 
                 const created = new FakeDirectory(name);
@@ -102,6 +104,7 @@ class FakeDirectory {
             async getFileHandle(name: string, options?: { create?: boolean }) {
                 const existing = directory.entries.get(name);
                 if (existing instanceof FakeFile) return existing.asHandle();
+                if (existing) throw new DOMException("Entry is a directory", "TypeMismatchError");
                 if (!options?.create) throw new DOMException("Missing file", "NotFoundError");
 
                 const created = new FakeFile(name);
@@ -176,19 +179,49 @@ describe("JavadocStorage", () => {
         expect(bridge.finishJavadocDirectory).not.toHaveBeenCalled();
     });
 
-    it("rewrites only the changed class at its existing path", async () => {
+    it("rewrites only the changed class at its mapped path", async () => {
         const changed = new FakeFile("A.mapping", "old");
         const untouched = new FakeFile("Other.mapping", "untouched");
-        const packageDirectory = new FakeDirectory("a").add(changed).add(untouched);
+        const packageDirectory = new FakeDirectory("named").add(changed).add(untouched);
         const root = new FakeDirectory("mappings").add(packageDirectory);
-        const source = directorySource(root, new Map([["a/A", ["a", "A.mapping"]]]));
+        const source = directorySource(root, new Map([["a/A", ["named", "A.mapping"]]]));
         bridge.writeJavadocClass.mockReturnValue(new Int8Array([1, 2, 3]));
 
-        await writeJavadocSource(source, "a/A$Inner");
+        await writeJavadocSource(source, toClassName("a/A$Inner"));
 
         expect(changed.writes).toBe(1);
         expect(untouched.writes).toBe(0);
         expect([...changed.content]).toEqual([1, 2, 3]);
+        expect(source.files.get("a/A")).toEqual(["named", "A.mapping"]);
+    });
+
+    it("preserves a directory at the target mapping file path", async () => {
+        const existing = new FakeDirectory("Owner.mapping");
+        const root = new FakeDirectory("mappings").add(existing);
+        const source = directorySource(root);
+        bridge.writeJavadocClass.mockReturnValue(new Int8Array([4, 5]));
+
+        await expect(writeJavadocSource(source, toClassName("Owner"))).rejects.toMatchObject({
+            name: "TypeMismatchError",
+        });
+
+        expect(root.entries.get("Owner.mapping")).toBe(existing);
+        expect(source.files.size).toBe(0);
+    });
+
+    it("preserves a file at the target package directory path", async () => {
+        const existing = new FakeFile("package", "untouched");
+        const root = new FakeDirectory("mappings").add(existing);
+        const source = directorySource(root);
+        bridge.writeJavadocClass.mockReturnValue(new Int8Array([4, 5]));
+
+        await expect(writeJavadocSource(source, toClassName("package/Owner"))).rejects.toMatchObject({
+            name: "TypeMismatchError",
+        });
+
+        expect(root.entries.get("package")).toBe(existing);
+        expect(existing.writes).toBe(0);
+        expect(source.files.size).toBe(0);
     });
 
     it("creates a canonical path for a newly documented class", async () => {
@@ -196,7 +229,7 @@ describe("JavadocStorage", () => {
         const source = directorySource(root);
         bridge.writeJavadocClass.mockReturnValue(new Int8Array([4, 5]));
 
-        await writeJavadocSource(source, "new/package/Owner");
+        await writeJavadocSource(source, toClassName("new/package/Owner"));
 
         expect(source.files.get("new/package/Owner")).toEqual(["new", "package", "Owner.mapping"]);
         const newDirectory = root.entries.get("new") as FakeDirectory;
@@ -210,7 +243,7 @@ describe("JavadocStorage", () => {
         const source = directorySource(root);
         bridge.writeJavadocClass.mockReturnValue(new Int8Array([4, 5]));
 
-        await expect(writeJavadocSource(source, "Owner")).rejects.toThrow("Write failed");
+        await expect(writeJavadocSource(source, toClassName("Owner"))).rejects.toThrow("Write failed");
 
         expect(root.deleted).toEqual(["Owner.mapping"]);
         expect(root.entries.has("Owner.mapping")).toBe(false);
@@ -222,7 +255,7 @@ describe("JavadocStorage", () => {
         const source = directorySource(root);
         bridge.writeJavadocClass.mockReturnValue(new Int8Array([4, 5]));
 
-        await writeJavadocSource(source, "new/package/$Proxy$Inner");
+        await writeJavadocSource(source, toClassName("new/package/$Proxy$Inner"));
 
         expect(bridge.writeJavadocClass).toHaveBeenCalledWith("new/package/$Proxy");
         expect(source.files.get("new/package/$Proxy")).toEqual(["new", "package", "$Proxy.mapping"]);
@@ -236,7 +269,7 @@ describe("JavadocStorage", () => {
         const source = directorySource(root, new Map([["a/Empty", ["a", "Empty.mapping"]]]));
         bridge.writeJavadocClass.mockReturnValue(new Int8Array());
 
-        await writeJavadocSource(source, "a/Empty");
+        await writeJavadocSource(source, toClassName("a/Empty"));
 
         expect(packageDirectory.deleted).toEqual(["Empty.mapping"]);
         expect(packageDirectory.entries.has("Other.mapping")).toBe(true);

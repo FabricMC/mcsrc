@@ -33,7 +33,7 @@ export function applyJavadocCodeExtensions(monaco: monaco, editor: editor.IStand
                     const location = getTokenLocation(decompile, token);
                     const zoneId = accessor.addZone({
                         afterLineNumber: location.line - 1,
-                        heightInPx: lineCount * editor.getOption(monaco.editor.EditorOption.lineHeight),
+                        heightInLines: lineCount,
                         domNode: domNode
                     });
 

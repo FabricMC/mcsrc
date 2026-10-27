@@ -8,6 +8,7 @@ import {
     readJavadocDirectory,
     readJavadocFile,
     type JavadocFormat,
+    type JavadocSource,
 } from "./JavadocStorage";
 
 const filePickerSupported = "showOpenFilePicker" in window && "showSaveFilePicker" in window;
@@ -51,24 +52,24 @@ const JavadocFilePicker = () => {
         setLoading(true);
 
         try {
+            let source: JavadocSource;
             if (key === "open") {
                 const [handle] = await window.showOpenFilePicker({
                     multiple: false,
                     types: [mappingFilePickerType],
                 });
-                const file = await readJavadocFile(handle);
-                activateJavadocFile(file);
+                source = await readJavadocFile(handle);
             } else if (key === "open-directory") {
                 const handle = await window.showDirectoryPicker({ mode: "readwrite" });
-                const directory = await readJavadocDirectory(handle);
-                activateJavadocFile(directory);
+                source = await readJavadocDirectory(handle);
+            } else if (key === "tiny2" || key === "enigma") {
+                const handle = await window.showSaveFilePicker(createPickerOptions(key));
+                source = await createJavadocFile(handle, key);
             } else {
-                const format = key as JavadocFormat;
-                const handle = await window.showSaveFilePicker(createPickerOptions(format));
-                const file = await createJavadocFile(handle, format);
-                activateJavadocFile(file);
+                throw new Error(`Unknown Javadoc action: ${key}`);
             }
 
+            activateJavadocFile(source);
             messageApi.success("Javadoc mappings opened.");
         } catch (error) {
             if (!(error instanceof DOMException && error.name === "AbortError")) {

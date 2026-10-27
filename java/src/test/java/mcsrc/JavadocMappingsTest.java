@@ -155,9 +155,39 @@ class JavadocMappingsTest {
         assertThrows(IOException.class, () -> mappings.readDirectory(
                 new byte[][] { "CLASS a/A\nCLASS b/B\n".getBytes(UTF_8) },
                 new String[] { "mixed.mapping" }));
-        assertThrows(IOException.class, () -> mappings.readDirectory(
-                new byte[][] { "CLASS a/A\n".getBytes(UTF_8) },
-                new String[] { "wrong/A.mapping" }));
         assertEquals("Current docs", mappings.get(CLASS, "current/Mapping", "", ""));
+    }
+
+    @Test
+    void acceptsDirectoryFilesNamedAfterMappedClasses() throws IOException {
+        String input = """
+                CLASS a/A named/A
+                \tCOMMENT Class docs
+                \tMETHOD run ()V
+                \t\tCOMMENT Method docs
+                """;
+
+        String[] owners = mappings.readDirectory(
+                new byte[][] { input.getBytes(UTF_8) },
+                new String[] { "named/A.mapping" });
+        mappings.set(METHOD, "a/A", "run", "()V", "Edited docs");
+        String output = new String(mappings.writeClass("a/A"), UTF_8);
+
+        assertArrayEquals(new String[] { "a/A" }, owners);
+        assertEquals("Class docs", mappings.get(CLASS, "a/A", "", ""));
+        assertTrue(output.contains("CLASS a/A named/A"));
+        assertTrue(output.contains("COMMENT Edited docs"));
+    }
+
+    @Test
+    void preservesLeadingDollarSignsInOuterClassNames() throws IOException {
+        mappings.beginDirectory();
+        mappings.finishDirectory();
+        mappings.set(CLASS, "$Proxy$Inner", "", "", "Inner docs");
+        JavadocMappings loaded = new JavadocMappings();
+
+        loaded.read(mappings.writeClass("$Proxy"));
+
+        assertEquals("Inner docs", loaded.get(CLASS, "$Proxy$Inner", "", ""));
     }
 }

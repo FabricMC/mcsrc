@@ -1,5 +1,6 @@
 import { load } from "../../java/build/generated/teavm/wasm-gc/mcsrc.wasm-runtime.js";
 import mappingsWasm from "../../java/build/generated/teavm/wasm-gc/mcsrc.wasm?url";
+import { outerClassName, type ClassName } from "../utils/Names";
 
 export type JavadocFormat = "tiny2" | "enigma";
 export const JavadocElementKind = {
@@ -8,6 +9,13 @@ export const JavadocElementKind = {
     Method: 2,
 } as const;
 export type JavadocElementKind = typeof JavadocElementKind[keyof typeof JavadocElementKind];
+
+export interface JavadocTarget {
+    kind: JavadocElementKind;
+    owner: ClassName;
+    name: string;
+    descriptor: string;
+}
 
 export interface JavadocFileSource {
     kind: "file";
@@ -100,7 +108,7 @@ export async function createJavadocFile(
     return { kind: "file", handle, format };
 }
 
-export async function writeJavadocSource(source: JavadocSource, owner: string): Promise<void> {
+export async function writeJavadocSource(source: JavadocSource, owner: ClassName): Promise<void> {
     if (source.kind === "file") {
         await writeBytes(source.handle, requireBridge().writeJavadocs(source.format));
         return;
@@ -144,23 +152,15 @@ export async function writeJavadocSource(source: JavadocSource, owner: string): 
     source.files.set(outerOwner, path);
 }
 
-export function getStoredJavadoc(
-    kind: JavadocElementKind,
-    owner: string,
-    name: string,
-    descriptor: string,
-): string | null {
-    return requireBridge().getJavadoc(kind, owner, name, descriptor);
+export function getStoredJavadoc(target: JavadocTarget): string | null {
+    return requireBridge().getJavadoc(target.kind, target.owner, target.name, target.descriptor);
 }
 
 export function setStoredJavadoc(
-    kind: JavadocElementKind,
-    owner: string,
-    name: string,
-    descriptor: string,
+    target: JavadocTarget,
     comment: string | null,
 ): void {
-    requireBridge().setJavadoc(kind, owner, name, descriptor, comment);
+    requireBridge().setJavadoc(target.kind, target.owner, target.name, target.descriptor, comment);
 }
 
 async function writeBytes(handle: FileSystemFileHandle, bytes: Int8Array): Promise<void> {
@@ -233,17 +233,6 @@ async function deleteFile(root: FileSystemDirectoryHandle, path: string[]): Prom
 
 function isNotFoundError(error: unknown): boolean {
     return error instanceof DOMException && error.name === "NotFoundError";
-}
-
-function outerClassName(name: string): string {
-    let start = 0;
-
-    while (true) {
-        const separator = name.indexOf("$", start);
-        if (separator < 0) return name;
-        if (separator === 0 || name[separator - 1] !== "/") return name.slice(0, separator);
-        start = separator + 1;
-    }
 }
 
 async function getBridge(): Promise<JavadocMappingsBridge> {
