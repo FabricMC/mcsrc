@@ -203,6 +203,7 @@ const InheritanceGraphInner = ({ tab, data }: { tab: InheritanceViewTab; data: C
         <ReactFlow
             nodes={nodes}
             edges={edges}
+            nodesConnectable={false}
             onNodeClick={(_, { id }) => openCodeTab(toClassFilePath(toClassName(id)))}
             onMoveEnd={onMoveEnd}
             defaultViewport={tab.innerTabs.graph.viewport}
