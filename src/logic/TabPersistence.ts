@@ -6,12 +6,13 @@ export interface SavedTab {
 export interface SavedTabState {
     openTabs: SavedTab[];
     activeTabKey: string | null;
+    minecraftVersion?: string | null;
 }
 
 const STORAGE_KEY = "tab_state";
 
 export const parseSavedTabState = (value: unknown): SavedTabState | null => {
-    const state = value as { openTabs?: unknown; activeTabKey?: unknown; } | null;
+    const state = value as { openTabs?: unknown; activeTabKey?: unknown; minecraftVersion?: unknown; } | null;
     if (!state || !Array.isArray(state.openTabs)) return null;
 
     const openTabs = state.openTabs.filter((tab): tab is SavedTab => {
@@ -22,7 +23,11 @@ export const parseSavedTabState = (value: unknown): SavedTabState | null => {
         );
     });
 
-    return { openTabs, activeTabKey: typeof state.activeTabKey === "string" ? state.activeTabKey : null };
+    return {
+        openTabs,
+        activeTabKey: typeof state.activeTabKey === "string" ? state.activeTabKey : null,
+        minecraftVersion: typeof state.minecraftVersion === "string" ? state.minecraftVersion : null
+    };
 };
 
 export const loadSavedTabState = (): { state: SavedTabState; fromHistory: boolean; } | null => {

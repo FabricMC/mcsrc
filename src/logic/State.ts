@@ -47,14 +47,18 @@ const buildInitialTabState = () => {
         : [initialState.file, saved?.activeTabKey];
     const active = preferredKeys.reduce<Tab | null>((tab, key) => tab ?? findTab(key), null) ?? tabs[0] ?? null;
 
-    return { tabs: enableTabs.value || !active ? tabs : [active], active };
+    const permalinkHasVersion = !!(initialState.minecraftVersion && initialState.minecraftVersion.length > 0);
+    const savedVersion = permalinkHasVersion ? null : saved?.minecraftVersion ?? null;
+    const minecraftVersion = initialState.minecraftVersion || savedVersion || null;
+
+    return { tabs: enableTabs.value || !active ? tabs : [active], active, minecraftVersion };
 };
 
-const { tabs: initialTabs, active: initialActive } = buildInitialTabState();
+const { tabs: initialTabs, active: initialActive, minecraftVersion: initialMinecraftVersion } = buildInitialTabState();
 
 /// All of the user controled global state should be defined here:
 
-export const selectedMinecraftVersion = new BehaviorSubject<string | null>(initialState.minecraftVersion);
+export const selectedMinecraftVersion = new BehaviorSubject<string | null>(initialMinecraftVersion);
 
 export const mobileDrawerOpen = new BehaviorSubject(false);
 export const selectedFile = new BehaviorSubject<ClassFilePath | undefined>(
@@ -98,5 +102,5 @@ selectedFile.pipe(pairwise()).subscribe(([previousFile, currentFile]) => {
 
 initialActive?.open();
 
-combineLatest([openTabs, openTab]).subscribe(([tabs, activeTab]) =>
-    persistTabState({ openTabs: serializeTabs(tabs), activeTabKey: activeTab?.key ?? null }));
+combineLatest([openTabs, openTab, selectedMinecraftVersion]).subscribe(([tabs, activeTab, minecraftVersion]) =>
+    persistTabState({ openTabs: serializeTabs(tabs), activeTabKey: activeTab?.key ?? null, minecraftVersion }));
