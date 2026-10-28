@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { toClassName } from "../utils/Names";
 
 const bridge = vi.hoisted(() => ({
+    getDeclarationMetadata: vi.fn(),
     readJavadocs: vi.fn(),
     beginJavadocDirectory: vi.fn(),
     readJavadocDirectoryFile: vi.fn(),
@@ -21,6 +22,7 @@ vi.mock("../../java/build/generated/teavm/wasm-gc/mcsrc.wasm-runtime.js", () => 
 vi.mock("../../java/build/generated/teavm/wasm-gc/mcsrc.wasm?url", () => ({ default: "test.wasm" }));
 
 import {
+    readJavadocDeclarationMetadata,
     readAnnotaterDirectory,
     readJavadocDirectory,
     readJavadocFile,
@@ -128,6 +130,22 @@ describe("JavadocStorage", () => {
         bridge.readJavadocDirectoryFile.mockImplementation(
             (_data: ArrayBuffer, path: string) => path.slice(0, -".mapping".length),
         );
+    });
+
+    it("shares runtime initialization across concurrent metadata queries", async () => {
+        const { load } = await import("../../java/build/generated/teavm/wasm-gc/mcsrc.wasm-runtime.js");
+        const metadata = { typeParameters: ['T'], exceptions: [], recordComponents: [] };
+        bridge.getDeclarationMetadata.mockReturnValue(metadata);
+        const bytes = new ArrayBuffer(4);
+
+        const results = await Promise.all([
+            readJavadocDeclarationMetadata(bytes),
+            readJavadocDeclarationMetadata(bytes, 'convert', '()V'),
+        ]);
+
+        expect(results).toEqual([metadata, metadata]);
+        expect(load).toHaveBeenCalledOnce();
+        expect(bridge.getDeclarationMetadata).toHaveBeenCalledWith(bytes, 'convert', '()V');
     });
 
     it("opens an empty Enigma file as a new mapping tree", async () => {

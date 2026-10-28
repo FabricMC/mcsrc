@@ -1,7 +1,5 @@
 import { languages, type editor, type Position } from 'monaco-editor';
-import type { Token } from '../logic/Tokens';
-import type { DecompileResult } from '../workers/decompile/types';
-import { getDeclaredExceptions, getJavadocDeclaration, type JavadocDeclaration } from './JavadocDeclaration';
+import type { JavadocDeclaration } from './JavadocDeclaration';
 import { getMarkdownContext } from './JavadocReference';
 import { readJavadocBlockTags } from './JavadocBlockTags';
 import { escapeSnippet, getCompletionRange, type CompletionRange } from './JavadocCompletionUtils';
@@ -22,7 +20,6 @@ interface TagSuggestion {
     label: string;
     insertText: string;
     detail: string;
-    filterText?: string;
 }
 
 interface TagDefinition {
@@ -72,7 +69,7 @@ function getTagContext(model: editor.ITextModel, position: Position): TagContext
     } else {
         return null;
     }
-    if (getMarkdownContext(model, position).inCode) {
+    if (getMarkdownContext(model.getValue(), position).inCode) {
         return null;
     }
     const startColumn = position.column - prefix.length;
@@ -112,50 +109,35 @@ function isExceptionDocumented(exception: string, documented: Set<string>): bool
     return false;
 }
 
-function createExceptionSuggestions(exceptions: string[], context: TagContext): TagSuggestion[] {
-    if (context.kind === 'tag' && context.hasDescription) return [];
+function createNamedTagSuggestions(tag: 'param' | 'throws', names: string[], context: TagContext): TagSuggestion[] {
+    if (context.kind === 'tag' && context.hasDescription) {
+        if (tag === 'throws' || names.length === 0) return [];
 
-    return exceptions.map(exception => {
-        const label = context.kind === 'exception' ? exception : `@throws ${exception}`;
+        return [{ label: '@param', insertText: '@param$0', detail: 'Document a parameter' }];
+    }
+    return names.map(name => {
+        const label = context.kind === 'tag' ? `@${tag} ${name}` : name;
         const description = context.hasDescription ? '' : ' ${1:description}';
-        return {
-            label,
-            insertText: `${escapeSnippet(label)}${description}$0`,
-            detail: 'Document a declared exception',
-        };
+        let detail = 'Document a parameter';
+        if (tag === 'throws') {
+            detail = 'Document a declared exception';
+        } else if (name.startsWith('<')) {
+            detail = 'Document a type parameter';
+        }
+        return { label, insertText: `${escapeSnippet(label)}${description}$0`, detail };
     });
 }
 
-function createParameterSuggestions(parameters: string[], context: TagContext): TagSuggestion[] {
-    if (context.kind === 'tag' && context.hasDescription) {
-        if (parameters.length === 0) {
-            return [];
-        }
-        return [{ label: '@param', insertText: '@param$0', detail: 'Document a parameter' }];
-    }
-    const suggestions: TagSuggestion[] = [];
-    for (const parameter of parameters) {
-        const label = context.kind === 'parameter' ? parameter : `@param ${parameter}`;
-        const description = context.hasDescription ? '' : ' ${1:description}';
-        suggestions.push({
-            label,
-            insertText: `${escapeSnippet(label)}${description}$0`,
-            detail: parameter.startsWith('<') ? 'Document a type parameter' : 'Document a parameter',
-        });
-    }
-    return suggestions;
-}
-
-function createTagSuggestions(token: Token, declaration: JavadocDeclaration, documented: DocumentedTags, context: TagContext): TagSuggestion[] {
+function createTagSuggestions(declaration: JavadocDeclaration, documented: DocumentedTags, context: TagContext): TagSuggestion[] {
     const definitions: TagDefinition[] = [];
     if (declaration.returnsValue) {
         definitions.push({ name: 'return', content: ' ${1:description}', detail: 'Describe the returned value' });
     }
-    if (token.type === 'method') {
+    if (declaration.type === 'method') {
         definitions.push(...methodTags);
     }
     definitions.push(...commonTags);
-    if (token.type === 'class') {
+    if (declaration.type === 'class') {
         definitions.push(...classTags);
     }
     const suggestions: TagSuggestion[] = [];
@@ -176,14 +158,10 @@ function createTagSuggestions(token: Token, declaration: JavadocDeclaration, doc
 export class JavadocTagCompletionProvider implements languages.CompletionItemProvider {
     readonly triggerCharacters = ['@', ' ', '<', '.'];
     private readonly declaration: JavadocDeclaration;
-    private readonly token: Token;
     private readonly model: editor.ITextModel;
-    private readonly exceptions: string[];
 
-    constructor(result: DecompileResult, token: Token, model: editor.ITextModel) {
-        this.declaration = getJavadocDeclaration(result, token);
-        this.exceptions = getDeclaredExceptions(result, token);
-        this.token = token;
+    constructor(declaration: JavadocDeclaration, model: editor.ITextModel) {
+        this.declaration = declaration;
         this.model = model;
     }
 
@@ -198,21 +176,21 @@ export class JavadocTagCompletionProvider implements languages.CompletionItemPro
         const documented = collectDocumentedTags(model, position.lineNumber);
         const missingParameters = [...this.declaration.typeParameters, ...this.declaration.parameters]
             .filter(parameter => !documented.parameters.has(parameter));
-        const missingExceptions = this.exceptions.filter(exception => !isExceptionDocumented(exception, documented.exceptions));
+        const missingExceptions = this.declaration.exceptions.filter(exception => !isExceptionDocumented(exception, documented.exceptions));
         const suggestions: TagSuggestion[] = [];
         if (context.kind !== 'exception') {
-            suggestions.push(...createParameterSuggestions(missingParameters, context));
+            suggestions.push(...createNamedTagSuggestions('param', missingParameters, context));
         }
         if (context.kind !== 'parameter') {
-            suggestions.push(...createExceptionSuggestions(missingExceptions, context));
+            suggestions.push(...createNamedTagSuggestions('throws', missingExceptions, context));
         }
         if (context.kind === 'tag') {
-            suggestions.push(...createTagSuggestions(this.token, this.declaration, documented, context));
+            suggestions.push(...createTagSuggestions(this.declaration, documented, context));
         }
         return {
             suggestions: suggestions.map((suggestion, index) => ({
                 ...suggestion,
-                filterText: suggestion.filterText ?? suggestion.label,
+                filterText: suggestion.label,
                 insertTextRules: languages.CompletionItemInsertTextRule.InsertAsSnippet,
                 kind: languages.CompletionItemKind.Snippet,
                 range: context.range,

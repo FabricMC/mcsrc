@@ -1,5 +1,7 @@
+import { defer, firstValueFrom, shareReplay, tap } from "rxjs";
 import { load } from "../../java/build/generated/teavm/wasm-gc/mcsrc.wasm-runtime.js";
 import mappingsWasm from "../../java/build/generated/teavm/wasm-gc/mcsrc.wasm?url";
+import type { DeclarationMetadata } from "./JavadocDeclaration";
 import { outerClassName, type ClassName } from "../utils/Names";
 
 export type JavadocFormat = "tiny2" | "enigma";
@@ -39,6 +41,7 @@ export interface AnnotaterConfig {
 }
 
 interface JavadocMappingsBridge {
+    getDeclarationMetadata(classBytes: ArrayBuffer, methodName: string, descriptor: string): DeclarationMetadata;
     readJavadocs(data: ArrayBuffer): string;
     beginJavadocDirectory(): void;
     readJavadocDirectoryFile(data: ArrayBuffer, path: string): string;
@@ -64,6 +67,12 @@ interface JavadocMappingsBridge {
 }
 
 let bridge: JavadocMappingsBridge | null = null;
+
+/** Queries class or method declaration metadata using the existing Javadoc runtime. */
+export async function readJavadocDeclarationMetadata(classBytes: ArrayBuffer, methodName = "", descriptor = ""): Promise<DeclarationMetadata> {
+    const mappingsBridge = await getBridge();
+    return mappingsBridge.getDeclarationMetadata(classBytes, methodName, descriptor);
+}
 
 export async function readAnnotaterDirectory(handle: FileSystemDirectoryHandle): Promise<{
     source: JavadocDirectorySource;
@@ -276,18 +285,23 @@ function isNotFoundError(error: unknown): boolean {
     return error instanceof DOMException && error.name === "NotFoundError";
 }
 
-async function getBridge(): Promise<JavadocMappingsBridge> {
-    if (bridge) return bridge;
-
+const bridgeLoad = defer(async () => {
     try {
         const teavm = await load(mappingsWasm);
-        bridge = teavm.exports as JavadocMappingsBridge;
+        return teavm.exports as JavadocMappingsBridge;
     } catch (error) {
         console.warn("Failed to load Javadoc mappings WASM, falling back to JavaScript", error);
-        bridge = await import("../../java/build/generated/teavm/js/mcsrc.js") as unknown as JavadocMappingsBridge;
+        return await import("../../java/build/generated/teavm/js/mcsrc.js") as unknown as JavadocMappingsBridge;
     }
+}).pipe(
+    tap(instance => {
+        bridge = instance;
+    }),
+    shareReplay({ bufferSize: 1, refCount: false }),
+);
 
-    return bridge;
+function getBridge(): Promise<JavadocMappingsBridge> {
+    return firstValueFrom(bridgeLoad);
 }
 
 function requireBridge(): JavadocMappingsBridge {

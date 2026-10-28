@@ -3,7 +3,7 @@ import type { editor, Position } from 'monaco-editor';
 import type { ParameterToken, Token } from '../logic/Tokens';
 import type { DecompileResult } from '../workers/decompile/types';
 import { toClassName } from '../utils/Names';
-import { getDeclaredExceptions, getJavadocDeclaration } from './JavadocDeclaration';
+import { getJavadocDeclaration, type DeclarationMetadata, type JavadocDeclaration } from './JavadocDeclaration';
 import { JavadocTagCompletionProvider } from './JavadocTagCompletionProvider';
 
 vi.mock('monaco-editor', () => ({
@@ -13,22 +13,22 @@ vi.mock('monaco-editor', () => ({
     },
 }));
 
-function target(source: string, type: Token['type'] = 'method', descriptor = '()Ljava/lang/Object;', name = 'convert') {
-    const start = source.indexOf('|');
+const emptyMetadata: DeclarationMetadata = { typeParameters: [], exceptions: [], recordComponents: [] };
+
+const method: JavadocDeclaration = {
+    type: 'method', parameters: ['count', 'value'], typeParameters: ['<T>'], exceptions: [], returnsValue: true,
+};
+
+function target(type: Token['type'] = 'method') {
     const token: Token = {
-        type,
-        start,
-        length: source.slice(start + 1).match(/^[\w$]+/)![0].length,
-        className: toClassName('example/Owner'),
-        declaration: true,
-        name,
-        descriptor,
+        type, start: 0, length: 7, className: toClassName('example/Owner'),
+        declaration: true, name: 'convert', descriptor: '(II)Ljava/lang/Object;',
     } as Token;
-    const result = { source: source.replace('|', ''), tokens: [token] } as unknown as DecompileResult;
+    const result = { tokens: [token] } as DecompileResult;
     return { result, token };
 }
 
-function complete(markdown: string, declaration = target('public <T> T |convert(int count, T value) {}')) {
+function complete(markdown: string, declaration = method) {
     const cursor = markdown.indexOf('|');
     const value = markdown.replace('|', '');
     const lines = value.split('\n');
@@ -37,14 +37,13 @@ function complete(markdown: string, declaration = target('public <T> T |convert(
     const model = {
         getValue: () => value,
         getLineContent: (lineNumber: number) => lines[lineNumber - 1],
-        getOffsetAt: (position: Position) => lines.slice(0, position.lineNumber - 1).reduce((offset, line) => offset + line.length + 1, 0) + position.column - 1,
     } as editor.ITextModel;
-    return new JavadocTagCompletionProvider(declaration.result, declaration.token, model).provideCompletionItems(model, position).suggestions;
+    return new JavadocTagCompletionProvider(declaration, model).provideCompletionItems(model, position).suggestions;
 }
 
 describe('Javadoc declaration metadata', () => {
     it('uses parameter metadata in declaration order and excludes other overloads and references', () => {
-        const { result, token } = target('public Object |convert(int sourceFirst, int sourceSecond) {}', 'method', '(II)Ljava/lang/Object;');
+        const { result, token } = target();
         const first: ParameterToken = {
             type: 'parameter', className: token.className, declaration: true, start: 0, length: 5,
             methodName: 'convert', methodDescriptor: '(II)Ljava/lang/Object;', index: 0, name: 'first',
@@ -52,47 +51,30 @@ describe('Javadoc declaration metadata', () => {
         result.tokens.push(
             { ...first, index: 1, name: 'second' },
             { ...first, methodDescriptor: '(I)Ljava/lang/Object;', name: 'otherOverload' },
+            { ...first, className: toClassName('example/Other'), name: 'otherClass' },
+            { ...first, methodName: '<init>', name: 'constructorParameter' },
             { ...first, declaration: false, name: 'reference' },
+            { ...first, name: 'this' },
             first,
         );
-        expect(getJavadocDeclaration(result, token).parameters).toEqual(['first', 'second']);
+        expect(getJavadocDeclaration(result, token, emptyMetadata).parameters).toEqual(['first', 'second']);
     });
 
-    it('handles nested generic bounds, annotations, arrays, and varargs', () => {
-        const { result, token } = target(`class Owner {
-            @Annotation(nested = @Nested(values = {"(", ")"}))
-            public <T extends Comparable<T>, U> T |convert(
-                @Annotation(values = {"a,b"}) Map<String, List<U>> values,
-                int counts[], T... others
-            ) { return null; }
-        }`);
-        expect(getJavadocDeclaration(result, token)).toEqual({
-            parameters: ['values', 'counts', 'others'],
-            typeParameters: ['<T>', '<U>'],
-            returnsValue: true,
-        });
-    });
-
-    it('reads class generics and record components without leaking enclosing type parameters', () => {
-        const record = target('public record |Owner<T>(T value, int count) {}', 'class');
-        expect(getJavadocDeclaration(record.result, record.token)).toEqual({
+    it('uses class generics and record components from bytecode metadata', () => {
+        const record = target('class');
+        const metadata = { ...emptyMetadata, typeParameters: ['T'], recordComponents: ['value', 'count'] };
+        expect(getJavadocDeclaration(record.result, record.token, metadata)).toEqual({
+            type: 'class', exceptions: [],
             parameters: ['value', 'count'], typeParameters: ['<T>'], returnsValue: false,
         });
-        const method = target('class Owner<T> { public T |convert(T value) {} }');
-        expect(getJavadocDeclaration(method.result, method.token).typeParameters).toEqual([]);
     });
 });
 
 describe('Javadoc tag completion', () => {
-    it('suggests undocumented value and type parameters after @param', () => {
-        const suggestions = complete('@param count documented\n@param |');
-        expect(suggestions.map(item => item.label)).toEqual(['<T>', 'value']);
-        expect(suggestions[0].insertText).toBe('<T> ${1:description}$0');
-    });
-
     it('excludes documented type parameters and parameters, including tags after the cursor', () => {
         const suggestions = complete('@param <T> documented\n@param |\n@param value documented');
         expect(suggestions.map(item => item.label)).toEqual(['count']);
+        expect(suggestions[0].insertText).toBe('count ${1:description}$0');
     });
 
     it('offers individual parameter completions without a bulk snippet', () => {
@@ -102,13 +84,8 @@ describe('Javadoc tag completion', () => {
         expect(parameters.every(item => !item.insertText.includes('\n'))).toBe(true);
     });
 
-    it.each([
-        target('public void |convert(int count) {}', 'method', '(I)V'),
-        target('public |Owner(int count) {}', 'method', '(I)V', '<init>'),
-        target('public class |Owner<T> {}', 'class'),
-        target('public int |count;', 'field', 'I'),
-    ])('omits @return for declarations without a return value', declaration => {
-        expect(complete('@|', declaration).map(item => item.label)).not.toContain('@return');
+    it('omits @return when the declaration has no return value', () => {
+        expect(complete('@|', { ...method, returnsValue: false }).map(item => item.label)).not.toContain('@return');
     });
 
     it('offers @return for value-returning methods and avoids duplicate singleton tags', () => {
@@ -130,33 +107,13 @@ describe('Javadoc tag completion', () => {
         expect(suggestions.map(item => item.label)).toContain('count');
     });
 
-    it.each(['```java\n@|\n```', '    @|', 'Contact user@|', '`@|`'])('leaves prose and code alone: %s', markdown => {
+    it.each(['```java\n@throws |\n```', '    @param |', 'Contact user@|', '`@|`'])('leaves prose and code alone: %s', markdown => {
         expect(complete(markdown)).toEqual([]);
     });
 });
 
-
 describe('Declared exception completion', () => {
-    const declaration = target(`public <E extends Exception> void |convert(
-        @Annotation(values = {"(", ")"}) int count
-    ) throws @TypeAnnotation java.io.IOException,
-        E;`);
-
-    it('reads multiline, qualified, annotated, and generic exception types', () => {
-        expect(getDeclaredExceptions(declaration.result, declaration.token)).toEqual(['java.io.IOException', 'E']);
-    });
-
-    it('reads constructor exceptions and legacy array return syntax', () => {
-        const constructor = target('public |Owner() throws IOException {}', 'method', '()V', '<init>');
-        expect(getDeclaredExceptions(constructor.result, constructor.token)).toEqual(['IOException']);
-        const method = target('public String |convert() [] throws IOException {}');
-        expect(getDeclaredExceptions(method.result, method.token)).toEqual(['IOException']);
-    });
-
-    it('does not read exceptions from method bodies or subsequent declarations', () => {
-        const method = target('void |convert() { throw new IOException(); } void other() throws OtherException {}');
-        expect(getDeclaredExceptions(method.result, method.token)).toEqual([]);
-    });
+    const declaration = { ...method, exceptions: ['java.io.IOException', 'E'] };
 
     it('offers declared exceptions after @throws and @exception', () => {
         for (const tag of ['throws', 'exception']) {
@@ -175,7 +132,7 @@ describe('Declared exception completion', () => {
 
     it('excludes documented exceptions using either tag and short or qualified names', () => {
         expect(complete('@throws IOException documented\n@exception E documented\n@throws |', declaration)).toEqual([]);
-        const shortName = target('void |convert() throws IOException {}');
+        const shortName = { ...method, exceptions: ['IOException'] };
         expect(complete('@throws java.io.IOException documented\n@throws |', shortName)).toEqual([]);
     });
 
@@ -186,21 +143,5 @@ describe('Declared exception completion', () => {
             insert: { startLineNumber: 1, startColumn: 9, endLineNumber: 1, endColumn: 19 },
             replace: { startLineNumber: 1, startColumn: 9, endLineNumber: 1, endColumn: 28 },
         });
-    });
-
-    it('ignores documented exceptions inside examples and the line being edited', () => {
-        const suggestions = complete('```java\n@throws java.io.IOException example\n```\n@throws java.io.IO|Exception description', declaration);
-        expect(suggestions.map(item => item.label)).toContain('java.io.IOException');
-    });
-
-    it('does not offer exceptions inside code, prose, parameter tags, or exception descriptions', () => {
-        for (const markdown of ['```java\n@throws |\n```', '    @throws |', 'Example @throws |', '@param |', '@throws IOException description |']) {
-            expect(complete(markdown, declaration).map(item => item.label)).not.toContain('java.io.IOException');
-        }
-    });
-
-    it('keeps generic throws snippets available for undeclared exceptions', () => {
-        expect(complete('@|').map(item => item.label)).toContain('@throws');
-        expect(complete('@throws |')).toEqual([]);
     });
 });

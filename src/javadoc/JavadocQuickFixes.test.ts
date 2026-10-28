@@ -1,18 +1,18 @@
 import { describe, expect, it } from 'vitest';
 import type { JavadocDeclaration } from './JavadocDeclaration';
-import { getJavadocQuickFixes } from './JavadocQuickFixes';
+import { getJavadocQuickFix } from './JavadocQuickFixes';
 import { validateJavadoc } from './JavadocValidation';
 
 const declaration: JavadocDeclaration = {
-    typeParameters: ['<T>'], parameters: ['first', 'second'], returnsValue: true,
+    type: 'method', exceptions: [], typeParameters: ['<T>'], parameters: ['first', 'second'], returnsValue: true,
 };
 
 function fix(markdown: string, code: string) {
     const diagnostic = validateJavadoc(markdown, declaration).find(diagnostic => diagnostic.code === code);
     expect(diagnostic).toBeDefined();
-    const fixes = getJavadocQuickFixes(markdown, declaration, diagnostic!);
-    expect(fixes).toHaveLength(1);
-    return fixes[0].text;
+    const result = getJavadocQuickFix(markdown, declaration, diagnostic!);
+    expect(result).toBeDefined();
+    return result!.text;
 }
 
 describe('Javadoc quick fixes', () => {

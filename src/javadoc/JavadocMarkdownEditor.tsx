@@ -1,17 +1,21 @@
+import { defer } from "rxjs";
 import { Editor, useMonaco } from "@monaco-editor/react";
 import { useObservable } from "../utils/UseObservable";
 import { currentResult } from "../logic/Decompiler";
 import { useEffect, useState } from "react";
-import type { editor } from "monaco-editor";
+import type { editor, IDisposable } from "monaco-editor";
 import { JavadocCompletionProvider } from "./JavadocCompletionProvider";
 import { JavadocTagCompletionProvider } from "./JavadocTagCompletionProvider";
 import { jarIndex } from "../workers/jar-index/client";
 import type { Token } from "../logic/Tokens";
-import { applyJavadocValidation } from "./JavadocValidationMarkers";
-import { getJavadocDeclaration } from "./JavadocDeclaration";
-import { registerJavadocCodeActions } from "./JavadocCodeActions";
+import { applyJavadocDiagnostics } from "./JavadocDiagnostics";
+import { getJavadocDeclaration, type DeclarationMetadata } from "./JavadocDeclaration";
 import { isDarkMode } from "../logic/Browser";
 import { JAVADOC_MARKDOWN_LANGUAGE } from "./JavadocMarkdownLanguage";
+import { minecraftJar } from "../logic/MinecraftApi";
+import { toClassFilePath } from "../utils/Names";
+import { toArrayBuffer } from "../utils/ArrayBuffer";
+import { readJavadocDeclarationMetadata } from "./JavadocStorage";
 
 const MIN_EDITOR_HEIGHT = 84;
 const MAX_EDITOR_HEIGHT = 320;
@@ -30,8 +34,9 @@ const JavadocMarkdownEditor = ({
     const monaco = useMonaco();
     const decompileResult = useObservable(currentResult);
     const index = useObservable(jarIndex);
-    const [model, setModel] = useState<editor.ITextModel | null>(null);
+    const jar = useObservable(minecraftJar);
     const [codeEditor, setCodeEditor] = useState<editor.IStandaloneCodeEditor | null>(null);
+    const model = codeEditor?.getModel();
     const [height, setHeight] = useState(MIN_EDITOR_HEIGHT);
     const darkMode = useObservable(isDarkMode);
 
@@ -48,29 +53,41 @@ const JavadocMarkdownEditor = ({
     }, [codeEditor]);
 
     useEffect(() => {
-        if (!monaco || !decompileResult || !model) return;
+        if (!monaco || !decompileResult || !model || !jar || jar.jar.name !== decompileResult.jarName) return;
 
-        const provider = new JavadocCompletionProvider(decompileResult, token.className, index, model);
-        const completionItemProvider = monaco.languages.registerCompletionItemProvider(JAVADOC_MARKDOWN_LANGUAGE, provider);
-        const tagCompletionProvider = monaco.languages.registerCompletionItemProvider(JAVADOC_MARKDOWN_LANGUAGE, new JavadocTagCompletionProvider(decompileResult, token, model));
+        const disposables: IDisposable[] = [
+            monaco.languages.registerCompletionItemProvider(JAVADOC_MARKDOWN_LANGUAGE, new JavadocCompletionProvider(decompileResult, token.className, index, model)),
+        ];
+        const subscription = defer(async () => {
+            let metadata: DeclarationMetadata = { typeParameters: [], exceptions: [], recordComponents: [] };
+            if (token.type === "class" || token.type === "method") {
+                const entry = jar.jar.entries[toClassFilePath(token.className)];
+                if (!entry) throw new Error(`Class not found: ${token.className}`);
 
+                const bytes = toArrayBuffer(await entry.bytes());
+                const methodName = token.type === "method" ? token.name : "";
+                const descriptor = token.type === "method" ? token.descriptor : "";
+                metadata = await readJavadocDeclarationMetadata(bytes, methodName, descriptor);
+            }
+            return getJavadocDeclaration(decompileResult, token, metadata);
+        }).subscribe({
+            next(declaration) {
+                if (model.isDisposed()) return;
+
+                disposables.push(
+                    monaco.languages.registerCompletionItemProvider(JAVADOC_MARKDOWN_LANGUAGE, new JavadocTagCompletionProvider(declaration, model)),
+                    applyJavadocDiagnostics(monaco, model, declaration),
+                );
+            },
+            error: error => console.error("Failed to read Javadoc declaration metadata:", error),
+        });
         return () => {
-            completionItemProvider.dispose();
-            tagCompletionProvider.dispose();
+            subscription.unsubscribe();
+            for (const disposable of disposables) {
+                disposable.dispose();
+            }
         };
-    }, [monaco, decompileResult, token, index, model]);
-
-    useEffect(() => {
-        if (!monaco || !decompileResult || !model) return;
-
-        const declaration = getJavadocDeclaration(decompileResult, token);
-        const validation = applyJavadocValidation(monaco, model, declaration);
-        const codeActions = registerJavadocCodeActions(monaco, model, declaration);
-        return () => {
-            codeActions.dispose();
-            validation.dispose();
-        };
-    }, [monaco, decompileResult, token, model]);
+    }, [monaco, decompileResult, token, index, model, jar]);
 
     return (
         <Editor
@@ -92,7 +109,6 @@ const JavadocMarkdownEditor = ({
                 wordBasedSuggestions: "off",
             }}
             onMount={(codeEditor) => {
-                setModel(codeEditor.getModel());
                 setCodeEditor(codeEditor);
                 codeEditor.focus();
             }}

@@ -46,7 +46,6 @@ export class JavadocSymbols {
     private readonly wildcardImports = new Set<string>();
     private readonly aliases = new Map<string, { className: ClassName; rank: number }[]>();
     readonly owner: ClassName;
-    private readonly index: JarIndex | undefined;
     private readonly enclosingClasses: ClassName[];
     readonly ready: Promise<void>;
 
@@ -56,12 +55,11 @@ export class JavadocSymbols {
         index: JarIndex | undefined,
     ) {
         this.owner = owner;
-        this.index = index;
         this.enclosingClasses = getEnclosingClasses(owner);
         this.classNames.add(owner);
         this.addSourceDeclarations(result);
         this.readImports(result.source);
-        this.ready = this.loadIndex();
+        this.ready = this.loadIndex(index);
     }
 
     classRank(className: ClassName): number {
@@ -161,16 +159,10 @@ export class JavadocSymbols {
         }
     }
 
-    private async loadIndex(): Promise<void> {
-        await this.loadIndexedDeclarations();
-        this.addImportedClasses();
-        this.buildAliases();
-    }
-
-    private async loadIndexedDeclarations(): Promise<void> {
-        if (this.index) {
+    private async loadIndex(index: JarIndex | undefined): Promise<void> {
+        if (index) {
             try {
-                const [classes, members] = await Promise.all([this.index.getClassData(), this.index.getMemberData()]);
+                const [classes, members] = await Promise.all([index.getClassData(), index.getMemberData()]);
                 for (const data of classes) {
                     this.classNames.add(data.className);
                     this.classes.set(data.className, data);
@@ -182,6 +174,8 @@ export class JavadocSymbols {
                 console.warn('Unable to load Javadoc completion index; using source declarations', error);
             }
         }
+        this.addImportedClasses();
+        this.buildAliases();
     }
 
     private addImportedClasses(): void {

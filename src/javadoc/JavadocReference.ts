@@ -46,14 +46,17 @@ function getSeeReference(line: string, cursor: number): JavadocReference | null 
 }
 
 /** Tracks code spans, fences, and the current reference bracket for documentation completions. */
-export function getMarkdownContext(model: Pick<editor.ITextModel, 'getValue' | 'getLineContent' | 'getOffsetAt'>, position: IPosition): { openBracket: number; inCode: boolean } {
-    const text = model.getValue();
+export function getMarkdownContext(text: string, position: IPosition): { openBracket: number; inCode: boolean } {
+    const lines = text.split('\n');
+    let offset = 0;
     let fence: { marker: string; length: number } | undefined;
     let codeSpanLength = 0;
     let openBracket = -1;
 
     for (let lineNumber = 1; lineNumber <= position.lineNumber; lineNumber++) {
-        const line = model.getLineContent(lineNumber);
+        const line = lines[lineNumber - 1];
+        const lineStart = offset;
+        offset += line.length + 1;
         const fenceMatch = /^ {0,3}(`{3,}|~{3,})(.*)$/.exec(line);
         if (fenceMatch && codeSpanLength === 0) {
             const marker = fenceMatch[1][0];
@@ -90,7 +93,7 @@ export function getMarkdownContext(model: Pick<editor.ITextModel, 'getValue' | '
                 const length = end - index;
                 if (codeSpanLength === 0) {
                     // Unmatched backticks are literal Markdown text.
-                    const remainingText = text.slice(model.getOffsetAt({ lineNumber, column: end + 1 }));
+                    const remainingText = text.slice(lineStart + end);
                     const closingDelimiter = new RegExp(`(?<!\x60)\x60{${length}}(?!\x60)`);
                     if (closingDelimiter.test(remainingText)) {
                         codeSpanLength = length;
@@ -117,7 +120,7 @@ export function getMarkdownContext(model: Pick<editor.ITextModel, 'getValue' | '
 
 /** Finds a Java reference while leaving Markdown code and ordinary links alone. */
 export function getJavadocReference(model: editor.ITextModel, position: IPosition): JavadocReference | null {
-    const { openBracket, inCode } = getMarkdownContext(model, position);
+    const { openBracket, inCode } = getMarkdownContext(model.getValue(), position);
     if (inCode) {
         return null;
     }

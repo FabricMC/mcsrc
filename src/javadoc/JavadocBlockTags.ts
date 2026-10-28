@@ -12,23 +12,12 @@ export interface JavadocBlockTag {
 /** Reads block tags and their multiline descriptions, excluding Markdown code examples. */
 export function readJavadocBlockTags(markdown: string): JavadocBlockTag[] {
     const lines = markdown.split('\n');
-    const offsets: number[] = [];
-    let offset = 0;
-    for (const line of lines) {
-        offsets.push(offset);
-        offset += line.length + 1;
-    }
-    const model = {
-        getValue: () => markdown,
-        getLineContent: (lineNumber: number) => lines[lineNumber - 1],
-        getOffsetAt: (position: { lineNumber: number; column: number }) => offsets[position.lineNumber - 1] + position.column - 1,
-    };
     const tags: JavadocBlockTag[] = [];
     for (let index = 0; index < lines.length; index++) {
         const line = lines[index];
         const match = /^ {0,3}@(\w+)(?=[ \t]|$)/.exec(line);
         const column = line.indexOf('@') + 1;
-        if (!match || getMarkdownContext(model, { lineNumber: index + 1, column: column + 1 }).inCode) {
+        if (!match || getMarkdownContext(markdown, { lineNumber: index + 1, column: column + 1 }).inCode) {
             const previous = tags.at(-1);
             if (previous) {
                 previous.description += '\n' + line;

@@ -31,15 +31,16 @@ export class DecompileWorker {
 
     db = new Dexie("decompiler") as Dexie & {
         options: EntityTable<DecompileOption, "key">,
-        results6: Table<DecompileResult, [string, number, string, string, Version]>,
+        results7: Table<DecompileResult, [string, number, string, string, Version]>,
     };
 
     constructor(version: Version = DEFAULT_VERSION) {
         this.#version = version;
-        this.db.version(7).stores({
+        this.db.version(8).stores({
             options: "key",
-            results6: "[className+checksum+language+jarName+version]",
-            // clear old data
+            results7: "[className+checksum+language+jarName+version]",
+            // Refresh cached results that may lack parameter token metadata.
+            results6: null,
             results5: null,
             results4: null,
             results3: null,
@@ -75,7 +76,7 @@ export class DecompileWorker {
         }
 
         if (changed || notVisited.size > 0) {
-            await this.db.results6.clear();
+            await this.db.results7.clear();
         }
 
         await this.db.options.clear();
@@ -89,8 +90,8 @@ export class DecompileWorker {
     });
 
     clear = (): Promise<number> => this.schedule(async () => {
-        const count = await this.db.results6.count();
-        await this.db.results6.clear();
+        const count = await this.db.results7.count();
+        await this.db.results7.clear();
         return count;
     });
 
@@ -129,7 +130,7 @@ export class DecompileWorker {
                 const checksum = jar.proxy[className]?.checksum;
                 if (!checksum) continue;
 
-                const dbCount = await this.db.results6
+                const dbCount = await this.db.results7
                     .where("[className+checksum+language+jarName+version]")
                     .equals([className, checksum, "java", jarName, this.#version])
                     .count();
@@ -163,7 +164,7 @@ export class DecompileWorker {
         try {
             const jar = new DecompileJar(await openJar(jarName, jarBlob));
             const checksum = jar.proxy[className]?.checksum;
-            const dbResult = await this.db.results6.get([className, checksum, "java", jarName, this.#version]);
+            const dbResult = await this.db.results7.get([className, checksum, "java", jarName, this.#version]);
             if (dbResult) return dbResult;
 
             const result = await this.#decompile(jarName, jar.classes, [className], jar.proxy);
@@ -289,13 +290,13 @@ export class DecompileWorker {
             res.push({ className, checksum, jarName, source: sourceStr, tokens, language: "java", version: this.#version });
         }
 
-        await this.db.results6.bulkPut(res);
+        await this.db.results7.bulkPut(res);
         return res;
     }
 
     #indexer = new JarIndexer();
     getClassBytecode = (className: ClassName, checksum: number, jarName: string, classData: ArrayBufferLike[]): Promise<DecompileResult> => this.schedule(async () => {
-        let result = await this.db.results6.get([className, checksum, "bytecode", jarName, this.#version]);
+        let result = await this.db.results7.get([className, checksum, "bytecode", jarName, this.#version]);
         if (result) return result;
 
         try {
@@ -306,7 +307,7 @@ export class DecompileWorker {
             result = { className, checksum, jarName, source: `// Error during bytecode retrieval: ${(e as Error).message}`, tokens: [], language: "bytecode", version: this.#version };
         }
 
-        await this.db.results6.put(result);
+        await this.db.results7.put(result);
         return result;
     });
 }
