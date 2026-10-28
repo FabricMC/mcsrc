@@ -1,7 +1,7 @@
 import { languages, type editor, type Position } from 'monaco-editor';
 import type { JavadocDeclaration } from './JavadocDeclaration';
 import { getMarkdownContext } from './JavadocReference';
-import { readJavadocBlockTags } from './JavadocBlockTags';
+import { readJavadocBlockTags, type JavadocBlockTag } from './JavadocBlockTags';
 import { escapeSnippet, getCompletionRange, type CompletionRange } from './JavadocCompletionUtils';
 
 interface TagContext {
@@ -83,9 +83,9 @@ function getTagContext(model: editor.ITextModel, position: Position): TagContext
     };
 }
 
-function collectDocumentedTags(model: editor.ITextModel, currentLine: number): DocumentedTags {
+function collectDocumentedTags(tags: JavadocBlockTag[], currentLine: number): DocumentedTags {
     const documented: DocumentedTags = { tags: new Set(), parameters: new Set(), exceptions: new Set() };
-    for (const tag of readJavadocBlockTags(model.getValue())) {
+    for (const tag of tags) {
         if (tag.line === currentLine) continue;
 
         documented.tags.add(tag.name);
@@ -173,7 +173,13 @@ export class JavadocTagCompletionProvider implements languages.CompletionItemPro
         if (!context) {
             return { suggestions: [] };
         }
-        const documented = collectDocumentedTags(model, position.lineNumber);
+        const tags = readJavadocBlockTags(model.getValue());
+        const currentTag = tags.find(tag => tag.line === position.lineNumber);
+        const continuation = currentTag?.description.split('\n').slice(1) ?? [];
+        if (continuation.some(line => line.trim().length > 0)) {
+            context.hasDescription = true;
+        }
+        const documented = collectDocumentedTags(tags, position.lineNumber);
         const missingParameters = [...this.declaration.typeParameters, ...this.declaration.parameters]
             .filter(parameter => !documented.parameters.has(parameter));
         const missingExceptions = this.declaration.exceptions.filter(exception => !isExceptionDocumented(exception, documented.exceptions));

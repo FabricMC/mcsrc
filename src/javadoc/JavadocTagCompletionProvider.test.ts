@@ -93,8 +93,8 @@ describe('Javadoc tag completion', () => {
         expect(complete('@return documented\n@|').map(item => item.label)).not.toContain('@return');
     });
 
-    it('preserves an existing parameter description while replacing its name', () => {
-        const suggestion = complete('@param va|lue existing description').find(item => item.label === 'value');
+    it.each([' existing description', '\nA multiline description.'])('preserves parameter descriptions: %s', description => {
+        const suggestion = complete(`@param va|lue${description}`).find(item => item.label === 'value');
         expect(suggestion?.insertText).toBe('value$0');
         expect(suggestion?.range).toEqual({
             insert: { startLineNumber: 1, startColumn: 8, endLineNumber: 1, endColumn: 10 },
@@ -136,8 +136,8 @@ describe('Declared exception completion', () => {
         expect(complete('@throws java.io.IOException documented\n@throws |', shortName)).toEqual([]);
     });
 
-    it('preserves an existing description and replaces a qualified exception suffix', () => {
-        const suggestion = complete('@throws java.io.IO|Exception existing description', declaration)[0];
+    it.each([' existing description', '\nA multiline description.'])('preserves exception descriptions: %s', description => {
+        const suggestion = complete(`@throws java.io.IO|Exception${description}`, declaration)[0];
         expect(suggestion.insertText).toBe('java.io.IOException$0');
         expect(suggestion.range).toEqual({
             insert: { startLineNumber: 1, startColumn: 9, endLineNumber: 1, endColumn: 19 },

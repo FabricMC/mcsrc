@@ -57,6 +57,11 @@ export function getMarkdownContext(text: string, position: IPosition): { openBra
         const line = lines[lineNumber - 1];
         const lineStart = offset;
         offset += line.length + 1;
+        if (!fence && codeSpanLength === 0 && /^(?: {4}| {0,3}\t)/.test(line)) {
+            if (lineNumber === position.lineNumber) return { openBracket: -1, inCode: true };
+
+            continue;
+        }
         const fenceMatch = /^ {0,3}(`{3,}|~{3,})(.*)$/.exec(line);
         if (fenceMatch && codeSpanLength === 0) {
             const marker = fenceMatch[1][0];

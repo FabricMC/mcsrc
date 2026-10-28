@@ -79,6 +79,8 @@ describe('Javadoc reference context', () => {
 
     it.each([
         '`[Block|]`',
+        '    [Block|]',
+        '\t[Block|]',
         '```java\n[Block|]\n```',
         '\\[Block|]',
         '[label|](https://example.com)',
