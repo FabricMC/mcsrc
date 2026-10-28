@@ -1,8 +1,8 @@
-import type { MemberToken } from '../logic/Tokens';
-import type { DecompileResult } from '../workers/decompile/types';
-import type { ClassData, JarIndex } from '../workers/jar-index/client';
-import type { MemberData } from '../workers/jar-index/types';
-import { toClassName, type ClassName } from '../utils/Names';
+import type { MemberToken } from '../../logic/Tokens';
+import type { DecompileResult } from '../../workers/decompile/types';
+import type { ClassData, JarIndex } from '../../workers/jar-index/client';
+import type { MemberData } from '../../workers/jar-index/types';
+import { toClassName, type ClassName } from '../../utils/Names';
 
 const PRIVATE = 0x0002;
 const PUBLIC_OR_PROTECTED = 0x0005;

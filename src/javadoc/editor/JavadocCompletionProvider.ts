@@ -1,10 +1,10 @@
 import { languages, type editor, type Position, type CancellationToken } from 'monaco-editor';
-import type { Token } from '../logic/Tokens';
-import type { DecompileResult } from '../workers/decompile/types';
-import type { JarIndex } from '../workers/jar-index/client';
-import type { ClassName } from '../utils/Names';
-import { parseFieldDescriptor, parseMethodDescriptor } from '../utils/JavaDescriptors';
-import { getJavadocForToken } from './Javadoc';
+import type { Token } from '../../logic/Tokens';
+import type { DecompileResult } from '../../workers/decompile/types';
+import type { JarIndex } from '../../workers/jar-index/client';
+import type { ClassName } from '../../utils/Names';
+import { parseFieldDescriptor, parseMethodDescriptor } from '../../utils/JavaDescriptors';
+import { getJavadocForToken } from '../Javadoc';
 import { getJavadocReference, type JavadocReference } from './JavadocReference';
 import { escapeSnippet, getCompletionRange, type CompletionRange } from './JavadocCompletionUtils';
 import { JavadocSymbols, simpleName, sourceName, type InheritedMember } from './JavadocSymbols';

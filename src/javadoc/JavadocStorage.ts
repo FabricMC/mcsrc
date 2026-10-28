@@ -1,7 +1,7 @@
 import { defer, firstValueFrom, shareReplay, tap } from "rxjs";
 import { load } from "../../java/build/generated/teavm/wasm-gc/mcsrc.wasm-runtime.js";
 import mappingsWasm from "../../java/build/generated/teavm/wasm-gc/mcsrc.wasm?url";
-import type { DeclarationMetadata } from "./JavadocDeclaration";
+import type { DeclarationMetadata } from "./editor/JavadocDeclaration";
 import { outerClassName, type ClassName } from "../utils/Names";
 
 export type JavadocFormat = "tiny2" | "enigma";

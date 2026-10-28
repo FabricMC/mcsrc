@@ -8,7 +8,7 @@ import type { DecompileResult } from "../workers/decompile/types";
 import { useObservable } from "../utils/UseObservable";
 import { activeJavadocToken, getJavadocForToken } from "./Javadoc";
 import { getJavadocDraft } from "./JavadocAutosave";
-import JavadocMarkdownEditor from "./JavadocMarkdownEditor";
+import JavadocMarkdownEditor from "./editor/JavadocMarkdownEditor";
 
 interface InlineHost {
     token: Token;

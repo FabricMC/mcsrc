@@ -2,10 +2,10 @@ import { describe, expect, it, vi } from 'vitest';
 import { languages, type CancellationToken, type editor, type Position } from 'monaco-editor';
 import { JavadocCompletionProvider } from './JavadocCompletionProvider';
 import { getJavadocReference } from './JavadocReference';
-import { toClassName } from '../utils/Names';
-import type { DecompileResult } from '../workers/decompile/types';
-import type { JarIndex } from '../workers/jar-index/client';
-import type { MemberData, Method, Field } from '../workers/jar-index/types';
+import { toClassName } from '../../utils/Names';
+import type { DecompileResult } from '../../workers/decompile/types';
+import type { JarIndex } from '../../workers/jar-index/client';
+import type { MemberData, Method, Field } from '../../workers/jar-index/types';
 
 vi.mock('monaco-editor', () => ({
     languages: {
@@ -13,7 +13,7 @@ vi.mock('monaco-editor', () => ({
         CompletionItemInsertTextRule: { InsertAsSnippet: 4 },
     },
 }));
-vi.mock('./Javadoc', () => ({ getJavadocForToken: () => 'Stored documentation' }));
+vi.mock('../Javadoc', () => ({ getJavadocForToken: () => 'Stored documentation' }));
 
 function documentAtCursor(markdown: string) {
     const offset = markdown.indexOf('|');

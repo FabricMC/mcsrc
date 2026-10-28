@@ -1,4 +1,4 @@
-package mcsrc;
+package mcsrc.javadoc;
 
 import java.util.ArrayList;
 import java.util.List;

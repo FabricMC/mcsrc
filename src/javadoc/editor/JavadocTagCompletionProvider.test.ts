@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { editor, Position } from 'monaco-editor';
-import type { ParameterToken, Token } from '../logic/Tokens';
-import type { DecompileResult } from '../workers/decompile/types';
-import { toClassName } from '../utils/Names';
+import type { ParameterToken, Token } from '../../logic/Tokens';
+import type { DecompileResult } from '../../workers/decompile/types';
+import { toClassName } from '../../utils/Names';
 import { getJavadocDeclaration, type DeclarationMetadata, type JavadocDeclaration } from './JavadocDeclaration';
 import { JavadocTagCompletionProvider } from './JavadocTagCompletionProvider';
 

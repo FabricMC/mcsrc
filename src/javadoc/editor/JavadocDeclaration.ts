@@ -1,5 +1,5 @@
-import type { MemberToken, ParameterToken, Token } from '../logic/Tokens';
-import type { DecompileResult } from '../workers/decompile/types';
+import type { MemberToken, ParameterToken, Token } from '../../logic/Tokens';
+import type { DecompileResult } from '../../workers/decompile/types';
 
 export interface DeclarationMetadata {
     typeParameters: string[];

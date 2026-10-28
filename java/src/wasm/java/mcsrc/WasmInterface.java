@@ -8,6 +8,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import mcsrc.javadoc.DeclarationMetadata;
+
 import net.fabricmc.mappingio.format.MappingFormat;
 
 import org.teavm.jso.JSExport;
