@@ -16,6 +16,7 @@ import { minecraftJar } from "../../logic/MinecraftApi";
 import { toClassFilePath } from "../../utils/Names";
 import { toArrayBuffer } from "../../utils/ArrayBuffer";
 import { readJavadocDeclarationMetadata } from "../JavadocStorage";
+import { autoJarIndex } from "../../logic/Settings";
 
 const MIN_EDITOR_HEIGHT = 84;
 const MAX_EDITOR_HEIGHT = 320;
@@ -33,7 +34,9 @@ const JavadocMarkdownEditor = ({
 }) => {
     const monaco = useMonaco();
     const decompileResult = useObservable(currentResult);
-    const index = useObservable(jarIndex);
+    const loadedIndex = useObservable(jarIndex);
+    const indexAutomatically = useObservable(autoJarIndex.observable);
+    const index = indexAutomatically ? loadedIndex : undefined;
     const jar = useObservable(minecraftJar);
     const [codeEditor, setCodeEditor] = useState<editor.IStandaloneCodeEditor | null>(null);
     const model = codeEditor?.getModel();

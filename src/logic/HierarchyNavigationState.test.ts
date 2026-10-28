@@ -1,7 +1,13 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { Subject, Subscription } from 'rxjs';
+import { BehaviorSubject, Subject, Subscription } from 'rxjs';
 import { jarIndex, type ClassData, type JarIndex } from '../workers/jar-index/client';
-import { hierarchyNavigation } from './Inheritance';
+import { automaticHierarchyNavigation, hierarchyNavigation } from './Inheritance';
+import { autoJarIndex } from './Settings';
+
+vi.mock('./Settings', async () => {
+    const { BehaviorSubject } = await import('rxjs');
+    return { autoJarIndex: { observable: new BehaviorSubject(true) } };
+});
 
 vi.mock('../workers/jar-index/client', async () => {
     const { Subject } = await import('rxjs');
@@ -19,6 +25,7 @@ let subscriptions = new Subscription();
 afterEach(() => {
     subscriptions.unsubscribe();
     subscriptions = new Subscription();
+    (autoJarIndex.observable as BehaviorSubject<boolean>).next(true);
     vi.restoreAllMocks();
 });
 
@@ -37,6 +44,41 @@ function observeNavigation(): (string | null)[] {
 }
 
 describe('Hierarchy navigation state', () => {
+    it('skips automatic indexing when disabled but allows explicit hierarchy requests', async () => {
+        (autoJarIndex.observable as BehaviorSubject<boolean>).next(false);
+        subscriptions.add(automaticHierarchyNavigation.subscribe());
+        const index = createIndex('explicit.jar', Promise.resolve([]));
+        indexes.next(index);
+        expect(index.getClassData).not.toHaveBeenCalled();
+        expect(index.getMemberData).not.toHaveBeenCalled();
+
+        const names = observeNavigation();
+        indexes.next(index);
+        await vi.waitFor(() => expect(names.at(-1)).toBe('explicit.jar'));
+        expect(index.getMemberData).toHaveBeenCalledOnce();
+    });
+
+    it('starts automatic indexing when enabled and ignores a pending result after disabling', async () => {
+        const enabled = autoJarIndex.observable as BehaviorSubject<boolean>;
+        enabled.next(false);
+        const names: (string | null)[] = [];
+        subscriptions.add(automaticHierarchyNavigation.subscribe(state => names.push(state?.jarName ?? null)));
+        let finishLoad!: (classes: ClassData[]) => void;
+        const classes = new Promise<ClassData[]>(resolve => { finishLoad = resolve; });
+        const index = createIndex('automatic.jar', classes);
+
+        enabled.next(true);
+        indexes.next(index);
+        expect(index.getMemberData).toHaveBeenCalledOnce();
+        enabled.next(false);
+        const disabledNames = [...names];
+        finishLoad([]);
+        await classes;
+        await Promise.resolve();
+        expect(names).toEqual(disabledNames);
+        expect(names.at(-1)).toBeNull();
+    });
+
     it('ignores an older jar load that completes after the selected jar', async () => {
         let finishOldLoad!: (classes: ClassData[]) => void;
         const oldClasses = new Promise<ClassData[]>(resolve => {

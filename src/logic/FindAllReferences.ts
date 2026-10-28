@@ -9,11 +9,14 @@ import { toClassFilePath, toClassName, type ClassName } from "../utils/Names";
 import { hierarchyNavigation } from './Inheritance';
 import { includeMethodHierarchy } from './Settings';
 
-export const methodReferenceKeys = combineLatest([referencesQuery, hierarchyNavigation]).pipe(
-    map(([query, navigation]) => {
-        if (!query || getQueryType(query) !== 'method' || !navigation) return [];
-        const [owner, name, descriptor] = query.split(':');
-        return navigation.index.methodHierarchy(toClassName(owner), name, descriptor);
+export const methodReferenceKeys = referencesQuery.pipe(
+    switchMap(query => {
+        if (!query || getQueryType(query) !== 'method') return of<ReferenceKey[]>([]);
+        return hierarchyNavigation.pipe(map(navigation => {
+            if (!navigation) return [];
+            const [owner, name, descriptor] = query.split(':');
+            return navigation.index.methodHierarchy(toClassName(owner), name, descriptor);
+        }));
     }),
     shareReplay({ bufferSize: 1, refCount: true }),
 );
@@ -24,37 +27,41 @@ export interface ReferenceMatch {
 }
 
 export const referenceResults = jarIndex.pipe(
-    switchMap(index => combineLatest([referencesQuery, includeMethodHierarchy.observable, hierarchyNavigation]).pipe(
-        map(([query, includeHierarchy, navigation]): ReferenceKey[] => {
-            if (!query) return [];
-            if (getQueryType(query) === 'field' && navigation?.jarName === index.minecraftJar.jar.name) {
-                const [owner, name, descriptor] = query.split(':');
-                const accessor = navigation.index.recordAccessor(toClassName(owner), name, descriptor);
-                if (accessor) return [query, accessor];
-            }
-            if (includeHierarchy && getQueryType(query) === 'method') {
-                if (!navigation || navigation.jarName !== index.minecraftJar.jar.name) return [];
-                const [owner, name, descriptor] = query.split(':');
-                return navigation.index.methodHierarchy(toClassName(owner), name, descriptor);
-            }
-            return [query];
-        }),
-        distinctUntilChanged((previous, current) => previous.length === current.length && previous.every((key, position) => key === current[position])),
-        switchMap(keys => {
-            if (keys.length === 0) return of<ReferenceMatch[]>([]);
-            return from(Promise.all(keys.map(async key => ({ key, references: await index.getReference(key) })))).pipe(
-                map(results => {
-                    const matches = new Map<ReferenceString, ReferenceMatch>();
-                    for (const { key, references } of results) {
-                        for (const reference of references) {
-                            const match = matches.get(reference) ?? { reference, queries: [] };
-                            match.queries.push(key);
-                            matches.set(reference, match);
-                        }
+    switchMap(index => referencesQuery.pipe(
+        switchMap(query => {
+            if (!query) return of<ReferenceMatch[]>([]);
+            return combineLatest([includeMethodHierarchy.observable, hierarchyNavigation]).pipe(
+                map(([includeHierarchy, navigation]): ReferenceKey[] => {
+                    if (getQueryType(query) === 'field' && navigation?.jarName === index.minecraftJar.jar.name) {
+                        const [owner, name, descriptor] = query.split(':');
+                        const accessor = navigation.index.recordAccessor(toClassName(owner), name, descriptor);
+                        if (accessor) return [query, accessor];
                     }
-                    return [...matches.values()];
+                    if (includeHierarchy && getQueryType(query) === 'method') {
+                        if (!navigation || navigation.jarName !== index.minecraftJar.jar.name) return [];
+                        const [owner, name, descriptor] = query.split(':');
+                        return navigation.index.methodHierarchy(toClassName(owner), name, descriptor);
+                    }
+                    return [query];
                 }),
-                startWith<ReferenceMatch[]>([]),
+                distinctUntilChanged((previous, current) => previous.length === current.length && previous.every((key, position) => key === current[position])),
+                switchMap(keys => {
+                    if (keys.length === 0) return of<ReferenceMatch[]>([]);
+                    return from(Promise.all(keys.map(async key => ({ key, references: await index.getReference(key) })))).pipe(
+                        map(results => {
+                            const matches = new Map<ReferenceString, ReferenceMatch>();
+                            for (const { key, references } of results) {
+                                for (const reference of references) {
+                                    const match = matches.get(reference) ?? { reference, queries: [] };
+                                    match.queries.push(key);
+                                    matches.set(reference, match);
+                                }
+                            }
+                            return [...matches.values()];
+                        }),
+                        startWith<ReferenceMatch[]>([]),
+                    );
+                }),
             );
         }),
     )),

@@ -13,7 +13,7 @@ import { isDarkMode } from "../logic/Browser";
 import { JavadocSymbols } from "./editor/JavadocSymbols";
 import { createJavadocView, createRawJavadocView } from "./JavadocView";
 import type { ClassName } from "../utils/Names";
-import { renderJavadoc } from "../logic/Settings";
+import { autoJarIndex, renderJavadoc } from "../logic/Settings";
 
 type monaco = typeof import("monaco-editor");
 
@@ -35,8 +35,10 @@ export function applyJavadocCodeExtensions(monaco: monaco, editor: editor.IStand
     const javadocSubscription = combineLatest([
         javadocRevision, activeJavadocToken, jarIndex, isDarkMode, renderJavadoc.observable,
         refreshJavadocs.pipe(startWith(undefined)),
+        autoJarIndex.observable,
     ]).pipe(
-        switchMap(([, , nextIndex, , renderMarkdown]) => {
+        switchMap(([, , jarIndex, , renderMarkdown, , indexAutomatically]) => {
+            const nextIndex = indexAutomatically ? jarIndex : undefined;
             for (const view of views) {
                 view.dispose();
             }

@@ -2,6 +2,7 @@ import { BehaviorSubject, catchError, combineLatest, defer, distinctUntilChanged
 import { jarIndex, type ClassData } from "../workers/jar-index/client";
 import { HierarchyNavigation } from './HierarchyNavigation';
 import { minecraftJar } from "./MinecraftApi";
+import { autoJarIndex } from "./Settings";
 import { classNameFromClassFilePath, isClassFilePath, type ClassName } from "../utils/Names";
 
 export class ClassNode {
@@ -78,6 +79,10 @@ export const hierarchyNavigation = jarIndex.pipe(
     shareReplay({ bufferSize: 1, refCount: true }),
 );
 
+export const automaticHierarchyNavigation = autoJarIndex.observable.pipe(
+    switchMap(enabled => enabled ? hierarchyNavigation : of(null)),
+);
+
 export const selectedInheritanceClassName = new BehaviorSubject<ClassName | null>(null);
 
 export const inheritanceIndex = combineLatest([jarIndex, minecraftJar]).pipe(
@@ -114,7 +119,7 @@ export const inheritanceIndex = combineLatest([jarIndex, minecraftJar]).pipe(
 
         return index;
     }),
-    shareReplay({ bufferSize: 1, refCount: false })
+    shareReplay({ bufferSize: 1, refCount: true })
 );
 
 export const selectedInheritanceClassNode = selectedInheritanceClassName.pipe(

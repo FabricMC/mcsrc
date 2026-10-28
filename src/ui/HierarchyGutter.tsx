@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { editor } from 'monaco-editor';
-import { hierarchyNavigation } from '../logic/Inheritance';
+import { automaticHierarchyNavigation } from '../logic/Inheritance';
 import type { DecompileResult } from '../workers/decompile/types';
 import { showInheritanceIcons } from '../logic/Settings';
 import { useObservable } from '../utils/UseObservable';
@@ -13,7 +13,7 @@ export function HierarchyGutter({ codeEditor, result }: {
     result: DecompileResult | undefined;
 }) {
     const showIcons = useObservable(showInheritanceIcons.observable);
-    const navigation = useObservable(hierarchyNavigation);
+    const navigation = useObservable(automaticHierarchyNavigation);
     const [chooser, setChooser] = useState<HierarchyChooser | null>(null);
     const closeChooser = useCallback(() => setChooser(null), []);
 

@@ -7,7 +7,7 @@ import { createJavadocView, createRawJavadocView } from './JavadocView';
 import { jarIndex, type ClassData, type JarIndex } from '../workers/jar-index/client';
 import type { DecompileResult } from '../workers/decompile/types';
 import { toClassName } from '../utils/Names';
-import { renderJavadoc } from '../logic/Settings';
+import { autoJarIndex, renderJavadoc } from '../logic/Settings';
 
 vi.mock('monaco-editor', () => ({}));
 vi.mock('./Javadoc', async () => {
@@ -24,7 +24,10 @@ vi.mock('../logic/Browser', async () => {
 });
 vi.mock('../logic/Settings', async () => {
     const { BehaviorSubject } = await import('rxjs');
-    return { renderJavadoc: { observable: new BehaviorSubject(true) } };
+    return {
+        renderJavadoc: { observable: new BehaviorSubject(true) },
+        autoJarIndex: { observable: new BehaviorSubject(true) },
+    };
 });
 vi.mock('../workers/jar-index/client', async () => {
     const { Subject } = await import('rxjs');
@@ -76,11 +79,29 @@ beforeEach(() => {
     activeJavadocToken.next(null);
     javadocRevision.next(0);
     renderMarkdown.next(true);
+    (autoJarIndex.observable as Subject<boolean>).next(true);
 });
 
 afterEach(disposeExtensions);
 
 describe('Javadoc render subscriptions', () => {
+    it('renders from source without indexing when automatic indexing is disabled', async () => {
+        (autoJarIndex.observable as Subject<boolean>).next(false);
+        setupEditor();
+        const index = createIndex();
+        const getClasses = vi.spyOn(index, 'getClassData');
+        const getMembers = vi.spyOn(index, 'getMemberData');
+        indexes.next(index);
+
+        await vi.waitFor(() => expect(createJavadocView).toHaveBeenCalledOnce());
+        expect(getClasses).not.toHaveBeenCalled();
+        expect(getMembers).not.toHaveBeenCalled();
+
+        (autoJarIndex.observable as Subject<boolean>).next(true);
+        await vi.waitFor(() => expect(createJavadocView).toHaveBeenCalledTimes(2));
+        expect(getMembers).toHaveBeenCalledOnce();
+    });
+
     it('switches to raw Markdown while symbols load and restores rendering when enabled', async () => {
         let finishLoad!: (classes: ClassData[]) => void;
         const loading = new Promise<ClassData[]>(resolve => {
