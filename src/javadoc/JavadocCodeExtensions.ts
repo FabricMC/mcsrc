@@ -11,8 +11,9 @@ import { combineLatest, EMPTY, from, startWith, Subject, switchMap, tap } from "
 import { jarIndex, type JarIndex } from "../workers/jar-index/client";
 import { isDarkMode } from "../logic/Browser";
 import { JavadocSymbols } from "./editor/JavadocSymbols";
-import { createJavadocView } from "./JavadocView";
+import { createJavadocView, createRawJavadocView } from "./JavadocView";
 import type { ClassName } from "../utils/Names";
+import { renderJavadoc } from "../logic/Settings";
 
 type monaco = typeof import("monaco-editor");
 
@@ -32,10 +33,10 @@ export function applyJavadocCodeExtensions(monaco: monaco, editor: editor.IStand
     };
     const refreshJavadocs = new Subject<void>();
     const javadocSubscription = combineLatest([
-        javadocRevision, activeJavadocToken, jarIndex, isDarkMode,
+        javadocRevision, activeJavadocToken, jarIndex, isDarkMode, renderJavadoc.observable,
         refreshJavadocs.pipe(startWith(undefined)),
     ]).pipe(
-        switchMap(([, , nextIndex]) => {
+        switchMap(([, , nextIndex, , renderMarkdown]) => {
             for (const view of views) {
                 view.dispose();
             }
@@ -50,6 +51,12 @@ export function applyJavadocCodeExtensions(monaco: monaco, editor: editor.IStand
                 .filter(token => token.declaration && token !== activeJavadocToken.value)
                 .map(token => ({ token, markdown: getJavadocForToken(token) }))
                 .filter(entry => entry.markdown !== null);
+            if (!renderMarkdown) {
+                for (const { token, markdown } of documentation) {
+                    views.push(createRawJavadocView(editor, decompile, token, markdown!));
+                }
+                return EMPTY;
+            }
             return from(Promise.all(documentation.map(({ token }) => symbolsFor(token.className).ready))).pipe(
                 tap(() => {
                     for (const { token, markdown } of documentation) {

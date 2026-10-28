@@ -2,7 +2,7 @@ import { Button, Flex, Modal, type CheckboxProps, Form, Tooltip, InputNumber, ty
 import { SettingOutlined, SunOutlined, MoonOutlined, DesktopOutlined, JavaOutlined, CloseOutlined, FileTextOutlined } from '@ant-design/icons';
 import { Checkbox } from 'antd';
 import { useObservable } from "../utils/UseObservable";
-import { BooleanSetting, enableTabs, tabPersistance, displayLambdas, focusSearch, KeybindSetting, type KeybindValue, bytecode, showStructure, NumberSetting, preferWasmDecompiler, compactPackages, theme, autoJarIndex, showInheritanceIcons, showClassHistoryIcons } from "../logic/Settings";
+import { BooleanSetting, enableTabs, tabPersistance, displayLambdas, focusSearch, KeybindSetting, type KeybindValue, bytecode, showStructure, NumberSetting, preferWasmDecompiler, compactPackages, theme, autoJarIndex, showInheritanceIcons, showClassHistoryIcons, renderJavadoc } from "../logic/Settings";
 import { capturingKeybind, rawKeydownEvent } from "../logic/Keybinds";
 import { BehaviorSubject } from "rxjs";
 import React, { useEffect, useState } from "react";
@@ -35,6 +35,7 @@ const SettingsTab = () => {
         <div className="settings-tab-content">
             <Form className="settings-form" layout="horizontal" labelCol={{ span: 9 }} wrapperCol={{ span: 16 }}>
                 <ThemeOption />
+                {javadocMode && <BooleanOption setting={renderJavadoc} title="Render Javadoc" tooltip="Render inline Javadoc as formatted documentation. Disable to show the raw Markdown." />}
                 <BooleanOption setting={enableTabs} title="Enable Tabs" />
                 <BooleanOption setting={tabPersistance} title="Preserve Tabs" tooltip="Automatically restore last opened tabs on page reload." />
                 <BooleanOption setting={showInheritanceIcons} title="Inheritance Gutter Icons" tooltip="Show gutter icons for class inheritance and method overrides." />

@@ -3,10 +3,11 @@ import { Subject } from 'rxjs';
 import type { editor, IDisposable } from 'monaco-editor';
 import { applyJavadocCodeExtensions } from './JavadocCodeExtensions';
 import { activeJavadocToken, javadocRevision } from './Javadoc';
-import { createJavadocView } from './JavadocView';
+import { createJavadocView, createRawJavadocView } from './JavadocView';
 import { jarIndex, type ClassData, type JarIndex } from '../workers/jar-index/client';
 import type { DecompileResult } from '../workers/decompile/types';
 import { toClassName } from '../utils/Names';
+import { renderJavadoc } from '../logic/Settings';
 
 vi.mock('monaco-editor', () => ({}));
 vi.mock('./Javadoc', async () => {
@@ -21,13 +22,21 @@ vi.mock('../logic/Browser', async () => {
     const { BehaviorSubject } = await import('rxjs');
     return { isDarkMode: new BehaviorSubject(false) };
 });
+vi.mock('../logic/Settings', async () => {
+    const { BehaviorSubject } = await import('rxjs');
+    return { renderJavadoc: { observable: new BehaviorSubject(true) } };
+});
 vi.mock('../workers/jar-index/client', async () => {
     const { Subject } = await import('rxjs');
     return { jarIndex: new Subject() };
 });
-vi.mock('./JavadocView', () => ({ createJavadocView: vi.fn(() => ({ dispose: vi.fn() })) }));
+vi.mock('./JavadocView', () => ({
+    createJavadocView: vi.fn(() => ({ dispose: vi.fn() })),
+    createRawJavadocView: vi.fn(() => ({ dispose: vi.fn() })),
+}));
 
 const indexes = jarIndex as Subject<JarIndex>;
+const renderMarkdown = renderJavadoc.observable as Subject<boolean>;
 const result = {
     source: 'class Owner {}',
     tokens: [{ type: 'class', className: toClassName('Owner'), declaration: true, start: 6, length: 5 }],
@@ -66,11 +75,33 @@ beforeEach(() => {
     vi.clearAllMocks();
     activeJavadocToken.next(null);
     javadocRevision.next(0);
+    renderMarkdown.next(true);
 });
 
 afterEach(disposeExtensions);
 
 describe('Javadoc render subscriptions', () => {
+    it('switches to raw Markdown while symbols load and restores rendering when enabled', async () => {
+        let finishLoad!: (classes: ClassData[]) => void;
+        const loading = new Promise<ClassData[]>(resolve => {
+            finishLoad = resolve;
+        });
+        setupEditor();
+        indexes.next(createIndex(loading));
+        renderMarkdown.next(false);
+        expect(createRawJavadocView).toHaveBeenCalledOnce();
+        const rawView = vi.mocked(createRawJavadocView).mock.results[0].value;
+
+        finishLoad([]);
+        await loading;
+        await new Promise(resolve => setTimeout(resolve, 0));
+        expect(createJavadocView).not.toHaveBeenCalled();
+
+        renderMarkdown.next(true);
+        expect(rawView.dispose).toHaveBeenCalledOnce();
+        await vi.waitFor(() => expect(createJavadocView).toHaveBeenCalledOnce());
+    });
+
     it('ignores an older symbol load that finishes after a newer refresh', async () => {
         let finishOldLoad!: (classes: ClassData[]) => void;
         const oldLoad = new Promise<ClassData[]>(resolve => {

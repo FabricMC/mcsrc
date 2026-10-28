@@ -7,6 +7,35 @@ import type { DecompileResult } from '../workers/decompile/types';
 import type { JavadocSymbols } from './editor/JavadocSymbols';
 import { renderJavadocMarkdown } from './JavadocMarkdown';
 
+export function createRawJavadocView(
+    codeEditor: editor.IStandaloneCodeEditor,
+    result: DecompileResult,
+    token: Token,
+    markdown: string,
+): IDisposable {
+    const domNode = document.createElement('div');
+    domNode.className = 'javadoc-raw';
+    codeEditor.applyFontInfo(domNode);
+    domNode.style.tabSize = String(codeEditor.getModel()?.getOptions().tabSize ?? 4);
+    const lineStart = result.source.lastIndexOf('\n', token.start - 1) + 1;
+    const indentation = /^[\t ]*/.exec(result.source.slice(lineStart))![0];
+    const lines = markdown.split('\n');
+    domNode.textContent = lines.map(line => `${indentation}/// ${line}`).join('\n');
+    let zoneId = '';
+    codeEditor.changeViewZones(accessor => {
+        zoneId = accessor.addZone({
+            afterLineNumber: getTokenLocation(result, token).line - 1,
+            heightInLines: lines.length,
+            domNode,
+        });
+    });
+    return {
+        dispose() {
+            codeEditor.changeViewZones(accessor => accessor.removeZone(zoneId));
+        },
+    };
+}
+
 export function createJavadocView(
     monaco: typeof import('monaco-editor'),
     codeEditor: editor.IStandaloneCodeEditor,

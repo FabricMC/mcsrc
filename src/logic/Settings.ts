@@ -158,6 +158,7 @@ export const theme = new StringSetting<ThemeMode>('theme', 'system', ['light', '
 
 export const agreedEula = new BooleanSetting('eula', false);
 export const showAnnotaterShortcut = new BooleanSetting('show_annotater_shortcut', false);
+export const renderJavadoc = new BooleanSetting('render_javadoc', true);
 export const enableTabs = new BooleanSetting('enable_tabs', true);
 export const tabPersistance = new BooleanSetting('tab_persistance', true);
 export const showInheritanceIcons = new BooleanSetting('show_inheritance_icons', true);
