@@ -21,7 +21,10 @@ const filePickerSupported = "showOpenFilePicker" in window && "showSaveFilePicke
 const directoryPickerSupported = "showDirectoryPicker" in window;
 const pickerSupported = filePickerSupported || directoryPickerSupported;
 
-const JavadocFilePicker = ({ annotaterShortcut = false }: { annotaterShortcut?: boolean }) => {
+const JavadocFilePicker = ({ annotaterShortcut = false, onOpen }: {
+    annotaterShortcut?: boolean;
+    onOpen?: () => void;
+}) => {
     const selectedFile = useObservable(activeJavadocFile);
     const [loading, setLoading] = useState(false);
     const [unsupportedAttempt, setUnsupportedAttempt] = useState(0);
@@ -97,6 +100,7 @@ const JavadocFilePicker = ({ annotaterShortcut = false }: { annotaterShortcut?: 
                 showAnnotaterShortcut.value = true;
             }
             messageApi.success("Javadoc mappings opened.");
+            onOpen?.();
         } catch (error) {
             if (!(error instanceof DOMException && error.name === "AbortError")) {
                 console.error("Unable to open Javadoc mappings:", error);

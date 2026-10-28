@@ -1,6 +1,6 @@
 import ProgressModal from "./ProgressModal";
 import AboutModal from "./AboutModal";
-import SettingsModal from "./SettingsModal";
+import SettingsModal from "./settings/SettingsModal";
 import StructureModal from "./StructureModal";
 import { JarDecompilerModal, JarDecompilerProgressModal } from "./JarDecompilerModal";
 import IndexProgressNotification from "./IndexProgressNotification";

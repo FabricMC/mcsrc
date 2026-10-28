@@ -18,7 +18,7 @@ test.describe('Decompilation', () => {
         await waitForDecompiledContent(page, 'enum ChatFormatting');
 
         await page.getByRole('button', { name: 'Settings' }).click();
-        await page.getByRole('tab', { name: 'Advanced' }).click();
+        await page.getByRole('menuitem', { name: 'Tools' }).click();
         await page.getByTestId('jar-decompiler').click();
 
         const splitsInput = page.getByTestId('jar-decompiler-splits').first();

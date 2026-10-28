@@ -1,6 +1,6 @@
 import { Button, Divider, Flex, Tooltip } from "antd";
 import { SwapOutlined } from "@ant-design/icons";
-import { SettingsModalButton } from "./SettingsModal";
+import { SettingsModalButton } from "./settings/SettingsModal";
 import VersionSelector from "./VersionSelector";
 import { diffView } from "../logic/State";
 import { activeJavadocFile } from "../javadoc/Javadoc";
