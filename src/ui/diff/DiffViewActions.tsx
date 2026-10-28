@@ -1,5 +1,7 @@
 import {
     AlignLeftOutlined,
+    ApartmentOutlined,
+    BarsOutlined,
     CodeOutlined,
     DownOutlined,
     FileTextOutlined,
@@ -11,7 +13,7 @@ import { Button, Tooltip } from "antd";
 import { type CSSProperties, useMemo } from "react";
 import { getDiffChanges } from "../../logic/Diff";
 import { isDecompiling } from "../../logic/Decompiler";
-import {bytecode, sortDiff, unifiedDiff} from "../../logic/Settings";
+import { bytecode, diffTreeView, sortDiff, unifiedDiff } from "../../logic/Settings";
 import { selectedFile } from "../../logic/State";
 import { openCodeTab } from "../../logic/tabs";
 import { useObservable } from "../../utils/UseObservable";
@@ -72,6 +74,7 @@ export const DiffViewModeButtons = () => {
     const isUnifiedDiff = useObservable(unifiedDiff.observable);
     const isBytecode = useObservable(bytecode.observable);
     const isSort = useObservable(sortDiff.observable);
+    const isTreeView = useObservable(diffTreeView.observable);
     const currentFile = useObservable(selectedFile);
     const changes = useObservable(diffChanges);
     const currentChange = currentFile ? changes?.get(currentFile) : undefined;
@@ -97,6 +100,15 @@ export const DiffViewModeButtons = () => {
                     aria-label={isBytecode ? "Show decompiled code" : "Show bytecode"}
                     aria-pressed={isBytecode}
                     style={hasNoLineChanges ? noLineChangesBytecodeStyle : undefined}
+                />
+            </Tooltip>
+            <Tooltip title={isTreeView ? "Switch to flat list" : "Switch to tree list"}>
+                <Button
+                    type={isTreeView ? "primary" : "default"}
+                    icon={isTreeView ? <ApartmentOutlined /> : <BarsOutlined />}
+                    onClick={() => diffTreeView.value = !diffTreeView.value}
+                    aria-label={isTreeView ? "Switch to flat list" : "Switch to tree list"}
+                    aria-pressed={!!isTreeView}
                 />
             </Tooltip>
             <Tooltip title={isSort ? "Sort by file name" : "Sort by change"}>
