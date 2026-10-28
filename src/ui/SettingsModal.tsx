@@ -2,7 +2,7 @@ import { Button, Flex, Modal, type CheckboxProps, Form, Tooltip, InputNumber, ty
 import { SettingOutlined, SunOutlined, MoonOutlined, DesktopOutlined, JavaOutlined, FileTextOutlined } from '@ant-design/icons';
 import { Checkbox } from 'antd';
 import { useObservable } from "../utils/UseObservable";
-import { BooleanSetting, enableTabs, displayLambdas, focusSearch, KeybindSetting, type KeybindValue, bytecode, showStructure, NumberSetting, preferWasmDecompiler, compactPackages, theme, autoJarIndex, showInheritanceIcons, showClassHistoryIcons } from "../logic/Settings";
+import { BooleanSetting, enableTabs, tabPersistance, displayLambdas, focusSearch, KeybindSetting, type KeybindValue, bytecode, showStructure, NumberSetting, preferWasmDecompiler, compactPackages, theme, autoJarIndex, showInheritanceIcons, showClassHistoryIcons } from "../logic/Settings";
 import { capturingKeybind, rawKeydownEvent } from "../logic/Keybinds";
 import { BehaviorSubject } from "rxjs";
 import React, { useEffect, useState } from "react";
@@ -33,6 +33,7 @@ const SettingsTab = () => {
             <Form className="settings-form" layout="horizontal" labelCol={{ span: 9 }} wrapperCol={{ span: 16 }}>
                 <ThemeOption />
                 <BooleanOption setting={enableTabs} title="Enable Tabs" />
+                <BooleanOption setting={tabPersistance} title="Preserve Tabs" tooltip="Automatically restore last opened tabs on page reload." />
                 <BooleanOption setting={showInheritanceIcons} title="Inheritance Gutter Icons" tooltip="Show gutter icons for class inheritance and method overrides." />
                 <BooleanOption setting={showClassHistoryIcons} title="Class History Gutter Icons" tooltip="Show gutter icons for class version history." />
                 <BooleanOption setting={compactPackages} title="Compact Packages" tooltip="Collapse packages with one child into one." />
@@ -169,18 +170,18 @@ export interface NumberOptionProps {
     testid?: string;
 }
 
-export const NumberOption: React.FC<NumberOptionProps> = ({ setting, title, min, max, testid}) => {
+export const NumberOption: React.FC<NumberOptionProps> = ({ setting, title, min, max, testid }) => {
     const value = useObservable(setting.observable);
     const onChange: InputNumberProps<number>["onChange"] = (e) => {
         setting.value = e ?? setting.defaultValue;
-    }
+    };
 
     return (
         <Form.Item label={title}>
-            <InputNumber data-testid={testid} min={min} max={max} value={value} onChange={onChange}/>
+            <InputNumber data-testid={testid} min={min} max={max} value={value} onChange={onChange} />
         </Form.Item>
     );
-}
+};
 
 interface KeybindOptionProps {
     setting: KeybindSetting;

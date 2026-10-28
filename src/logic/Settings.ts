@@ -68,14 +68,14 @@ export class NumberSetting extends Setting<number> {
 export class StringSetting<T extends string = string> extends Setting<T> {
     constructor(key: string, defaultValue: T, validValues?: readonly T[]) {
         super(
-            key, 
-            defaultValue, 
+            key,
+            defaultValue,
             (s) => {
                 if (validValues && !validValues.includes(s as T)) {
                     return defaultValue;
                 }
                 return s as T;
-            }, 
+            },
             v => v
         );
     }
@@ -158,6 +158,7 @@ export const theme = new StringSetting<ThemeMode>('theme', 'system', ['light', '
 
 export const agreedEula = new BooleanSetting('eula', false);
 export const enableTabs = new BooleanSetting('enable_tabs', true);
+export const tabPersistance = new BooleanSetting('tab_persistance', true);
 export const showInheritanceIcons = new BooleanSetting('show_inheritance_icons', true);
 export const showClassHistoryIcons = new BooleanSetting('show_class_history_icons', true);
 export const includeMethodHierarchy = new BooleanSetting('include_method_hierarchy', true);

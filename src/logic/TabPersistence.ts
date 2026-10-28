@@ -1,3 +1,5 @@
+import { tabPersistance } from "./Settings";
+
 export interface SavedTab {
     type: "CodeTab" | "InheritanceViewTab";
     key: string;
@@ -31,6 +33,8 @@ export const parseSavedTabState = (value: unknown): SavedTabState | null => {
 };
 
 export const loadSavedTabState = (): { state: SavedTabState; fromHistory: boolean; } | null => {
+    if (!tabPersistance.value) return null;
+
     const fromHistory = Array.isArray(window.history.state?.openTabs);
     try {
         const value = fromHistory ? window.history.state : localStorage.getItem(STORAGE_KEY);
@@ -43,6 +47,20 @@ export const loadSavedTabState = (): { state: SavedTabState; fromHistory: boolea
 };
 
 export const persistTabState = (state: SavedTabState): void => {
+    if (!tabPersistance.value) {
+        try {
+            localStorage.removeItem(STORAGE_KEY);
+            const historyState = { ...(window.history.state ?? {}) };
+            delete (historyState as any).openTabs;
+            delete (historyState as any).activeTabKey;
+            delete (historyState as any).minecraftVersion;
+            window.history.replaceState(historyState, '');
+        } catch {
+            // Haha get ignored
+        }
+        return;
+    }
+
     try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     } catch {
@@ -50,8 +68,7 @@ export const persistTabState = (state: SavedTabState): void => {
     }
 
     try {
-        // Merge into the existing history state
-        window.history.replaceState({ ...window.history.state, ...state }, '');
+        window.history.replaceState({ ...(window.history.state ?? {}), ...state }, '');
     } catch {
         // Haha get ignored
     }
