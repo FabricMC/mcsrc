@@ -1,5 +1,4 @@
-import type { ClassData } from '../workers/jar-index/client';
-import type { MemberData, Method } from '../workers/jar-index/types';
+import type {ClassData, MemberData, Method} from '../workers/jar-index/types';
 import type { ClassName } from '../utils/Names';
 import type { Token } from './Tokens';
 import { isAbstract, isInterface, isRecord } from '../utils/Classfile';

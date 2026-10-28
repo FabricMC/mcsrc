@@ -1,13 +1,13 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { BehaviorSubject, Subject, Subscription } from 'rxjs';
-import { jarIndex, type ClassData, type JarIndex } from '../workers/jar-index/client';
+import { jarIndex, type JarIndex } from '../workers/jar-index/client';
 import { referencesQuery } from './State';
 import { hierarchyNavigation } from './Inheritance';
 import { HierarchyNavigation } from './HierarchyNavigation';
 import { getNextJumpToken, goToReference, referenceResults, type ReferenceMatch } from './FindAllReferences';
 import { includeMethodHierarchy } from './Settings';
 import { toClassName } from '../utils/Names';
-import type { MemberData, Method, ReferenceString } from '../workers/jar-index/types';
+import type {ClassData, MemberData, Method, ReferenceString} from '../workers/jar-index/types';
 import type { DecompileResult } from '../workers/decompile/types';
 import type { Token } from './Tokens';
 

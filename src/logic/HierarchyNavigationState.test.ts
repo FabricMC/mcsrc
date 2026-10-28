@@ -1,7 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Subject, Subscription } from 'rxjs';
-import { jarIndex, type ClassData, type JarIndex } from '../workers/jar-index/client';
+import { jarIndex, type JarIndex } from '../workers/jar-index/client';
 import { hierarchyNavigation } from './Inheritance';
+import type {ClassData} from "../workers/jar-index/types.ts";
 
 vi.mock('../workers/jar-index/client', async () => {
     const { Subject } = await import('rxjs');
