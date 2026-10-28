@@ -7,50 +7,62 @@ import {
 import { getTokenLocation, type Token } from "../logic/Tokens";
 import { activeJavadocToken, getJavadocForToken, javadocRevision } from "./Javadoc";
 import type { DecompileResult } from "../workers/decompile/types";
-import { combineLatest } from "rxjs";
+import { combineLatest, EMPTY, from, startWith, Subject, switchMap, tap } from "rxjs";
+import { jarIndex, type JarIndex } from "../workers/jar-index/client";
+import { isDarkMode } from "../logic/Browser";
+import { JavadocSymbols } from "./editor/JavadocSymbols";
+import { createJavadocView } from "./JavadocView";
+import type { ClassName } from "../utils/Names";
 
 type monaco = typeof import("monaco-editor");
 
 const EDIT_JAVADOC_COMMAND_ID = 'editor.action.editJavadoc';
 
 export function applyJavadocCodeExtensions(monaco: monaco, editor: editor.IStandaloneCodeEditor, decompile: DecompileResult): IDisposable {
-    const viewZoneIds: string[] = [];
-    const refreshJavadocs = () => {
-        editor.changeViewZones((accessor) => {
-            viewZoneIds.forEach(id => accessor.removeZone(id));
-            viewZoneIds.length = 0;
-
-            decompile.tokens
-                .filter(token => token.declaration)
-                .forEach(token => {
-                    const mdValue = getJavadocForToken(token);
-                    if (mdValue == null || activeJavadocToken.value === token) {
-                        return;
-                    }
-
-                    const domNode = document.createElement('div');
-                    editor.applyFontInfo(domNode);
-                    const lineStart = decompile.source.lastIndexOf("\n", token.start - 1) + 1;
-                    const indentation = /^[\t ]*/.exec(decompile.source.slice(lineStart))![0];
-                    const tabSize = editor.getModel()?.getOptions().tabSize ?? 4;
-                    const lineCount = renderJavadoc(domNode, mdValue, indentation, tabSize);
-
-                    const location = getTokenLocation(decompile, token);
-                    const zoneId = accessor.addZone({
-                        afterLineNumber: location.line - 1,
-                        heightInLines: lineCount,
-                        domNode: domNode
-                    });
-
-                    viewZoneIds.push(zoneId);
-                });
-        });
+    const views: IDisposable[] = [];
+    const symbols = new Map<ClassName, JavadocSymbols>();
+    let index: JarIndex | undefined;
+    const symbolsFor = (owner: ClassName) => {
+        let result = symbols.get(owner);
+        if (!result) {
+            result = new JavadocSymbols(decompile, owner, index);
+            symbols.set(owner, result);
+        }
+        return result;
     };
-    const javadocSubscription = combineLatest([javadocRevision, activeJavadocToken]).subscribe(refreshJavadocs);
-    const modelChangeListener = editor.onDidChangeModel(refreshJavadocs);
+    const refreshJavadocs = new Subject<void>();
+    const javadocSubscription = combineLatest([
+        javadocRevision, activeJavadocToken, jarIndex, isDarkMode,
+        refreshJavadocs.pipe(startWith(undefined)),
+    ]).pipe(
+        switchMap(([, , nextIndex]) => {
+            for (const view of views) {
+                view.dispose();
+            }
+            views.length = 0;
+            if (index !== nextIndex) {
+                index = nextIndex;
+                symbols.clear();
+            }
+            if (editor.getModel()?.getValue() !== decompile.source) return EMPTY;
+
+            const documentation = decompile.tokens
+                .filter(token => token.declaration && token !== activeJavadocToken.value)
+                .map(token => ({ token, markdown: getJavadocForToken(token) }))
+                .filter(entry => entry.markdown !== null);
+            return from(Promise.all(documentation.map(({ token }) => symbolsFor(token.className).ready))).pipe(
+                tap(() => {
+                    for (const { token, markdown } of documentation) {
+                        views.push(createJavadocView(monaco, editor, decompile, token, markdown!, symbolsFor(token.className)));
+                    }
+                }),
+            );
+        }),
+    ).subscribe();
+    const modelChangeListener = editor.onDidChangeModel(() => refreshJavadocs.next());
     const configurationChangeListener = editor.onDidChangeConfiguration(event => {
         if (event.hasChanged(monaco.editor.EditorOption.fontInfo)) {
-            refreshJavadocs();
+            refreshJavadocs.next();
         }
     });
 
@@ -103,20 +115,10 @@ export function applyJavadocCodeExtensions(monaco: monaco, editor: editor.IStand
             modelChangeListener.dispose();
             configurationChangeListener.dispose();
             javadocSubscription.unsubscribe();
-            editor.changeViewZones((accessor) => {
-                viewZoneIds.forEach(id => accessor.removeZone(id));
-            });
+            refreshJavadocs.complete();
+            for (const view of views) {
+                view.dispose();
+            }
         }
     };
-}
-
-function renderJavadoc(domNode: HTMLDivElement, markdown: string, indentation: string, tabSize: number): number {
-    const indent = indentation + "/// ";
-    const lines = markdown.split("\n");
-
-    domNode.style.color = "#6A9955";
-    domNode.style.whiteSpace = "pre";
-    domNode.style.tabSize = String(tabSize);
-    domNode.textContent = lines.map(line => indent + line).join("\n");
-    return lines.length;
 }

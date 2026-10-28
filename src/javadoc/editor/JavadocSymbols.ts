@@ -1,4 +1,5 @@
-import type { MemberToken } from '../../logic/Tokens';
+import type { MemberToken, Token } from '../../logic/Tokens';
+import { parseMethodDescriptor } from '../../utils/JavaDescriptors';
 import type { DecompileResult } from '../../workers/decompile/types';
 import type { ClassData, JarIndex } from '../../workers/jar-index/client';
 import type { MemberData } from '../../workers/jar-index/types';
@@ -97,6 +98,36 @@ export class JavadocSymbols {
         return this.resolveClass(shortName) === className ? shortName : sourceName(className);
     }
 
+    resolveReference(reference: string): Token | undefined {
+        const match = /^([\p{ID_Continue}$.]*)(?:#([\p{ID_Continue}$]+)(?:\(([^()]*)\))?)?$/u.exec(reference);
+        if (!match || (!match[1] && !match[2])) return undefined;
+
+        const className = match[1] ? this.resolveClass(match[1]) : this.owner;
+        if (!className) return undefined;
+        if (!match[2]) {
+            return { type: 'class', className, declaration: true, start: 0, length: 0 };
+        }
+
+        const parameters = match[3]?.split(',').map(parameter => parameter.trim().replace(/\.\.\.$/, '[]')).filter(Boolean);
+        const candidates = this.getMembers(className).filter(({ member }) => {
+            const name = member.name === '<init>' ? simpleName(className) : member.name;
+            if (name !== match[2]) return false;
+            if (!parameters) return true;
+            if (member.type !== 'method') return false;
+
+            const types = parseMethodDescriptor(member.descriptor).parameterTypes;
+            return types.length === parameters.length && types.every((type, index) => {
+                const expected = parameters[index];
+                const arraySuffix = /(?:\[\])*$/.exec(expected)![0];
+                const referenceType = expected.slice(0, expected.length - arraySuffix.length);
+                const resolved = this.resolveClass(referenceType);
+                const parameterType = resolved ? sourceName(resolved) + arraySuffix : expected;
+                return type.replaceAll('$', '.') === parameterType;
+            });
+        });
+        return candidates.length === 1 ? candidates[0].member : undefined;
+    }
+
     getMembers(className: ClassName): InheritedMember[] {
         const members: InheritedMember[] = [];
         const visited = new Set<ClassName>();
@@ -189,6 +220,9 @@ export class JavadocSymbols {
     private buildAliases(): void {
         for (const className of this.classNames) {
             const aliases = new Set([sourceName(className), className.replaceAll('/', '.'), this.shortReferenceName(className)]);
+            if (packageName(className) === packageName(this.owner)) {
+                aliases.add(sourceName(toClassName(className.slice(packageName(className).length))));
+            }
             for (const alias of aliases) {
                 const candidates = this.aliases.get(alias) ?? [];
                 candidates.push({ className, rank: this.classRank(className) });
