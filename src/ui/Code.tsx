@@ -3,7 +3,7 @@ import { ClassHistoryGutter } from './ClassHistoryGutter';
 import Editor, { useMonaco } from '@monaco-editor/react';
 import { useObservable } from '../utils/UseObservable';
 import { currentResult, isDecompiling } from '../logic/Decompiler';
-import { useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { editor, Range } from "monaco-editor";
 import { isDarkMode, isThin } from '../logic/Browser';
 import { classesList } from '../logic/JarFile';
@@ -13,9 +13,7 @@ import { LoadingOutlined } from '@ant-design/icons';
 import { getTokenLocation } from '../logic/Tokens';
 import { getNextJumpToken, nextReferenceNavigation } from '../logic/FindAllReferences';
 import { setupJavaBytecodeLanguage } from '../utils/JavaBytecode';
-import { applyJavadocCodeExtensions } from '../javadoc/JavadocCodeExtensions';
 import { activeJavadocFile } from '../javadoc/Javadoc';
-import JavadocInlineEditor from '../javadoc/JavadocInlineEditor';
 import { selectedInheritanceClassName } from '../logic/Inheritance';
 import { createHoverProvider } from './CodeHoverProvider';
 import { findTokenAtPosition } from './CodeUtils';
@@ -41,6 +39,7 @@ import { bytecode } from '../logic/Settings';
 import { selectedFile, diffView, openTabs, selectedLines, tabHistory, referencesQuery, mobileDrawerOpen } from '../logic/State';
 import { toClassFilePath } from '../utils/Names';
 
+const JavadocCode = lazy(() => import('../javadoc/JavadocCode'));
 const IS_ANDROID_CHROME = /Android/.test(navigator.userAgent) && /Chrome/.test(navigator.userAgent);
 
 const Code = () => {
@@ -173,17 +172,6 @@ const Code = () => {
             definitionProvider.dispose();
         };
     }, [monaco, decompileResult, classList, resetViewTrigger, messageApi]);
-
-    useEffect(() => {
-        if (!monaco || !editorRef.current || decompileResult?.language !== "java" || !javadocFile) return;
-
-        const extensions = applyJavadocCodeExtensions(monaco, editorRef.current, decompileResult);
-
-        return () => {
-            extensions.dispose();
-        };
-        // oxlint-disable-next-line eslint-plugin-react-hooks/exhaustive-deps
-    }, [monaco, editorRef.current, decompileResult, javadocFile]);
 
     // Scroll to top when source changes, or to specific line if specified
     useEffect(() => {
@@ -374,8 +362,10 @@ const Code = () => {
             }}
         >
             {contextHolder}
-            {javadocFile && codeEditor && decompileResult && (
-                <JavadocInlineEditor codeEditor={codeEditor} result={decompileResult} />
+            {javadocFile && codeEditor && decompileResult?.language === 'java' && (
+                <Suspense fallback={null}>
+                    <JavadocCode codeEditor={codeEditor} result={decompileResult} />
+                </Suspense>
             )}
             <HierarchyGutter codeEditor={codeEditor} result={decompileResult} />
             <ClassHistoryGutter codeEditor={codeEditor} result={decompileResult} />

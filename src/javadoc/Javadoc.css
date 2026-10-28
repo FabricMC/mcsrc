@@ -1,0 +1,101 @@
+.javadoc-inline-editor {
+  box-sizing: border-box;
+  border: 1px solid;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.javadoc-inline-toolbar {
+  padding: 6px 10px;
+  font-family: sans-serif;
+  line-height: normal;
+}
+
+.javadoc-rendered {
+  box-sizing: border-box;
+  padding: 8px 12px;
+  border-left: 2px solid var(--token-comment);
+  color: var(--vscode-editor-foreground);
+  background: var(--vscode-editor-background);
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.javadoc-rendered > :first-child,
+.javadoc-rendered .block > :first-child,
+.javadoc-rendered dd > :first-child {
+  margin-top: 0;
+}
+
+.javadoc-rendered > :last-child,
+.javadoc-rendered .block > :last-child,
+.javadoc-rendered dd > :last-child {
+  margin-bottom: 0;
+}
+
+.javadoc-rendered p,
+.javadoc-rendered pre,
+.javadoc-rendered ul,
+.javadoc-rendered ol,
+.javadoc-rendered dl {
+  margin: 0 0 0.6em;
+}
+
+.javadoc-rendered a {
+  color: var(--vscode-textLink-foreground);
+  text-decoration: underline;
+}
+
+.javadoc-rendered code {
+  font-family: inherit;
+}
+
+.javadoc-rendered h1,
+.javadoc-rendered h2,
+.javadoc-rendered h3,
+.javadoc-rendered h4,
+.javadoc-rendered h5,
+.javadoc-rendered h6 {
+  line-height: 1.25;
+}
+
+.javadoc-rendered pre {
+  padding: 8px;
+  background: var(--vscode-textCodeBlock-background);
+  white-space: pre;
+  overflow: auto;
+  overflow-wrap: normal;
+}
+
+.javadoc-rendered blockquote {
+  margin: 0 0 0.6em;
+  padding-left: 12px;
+  border-left: 2px solid var(--token-comment);
+}
+
+.javadoc-rendered table {
+  border-collapse: collapse;
+  margin-bottom: 0.6em;
+}
+
+.javadoc-rendered th,
+.javadoc-rendered td {
+  border: 1px solid var(--vscode-editorWidget-border);
+  padding: 3px 8px;
+}
+
+.javadoc-tags dt {
+  font-weight: bold;
+}
+
+.javadoc-rendered .deprecated-label {
+  font-weight: bold;
+}
+
+.javadoc-tags dd {
+  margin: 0 0 0.6em 16px;
+}
+
+.javadoc-tags dd > p:first-of-type {
+  display: inline;
+}
