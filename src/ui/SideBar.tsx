@@ -1,8 +1,7 @@
-import { Button, Checkbox, Divider, Dropdown, Flex, Input } from "antd";
+import { Button, Checkbox, Divider, Flex, Input, Select, Space } from "antd";
 import Header from "./Header";
 import FileList from "./FileList";
 import type { InputProps, InputRef } from "antd/es/input";
-import type { MenuProps } from "antd";
 import { useObservable } from "../utils/UseObservable";
 import { isSearching } from "../logic/JarFile";
 import SearchResults from "./SearchResults";
@@ -11,8 +10,8 @@ import { formatReferenceQuery, isViewingReferences, methodReferenceKeys } from "
 import { includeMethodHierarchy } from "../logic/Settings";
 import { ArrowLeftOutlined, CaretDownOutlined } from "@ant-design/icons";
 import { focusSearchEvent } from "../logic/Keybinds";
-import { useEffect, useRef } from "react";
-import { searchQuery, referencesQuery, searchType, type SearchType } from "../logic/State";
+import { Fragment, useEffect, useRef, type JSX } from "react";
+import { searchQuery, referencesQuery, searchType } from "../logic/State";
 import { ClassIcon, FieldIcon, MethodIcon } from "./intellij-icons";
 
 const SideBar = () => {
@@ -41,24 +40,17 @@ const SideBar = () => {
         searchQuery.next(e.target.value);
     };
 
-    type SearchTypeData = {
-        key: SearchType;
-        label: string;
-        Icon: typeof ClassIcon;
-    };
+    const makeIconizedLabel = (text: React.ReactNode, Icon: typeof ClassIcon) =>
+        <Flex align="center" gap={4}>
+            <Icon style={{ fontSize: 20 }} />
+            {text}
+        </Flex>;
 
-    const searchTypeMenuItems: SearchTypeData[] = [
-        { key: "classes", label: "Classes", Icon: ClassIcon },
-        { key: "methods", label: "Methods", Icon: MethodIcon },
-        { key: "fields", label: "Fields", Icon: FieldIcon }
+    const searchTypeMenuItems: { value: string, label: JSX.Element; }[] = [
+        { value: "classes", label: makeIconizedLabel("Classes", ClassIcon) },
+        { value: "methods", label: makeIconizedLabel("Methods", MethodIcon) },
+        { value: "fields", label: makeIconizedLabel("Fields", FieldIcon) }
     ];
-
-    const selectedSearchType = searchTypeMenuItems.find(type => type.key === currentSearchType);
-    const SearchTypeIcon = selectedSearchType?.Icon ?? ClassIcon;
-
-    const onSearchTypeMenuClick: MenuProps["onClick"] = ({ key }) => {
-        searchType.next(key as SearchType);
-    };
 
     const onBackClick = () => {
         referencesQuery.next("");
@@ -84,42 +76,34 @@ const SideBar = () => {
                     >Include method hierarchy</Checkbox>}
                 </>
             ) : (
-                <Input
-                    ref={searchRef}
-                    className="class-search-input"
-                    type="search"
-                    placeholder={`Search ${currentSearchType}`}
-                    allowClear
-                    onChange={onChange}
-                    addonAfter={
-                        <Dropdown
-                            menu={{
-                                items: searchTypeMenuItems.map(({ key, label, Icon }) => ({
-                                    key,
-                                    label,
-                                    style: { paddingInline: "6px" },
-                                    icon: <Icon style={{ fontSize: "20px", marginRight: "6px" }} />
-                                })),
-                                selectable: true,
-                                selectedKeys: [currentSearchType],
-                                onClick: onSearchTypeMenuClick
-                            }}
-                            trigger={["click"]}
-                        >
-                            <Button
-                                type="text"
-                                size="small"
-                                icon={<SearchTypeIcon style={{ fontSize: "20px" }} />}
-                                aria-label="Search type"
-                                title={`Search type: ${selectedSearchType?.label ?? "Unknown"}`}
-                                style={{ gap: "4px" }}
-                            >
-                                {selectedSearchType?.label ?? "Unknown"}
-                                <CaretDownOutlined style={{ fontSize: "10px" }} />
-                            </Button>
-                        </Dropdown>
-                    }
-                />
+                <Space.Compact block>
+                    <Input
+                        ref={searchRef}
+                        type="search"
+                        placeholder={`Search ${currentSearchType}`}
+                        allowClear
+                        onChange={onChange}
+                    />
+                    <Select
+                        aria-label="Search type"
+                        title={`Search type: ${currentSearchType}`}
+                        value={currentSearchType}
+                        options={searchTypeMenuItems}
+                        // use the label and not the suffix to have the icon
+                        // be dimmed as well when the popup is open
+                        labelRender={({ label }) =>
+                            <Space.Compact block>
+                                {label}
+                                <CaretDownOutlined style={{ marginLeft: 4, color: "var(--ant-color-text)" }} />
+                            </Space.Compact>
+                        }
+                        suffix={<></>}
+                        styles={{ content: { marginRight: 0 } }}
+                        onChange={value => searchType.next(value)}
+                        popupMatchSelectWidth={112}
+                        style={{ padding: "4px 7px", backgroundColor: "var(--ant-color-fill-alter)" }}
+                    />
+                </Space.Compact>
             )}
             <Divider size="small" />
             <div style={{ flexGrow: 1, overflowY: "auto" }}>

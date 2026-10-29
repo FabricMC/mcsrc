@@ -119,10 +119,6 @@ html, body, #root {
   overflow: auto;
 }
 
-.class-search-input .ant-input-group-addon {
-  padding: 0;
-}
-
 .ant-tabs-content {
     height: 100%;
 }
