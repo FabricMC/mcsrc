@@ -71,7 +71,6 @@ export const DiffViewModeButtons = () => {
     const diffChanges = useMemo(() => getDiffChanges(), []);
     const isUnifiedDiff = useObservable(unifiedDiff.observable);
     const isBytecode = useObservable(bytecode.observable);
-    const isSort = useObservable(sortDiff.observable);
     const currentFile = useObservable(selectedFile);
     const changes = useObservable(diffChanges);
     const currentChange = currentFile ? changes?.get(currentFile) : undefined;
@@ -99,6 +98,15 @@ export const DiffViewModeButtons = () => {
                     style={hasNoLineChanges ? noLineChangesBytecodeStyle : undefined}
                 />
             </Tooltip>
+        </>
+    );
+};
+
+export const DiffSortButton = () => {
+    const isSort = useObservable(sortDiff.observable);
+
+    return (
+        <span style={{ flexShrink: 0 }}>
             <Tooltip title={isSort ? "Sort by file name" : "Sort by change"}>
                 <Button
                     type={isSort ? "primary" : "default"}
@@ -108,7 +116,7 @@ export const DiffViewModeButtons = () => {
                     aria-pressed={isSort}
                 />
             </Tooltip>
-        </>
+        </span>
     );
 };
 

@@ -94,6 +94,7 @@ const MobileDiffHeader = () => {
             </Flex>
             <Flex gap={6} justify="center" wrap={false}>
                 <DiffNavigationButtons />
+                <DiffViewModeButtons />
             </Flex>
             <Flex flex={1} justify="flex-end">
                 <Button
@@ -110,7 +111,7 @@ const MobileDiffHeader = () => {
 
 type SidebarCloseAction = "close" | "exit";
 
-const DiffSidebar = ({ closeAction = "exit" }: { closeAction?: SidebarCloseAction }) => {
+const DiffSidebar = ({ closeAction = "exit" }: { closeAction?: SidebarCloseAction; }) => {
     const summary = useObservable<DiffSummary>(getDiffSummary());
 
     return (
@@ -126,14 +127,13 @@ const DiffSidebar = ({ closeAction = "exit" }: { closeAction?: SidebarCloseActio
                 <div style={{ display: "flex", justifyContent: "center", overflowX: "hidden" }}>
                     <DiffVersionSelection />
                 </div>
-                <DiffActions />
             </Flex>
             <DiffViewFileList />
         </aside>
     );
 };
 
-const DiffSidebarCloseButton = ({ action }: { action: SidebarCloseAction }) => {
+const DiffSidebarCloseButton = ({ action }: { action: SidebarCloseAction; }) => {
     const isExitAction = action === "exit";
 
     return (
@@ -146,7 +146,7 @@ const DiffSidebarCloseButton = ({ action }: { action: SidebarCloseAction }) => {
     );
 };
 
-const DiffSummaryLine = ({ summary }: { summary?: DiffSummary }) => {
+const DiffSummaryLine = ({ summary }: { summary?: DiffSummary; }) => {
     if (!summary) {
         return <Text type="secondary">Loading changes...</Text>;
     }
@@ -163,22 +163,20 @@ const DiffSummaryLine = ({ summary }: { summary?: DiffSummary }) => {
         </Flex>
     );
 };
-
-const DiffActions = () => {
-    return (
-        <Flex gap={6} justify="center" wrap={false}>
-            <DiffNavigationButtons />
-            <DiffViewModeButtons />
-        </Flex>
-    );
-};
-
-const DiffMainPane = ({ showHeader = true }: { showHeader?: boolean }) => {
+const DiffMainPane = ({ showHeader = true }: { showHeader?: boolean; }) => {
     const currentFile = useObservable(selectedFile);
 
     return (
         <Flex vertical style={{ flex: 1, height: "100%", minHeight: 0 }}>
-            {showHeader && <FilepathHeader />}
+            {showHeader && (
+                <Flex align="center" justify="space-between" style={{ minHeight: 0 }}>
+                    <FilepathHeader />
+                    <Flex gap={6} wrap={false} style={{ padding: "5px 9px 5px 0px", flexShrink: 0 }}>
+                        <DiffNavigationButtons />
+                        <DiffViewModeButtons />
+                    </Flex>
+                </Flex>
+            )}
             <div className="diff-code-frame">
                 {currentFile ? <DiffCode key={currentFile} /> : <DiffPlaceholder />}
             </div>
