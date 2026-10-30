@@ -38,4 +38,17 @@ test.describe('Diff View', () => {
         await expect(editor).toBeVisible();
         await expect(editor).toContainText('net.minecraft.client.renderer');
     });
+
+    test('Selects the latest two snapshots from the swap button menu', async ({ page }) => {
+        await page.goto('/');
+        await waitForBlockingModalToClose(page);
+        await page.getByRole('button', { name: 'Compare' }).click();
+
+        await page.getByRole('button', { name: 'Swap versions' }).click({ button: 'right' });
+        await page.getByRole('menuitem', { name: 'Compare last two snapshots' }).click();
+
+        const selectors = page.locator('.diff-sidebar-panel button:has(.anticon-down)');
+        await expect(selectors.nth(0)).toContainText('26.1-mock-2');
+        await expect(selectors.nth(1)).toContainText('26.1-mock-3');
+    });
 });

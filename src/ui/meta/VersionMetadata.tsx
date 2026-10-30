@@ -6,6 +6,7 @@ import {
     launcherVersionList, launcherVersions, updateLauncherSelection,
 } from "../../logic/LauncherMeta";
 import VersionSelector from "../VersionSelector";
+import VersionComparisonMenu from "../VersionComparisonMenu";
 import JsonView from "./JsonView";
 import VersionSummary from "./VersionSummary";
 
@@ -56,12 +57,23 @@ export default function VersionMetadata() {
                     ariaLabel="Launcher version"
                     minWidth={200}
                 />
-                <Button
-                    aria-label="Swap launcher versions"
-                    icon={<SwapOutlined />}
-                    disabled={!comparing}
-                    onClick={swapVersions}
-                />
+                <VersionComparisonMenu
+                    versions={versions?.status === "ready" ? versions.data : []}
+                    onSelect={({ left, right }) => {
+                        launcherLeftVersion.next(left);
+                        launcherRightVersion.next(right);
+                    }}
+                >
+                    <span style={{ display: "inline-flex" }} title="Right-click for common comparisons">
+                        <Button
+                            aria-label="Swap launcher versions"
+                            icon={<SwapOutlined />}
+                            disabled={!comparing}
+                            style={!comparing ? { pointerEvents: "none" } : undefined}
+                            onClick={swapVersions}
+                        />
+                    </span>
+                </VersionComparisonMenu>
                 <VersionSelector
                     selectedVersion={launcherRightVersion}
                     versions={launcherVersionList}
