@@ -2,12 +2,14 @@ import type { editor } from "monaco-editor";
 import { Tab } from "./Tabs";
 import { selectedFile, tabHistory } from "../State";
 import type { ClassFilePath } from "../../utils/Names";
+import type { DecompileResult } from "../../workers/decompile/types";
 
 export class CodeTab extends Tab {
     public declare key: ClassFilePath;
     public editorRef: editor.IStandaloneCodeEditor | null = null;
     public viewState: editor.ICodeEditorViewState | null = null;
     public model: editor.ITextModel | null = null;
+    private sourceCache: DecompileResult | null = null;
 
     public constructor(key: ClassFilePath) {
         super(key);
@@ -29,15 +31,26 @@ export class CodeTab extends Tab {
         this.viewState = this.editorRef?.saveViewState() || null;
         this.model = this.editorRef?.getModel() || null;
 
-        // Setting the editor's model here separates the two.
-        // Otherwise - if monaco is unmounted - all models are disposed.
-        // This allows for caching while a different tab type other than the code view is open
-        this.editorRef?.setModel(null);
+        // Keep the current model attached until the next tab has a model to show.
+        // Monaco switches models without clearing the editor in between.
     }
 
     public onClose() {
         super.onClose();
         this.invalidateCachedView();
+        this.sourceCache = null;
+    }
+
+    public getCachedResult(): DecompileResult | null {
+        return this.sourceCache;
+    }
+
+    public cacheResult(result: DecompileResult): void {
+        this.sourceCache = result;
+    }
+
+    public clearSourceCache(): void {
+        this.sourceCache = null;
     }
 
     public setModel(model: editor.ITextModel) {
