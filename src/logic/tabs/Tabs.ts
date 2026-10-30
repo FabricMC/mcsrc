@@ -51,10 +51,11 @@ export abstract class Tab {
     protected onBlur() { };
 
     protected pushToTabHistory() {
-        if (tabHistory.value.length < 50) {
-            // Limit history to 50
-            tabHistory.next([...tabHistory.value, this.key]);
-        }
+        // Limit history to 50, forgetting older entries
+        const entriesToForget = tabHistory.value.length < 50 ? 0 : 1;
+        const newHistory = tabHistory.value.slice(entriesToForget);
+        newHistory.push(this.key);
+        tabHistory.next(newHistory);
     }
 
     protected removeFromTabHistory() {
@@ -68,8 +69,10 @@ export abstract class Tab {
         // Get the last tab
         let tab = openTabs.value.find(t => t.key === lastTabKeyFromHistory);
 
-        // If no tab can be found in the tab history, we simply default to the first open one
-        if (!tab) tab = openTabs.value[0];
+        // If no tab can be found in the tab history, we simply default to the last open one
+        if (!tab && openTabs.value.length > 0) {
+            tab = openTabs.value[openTabs.value.length - 1];
+        }
         tab?.open();
     }
 
@@ -116,8 +119,11 @@ export const openInheritanceViewTab = (key: string) => openTabOfType(key, Inheri
 
 export const closeTab = (key: string) => {
     const tab = openTabs.value.find(o => o.key === key);
+    const wasOpen = openTab.value?.key === key;
     tab?.onClose();
-    tab?.openLastTabFromHistory();
+    if (wasOpen) {
+        tab?.openLastTabFromHistory();
+    }
 };
 
 export const setTabPosition = (key: string, placeIndex: number) => {
