@@ -1,11 +1,12 @@
 [versions]
 asm = "9.9.1"
-teavm = "0.15.0"
+teavm = "0.16.0"
 mapping-io = "0.9.1"
 junit = "5.13.4"
 junit-platform = "1.13.4"
 
 [libraries]
+unpick = { module = "net.fabricmc.unpick:unpick", version = "3.0.0-beta.13" }
 asm = { module = "org.ow2.asm:asm", version.ref = "asm" }
 asm-commons = { module = "org.ow2.asm:asm-commons", version.ref = "asm" }
 asm-util = { module = "org.ow2.asm:asm-util", version.ref = "asm" }

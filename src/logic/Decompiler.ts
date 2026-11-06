@@ -1,3 +1,6 @@
+import type { RuntimeLibrariesConfig } from "../javadoc/RuntimeLibraries";
+import type { UnpickConfig } from "../workers/decompile/Unpick";
+import { activeJavadocFile } from "../javadoc/Javadoc";
 import {
     BehaviorSubject,
     combineLatest, distinctUntilChanged, from, map, Observable, of, shareReplay, switchMap, throttleTime
@@ -35,10 +38,11 @@ export function decompileResultPipeline(jar: Observable<MinecraftJar>): Observab
         jar,
         bytecode.observable,
         displayLambdas.observable,
+        activeJavadocFile,
     ]).pipe(
         distinctUntilChanged(),
         throttleTime(250, undefined, { leading: true, trailing: true }),
-        switchMap(([file, jar, bytecode, displayLambdas]) => {
+        switchMap(([file, jar, bytecode, displayLambdas, javadoc]) => {
             if (!file) {
                 return of();
             }
@@ -49,8 +53,9 @@ export function decompileResultPipeline(jar: Observable<MinecraftJar>): Observab
             }
 
             const options = getDecompilerOptions(displayLambdas);
+            const project = javadoc?.kind === "directory" ? javadoc : undefined;
             return from(worker.setOptions(options)).pipe(
-                switchMap(() => from(decompileClass(className, jar.jar)))
+                switchMap(() => from(decompileClass(className, jar.jar, project?.unpick, project?.runtimeLibraries)))
             );
         }),
         shareReplay({ bufferSize: 1, refCount: false })
@@ -66,10 +71,10 @@ export async function getClassBytecode(className: ClassName, jar: Jar) {
     }
 }
 
-export async function decompileClass(className: ClassName, jar: Jar) {
+export async function decompileClass(className: ClassName, jar: Jar, unpick?: UnpickConfig, runtimeLibraries?: RuntimeLibrariesConfig) {
     try {
         decompilerCounter.next(decompilerCounter.value + 1);
-        return await worker.decompileClass(className, jar, vineflowerVersion.value);
+        return await worker.decompileClass(className, jar, vineflowerVersion.value, unpick, runtimeLibraries);
     } finally {
         decompilerCounter.next(decompilerCounter.value - 1);
     }

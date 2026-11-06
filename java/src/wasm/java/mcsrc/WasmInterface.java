@@ -13,10 +13,12 @@ import mcsrc.javadoc.DeclarationMetadata;
 import net.fabricmc.mappingio.format.MappingFormat;
 
 import org.teavm.jso.JSExport;
+import org.teavm.jso.JSFunctor;
 import org.teavm.jso.JSBody;
 import org.teavm.jso.JSObject;
 import org.teavm.jso.core.JSMap;
 import org.teavm.jso.core.JSString;
+import org.teavm.jso.core.JSPromise;
 import org.teavm.jso.typedarrays.ArrayBuffer;
 import org.teavm.jso.typedarrays.Int8Array;
 
@@ -24,6 +26,7 @@ public final class WasmInterface {
     private static final Indexer INDEXER = new Indexer();
     private static final JavadocMappings JAVADOC_MAPPINGS = new JavadocMappings();
     private static ClassFileRemapper remapper;
+    private static Unpick unpick;
 
     private WasmInterface() {
     }
@@ -187,6 +190,39 @@ public final class WasmInterface {
     @JSExport
     public static void setJavadoc(int kind, String owner, String name, String descriptor, String comment) throws IOException {
         JAVADOC_MAPPINGS.set(javadocElementKind(kind), owner, name, descriptor, comment);
+    }
+
+    @JSFunctor
+    public interface UnpickClassSource extends JSObject {
+        JSPromise<ArrayBuffer> source(String name);
+    }
+
+    @JSExport
+    public static void resetUnpick() {
+        unpick = null;
+    }
+
+    @JSExport
+    public static JSPromise<JSObject> loadUnpickDefinitions(String[] definitions, UnpickClassSource source) {
+        return JSPromise.callAsync(() -> {
+            var instance = new Unpick(name -> {
+                ArrayBuffer bytes = source.source(name).await();
+                return bytes == null ? null : toBytes(bytes);
+            });
+            instance.loadDefinitions(definitions);
+            unpick = instance;
+            return null;
+        });
+    }
+
+    @JSExport
+    public static JSPromise<Int8Array> applyUnpick(ArrayBuffer bytes) {
+        return JSPromise.callAsync(() -> {
+            if (unpick == null) {
+                throw new IllegalStateException("Unpick definitions have not been loaded");
+            }
+            return toInt8Array(unpick.apply(toBytes(bytes)));
+        });
     }
 
     private static MappingFormat javadocFormat(String format) throws IOException {

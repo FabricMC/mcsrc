@@ -1,5 +1,5 @@
 declare module "*/mcsrc.wasm-runtime.js" {
-    export async function load(src: string);
+    export async function load(src: string | BufferSource);
 }
 
 declare module "monaco-editor/languages/definitions/markdown/markdown.js" {

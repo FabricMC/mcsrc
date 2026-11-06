@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { readAnnotaterDirectory } from "./AnnotaterProject";
 import { toClassName } from "../utils/Names";
 
 const bridge = vi.hoisted(() => ({
@@ -23,7 +24,6 @@ vi.mock("../../java/build/generated/teavm/wasm-gc/mcsrc.wasm?url", () => ({ defa
 
 import {
     readJavadocDeclarationMetadata,
-    readAnnotaterDirectory,
     readJavadocDirectory,
     readJavadocFile,
     writeJavadocSource,
@@ -169,6 +169,90 @@ describe("JavadocStorage", () => {
         expect(project.source.handle.name).toBe("enigma");
         expect(project.source.files.get("Owner")).toEqual(["Owner.mapping"]);
         expect(bridge.readJavadocDirectoryFile).toHaveBeenCalledOnce();
+    });
+
+    it("loads configured Unpick definitions and runtime jars recursively", async () => {
+        const root = new FakeDirectory("project")
+            .add(new FakeFile("config.json", JSON.stringify({
+                mappings: "mappings", version: "26.3", runtimeLibraries: "build/libs", unpickDefinitions: "unpick",
+            })))
+            .add(new FakeDirectory("mappings"))
+            .add(new FakeDirectory("build").add(new FakeDirectory("libs")
+                .add(new FakeFile("runtime.jar", "jar"))
+                .add(new FakeFile("ignored.txt"))))
+            .add(new FakeDirectory("unpick")
+                .add(new FakeDirectory("nested").add(new FakeFile("flags.unpick", "unpick v4\n")))
+                .add(new FakeFile("ignored.txt")));
+
+        const { source } = await readAnnotaterDirectory(root.asHandle());
+
+        expect(source.unpick?.definitions).toEqual([{ path: "nested/flags.unpick", content: "unpick v4\n" }]);
+        expect(source.runtimeLibraries?.files).toHaveLength(1);
+        expect(source.unpick?.id).toBeTruthy();
+    });
+
+    it("loads runtime jars independently of Unpick", async () => {
+        const root = new FakeDirectory("project")
+            .add(new FakeFile("config.json", JSON.stringify({
+                mappings: "mappings", version: "26.3", runtimeLibraries: "libs",
+            })))
+            .add(new FakeDirectory("mappings"))
+            .add(new FakeDirectory("libs").add(new FakeFile("runtime.jar", "jar")));
+
+        const { source } = await readAnnotaterDirectory(root.asHandle());
+
+        expect(source.runtimeLibraries?.files).toHaveLength(1);
+        expect(source.unpick).toBeUndefined();
+    });
+
+    it.each([
+        { hasLibraries: true, hasDefinitions: false },
+        { hasLibraries: false, hasDefinitions: true },
+        { hasLibraries: false, hasDefinitions: false },
+    ])("skips Unpick when either directory has no matching files: %j", async ({ hasLibraries, hasDefinitions }) => {
+        const libraries = new FakeDirectory("libs").add(new FakeFile("ignored.txt"));
+        const definitions = new FakeDirectory("unpick").add(new FakeFile("ignored.txt"));
+        if (hasLibraries) libraries.add(new FakeFile("runtime.jar", "jar"));
+        if (hasDefinitions) definitions.add(new FakeFile("flags.unpick", "unpick v4\n"));
+        const root = new FakeDirectory("project")
+            .add(new FakeFile("config.json", JSON.stringify({
+                mappings: "mappings", version: "26.3", runtimeLibraries: "libs", unpickDefinitions: "unpick",
+            })))
+            .add(new FakeDirectory("mappings"))
+            .add(libraries)
+            .add(definitions);
+
+        const { source } = await readAnnotaterDirectory(root.asHandle());
+
+        expect(source.unpick).toBeUndefined();
+        expect(source.runtimeLibraries?.files.length ?? 0).toBe(hasLibraries ? 1 : 0);
+    });
+
+    it("allows Unpick configuration without runtime library configuration", async () => {
+        const root = new FakeDirectory("project")
+            .add(new FakeFile("config.json", JSON.stringify({
+                mappings: "mappings", version: "26.3", unpickDefinitions: "unpick",
+            })))
+            .add(new FakeDirectory("mappings"))
+            .add(new FakeDirectory("unpick").add(new FakeFile("flags.unpick", "unpick v4\n")));
+
+        const { source } = await readAnnotaterDirectory(root.asHandle());
+
+        expect(source.runtimeLibraries).toBeUndefined();
+        expect(source.unpick).toBeUndefined();
+    });
+
+    it.each([
+        { unpickDefinitions: "../outside", runtimeLibraries: "libs" },
+        { unpickDefinitions: "unpick", runtimeLibraries: "/libs" },
+        { unpickDefinitions: "unpick", runtimeLibraries: 3 },
+    ])("rejects invalid Unpick configuration before loading mappings: %j", async options => {
+        const root = new FakeDirectory("project").add(new FakeFile("config.json", JSON.stringify({
+            mappings: "mappings", version: "26.3", ...options,
+        })));
+
+        await expect(readAnnotaterDirectory(root.asHandle())).rejects.toThrow();
+        expect(bridge.beginJavadocDirectory).not.toHaveBeenCalled();
     });
 
     it.each([

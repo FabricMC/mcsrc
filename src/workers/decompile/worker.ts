@@ -1,3 +1,5 @@
+import { RuntimeLibraries, type RuntimeLibrariesConfig } from "../../javadoc/RuntimeLibraries";
+import { UnpickProcessor, type UnpickConfig } from "./Unpick";
 import * as vf from "../../logic/vineflower/vineflower";
 import * as Comlink from "comlink";
 import Dexie, { type EntityTable, type Table } from "dexie";
@@ -9,6 +11,8 @@ import { DEFAULT_VERSION, type Version } from "../../logic/vineflower/versions";
 import { classNameFromDottedClassName, toClassName, type ClassName } from "../../utils/Names";
 
 export class DecompileWorker {
+    #unpick: UnpickProcessor | undefined;
+    #runtimeLibraries = new RuntimeLibraries();
     #lastPromise: Promise<unknown> | undefined = undefined;
     #promiseCount = 0;
     #preferWasmRuntime = true;
@@ -160,14 +164,29 @@ export class DecompileWorker {
         className: ClassName,
         jarName: string,
         jarBlob: Blob,
+        unpick?: UnpickConfig,
+        runtimeLibraries?: RuntimeLibrariesConfig,
     ): Promise<DecompileResult> => this.schedule(async () => {
         try {
             const jar = new DecompileJar(await openJar(jarName, jarBlob));
             const checksum = jar.proxy[className]?.checksum;
-            const dbResult = await this.db.results7.get([className, checksum, "java", jarName, this.#version]);
-            if (dbResult) return dbResult;
+            this.#runtimeLibraries.load(runtimeLibraries);
+            const unpickEnabled = unpick !== undefined && unpick.definitions.length > 0
+                && runtimeLibraries !== undefined && runtimeLibraries.files.length > 0;
+            if (!unpickEnabled) {
+                if (this.#unpick) {
+                    await this.#unpick.reset();
+                    this.#unpick = undefined;
+                }
+                const cached = await this.db.results7.get([className, checksum, "java", jarName, this.#version]);
+                if (cached) return cached;
+            }
 
-            const result = await this.#decompile(jarName, jar.classes, [className], jar.proxy);
+            if (unpickEnabled) {
+                this.#unpick ??= new UnpickProcessor();
+                await this.#unpick.load(unpick, jar.jar, this.#runtimeLibraries);
+            }
+            const result = await this.#decompile(jarName, jar.classes, [className], jar.proxy, undefined, unpickEnabled);
             return result[0];
         } catch (e) {
             console.error(`Error during decompilation of class '${className}':`, e);
@@ -189,6 +208,7 @@ export class DecompileWorker {
         classNames: ClassName[],
         classData: DecompileData,
         logger?: (className: ClassName) => void,
+        unpick = false,
     ): Promise<DecompileResult[]> {
         await vf.loadRuntime(this.#preferWasmRuntime, this.#version);
 
@@ -210,7 +230,8 @@ export class DecompileWorker {
                     return null;
                 }
 
-                return data;
+                const transform = unpick && classNames.some(target => className === target || className.startsWith(`${target}$`));
+                return transform ? this.#unpick!.apply(data) : data;
             },
             resources: jarClasses,
             options: await this.getOptions(),
@@ -290,7 +311,7 @@ export class DecompileWorker {
             res.push({ className, checksum, jarName, source: sourceStr, tokens, language: "java", version: this.#version });
         }
 
-        await this.db.results7.bulkPut(res);
+        if (!unpick) await this.db.results7.bulkPut(res);
         return res;
     }
 
