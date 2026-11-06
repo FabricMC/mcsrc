@@ -1,3 +1,4 @@
+import { javadocAltersDecompileOutput } from "../../javadoc/JavadocState";
 import { RuntimeLibraries, type RuntimeLibrariesConfig } from "../../javadoc/RuntimeLibraries";
 import { UnpickProcessor, type UnpickConfig } from "./Unpick";
 import * as vf from "../../logic/vineflower/vineflower";
@@ -9,6 +10,12 @@ import { openJar } from "../../utils/Jar";
 import { JarIndexer } from "../jar-index/types";
 import { DEFAULT_VERSION, type Version } from "../../logic/vineflower/versions";
 import { classNameFromDottedClassName, toClassName, type ClassName } from "../../utils/Names";
+
+interface DecompileContext {
+    useCache: boolean;
+    runtimeLibraries?: RuntimeLibraries;
+    unpick?: UnpickProcessor;
+}
 
 export class DecompileWorker {
     #unpick: UnpickProcessor | undefined;
@@ -171,22 +178,23 @@ export class DecompileWorker {
             const jar = new DecompileJar(await openJar(jarName, jarBlob));
             const checksum = jar.proxy[className]?.checksum;
             this.#runtimeLibraries.load(runtimeLibraries);
-            const unpickEnabled = unpick !== undefined && unpick.definitions.length > 0
-                && runtimeLibraries !== undefined && runtimeLibraries.files.length > 0;
-            if (!unpickEnabled) {
-                if (this.#unpick) {
-                    await this.#unpick.reset();
-                    this.#unpick = undefined;
-                }
+            const useCache = !javadocAltersDecompileOutput({ kind: "directory", unpick, runtimeLibraries });
+            if (unpick && unpick.definitions.length > 0 && runtimeLibraries?.files.length) {
+                this.#unpick ??= new UnpickProcessor();
+                await this.#unpick.load(unpick, jar.jar, this.#runtimeLibraries);
+            } else if (this.#unpick) {
+                await this.#unpick.reset();
+                this.#unpick = undefined;
+            }
+
+            if (useCache) {
                 const cached = await this.db.results7.get([className, checksum, "java", jarName, this.#version]);
                 if (cached) return cached;
             }
 
-            if (unpickEnabled) {
-                this.#unpick ??= new UnpickProcessor();
-                await this.#unpick.load(unpick, jar.jar, this.#runtimeLibraries);
-            }
-            const result = await this.#decompile(jarName, jar.classes, [className], jar.proxy, undefined, unpickEnabled);
+            const context: DecompileContext = { useCache, unpick: this.#unpick };
+            if (!useCache) context.runtimeLibraries = this.#runtimeLibraries;
+            const result = await this.#decompile(jarName, jar.classes, [className], jar.proxy, undefined, context);
             return result[0];
         } catch (e) {
             console.error(`Error during decompilation of class '${className}':`, e);
@@ -208,7 +216,7 @@ export class DecompileWorker {
         classNames: ClassName[],
         classData: DecompileData,
         logger?: (className: ClassName) => void,
-        unpick = false,
+        context: DecompileContext = { useCache: true },
     ): Promise<DecompileResult[]> {
         await vf.loadRuntime(this.#preferWasmRuntime, this.#version);
 
@@ -223,6 +231,9 @@ export class DecompileWorker {
                 const data = await classData[className]?.data;
 
                 if (!data) {
+                    const libraryBytes = await context.runtimeLibraries?.getClassBytes(name);
+                    if (libraryBytes) return new Uint8Array(libraryBytes);
+
                     if (name.startsWith("net/minecraft/")) {
                         console.warn(`Class data not found for '${name}'`);
                     }
@@ -230,8 +241,8 @@ export class DecompileWorker {
                     return null;
                 }
 
-                const transform = unpick && classNames.some(target => className === target || className.startsWith(`${target}$`));
-                return transform ? this.#unpick!.apply(data) : data;
+                const transform = context.unpick && classNames.some(target => className === target || className.startsWith(`${target}$`));
+                return transform ? context.unpick!.apply(data) : data;
             },
             resources: jarClasses,
             options: await this.getOptions(),
@@ -311,7 +322,7 @@ export class DecompileWorker {
             res.push({ className, checksum, jarName, source: sourceStr, tokens, language: "java", version: this.#version });
         }
 
-        if (!unpick) await this.db.results7.bulkPut(res);
+        if (context.useCache) await this.db.results7.bulkPut(res);
         return res;
     }
 

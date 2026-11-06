@@ -1,5 +1,6 @@
 // oxlint-disable typescript/no-redundant-type-constituents
 import { BehaviorSubject, combineLatest, distinctUntilChanged, map, Observable, switchMap } from "rxjs";
+import { activeJavadocFile, javadocAltersDecompileOutput } from "../javadoc/JavadocState";
 import * as decompiler from "../workers/decompile/client";
 
 
@@ -185,9 +186,13 @@ export const MAX_THREADS = navigator.hardwareConcurrency || 4;
 export const decompilerThreads = new NumberSetting("decompiler_threads", Math.max(MAX_THREADS / 2, 1));
 export const decompilerSplits = new NumberSetting("decompiler_splits", 100);
 
-export const supportsPermalinking = combineLatest([displayLambdas.observable, bytecode.observable]).pipe(
-    map(([lambdaDisplay, bytecode]) => {
-        if (lambdaDisplay || bytecode) {
+export const supportsPermalinking = combineLatest([
+    displayLambdas.observable,
+    bytecode.observable,
+    activeJavadocFile,
+]).pipe(
+    map(([lambdaDisplay, bytecode, javadoc]) => {
+        if (lambdaDisplay || bytecode || javadocAltersDecompileOutput(javadoc)) {
             // Alters the decompilation output, so permalinks are not stable
             return false;
         }
