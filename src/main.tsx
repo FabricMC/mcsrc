@@ -26,6 +26,20 @@ globalThis.MonacoEnvironment = {
     }
 };
 
+function isWebKit(): boolean {
+    return typeof navigator !== "undefined"
+        && navigator.vendor === "Apple Computer, Inc."
+        && !/CriOS/.test(navigator.userAgent); // Chrome on iOS
+}
+
+// Enables installing the site and opening it offline. Registration is optional: an
+// unsupported browser simply ignores it.
+if ("serviceWorker" in navigator && !isWebKit()) {
+    window.addEventListener("load", () => {
+        void navigator.serviceWorker.register("/sw.js");
+    });
+}
+
 createRoot(document.getElementById('root')!).render(
     <StrictMode>
         <App />

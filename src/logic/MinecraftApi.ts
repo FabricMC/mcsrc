@@ -164,19 +164,42 @@ export function minecraftJarPipeline(source$: Observable<string | null>): Observ
     );
 }
 
-async function getJson<T>(url: string): Promise<T> {
+async function getJson<T>(url: string, fallbackCacheEnabled: boolean = false): Promise<T> {
     console.log(`Fetching JSON from ${url}`);
-    const response = await fetch(url);
+
+    let response;
+
+    try {
+        response = await fetch(url);
+    } catch (error) {
+        if (fallbackCacheEnabled) {
+            const cache = await caches.open(CACHE_NAME);
+            response = await cache.match(url);
+            if (!response) {
+                throw error;
+            }
+            return response.json();
+        }
+    }
+
+    if (!response) {
+        throw new Error(`Failed to fetch JSON from ${url}`);
+    }
 
     if (!response.ok) {
         throw new Error(`Failed to fetch JSON from ${url}: ${response.statusText}`);
+    }
+
+    if (fallbackCacheEnabled) {
+        const cache = await caches.open(CACHE_NAME);
+        cache.put(url, response.clone());
     }
 
     return response.json();
 }
 
 async function fetchVersions(): Promise<VersionListEntry[]> {
-    const mojang = await getJson<VersionsList>(VERSIONS_URL);
+    const mojang = await getJson<VersionsList>(VERSIONS_URL, true);
     const allVersions = mojang.versions.concat(EXPERIMENTAL_VERSIONS.versions);
     const filteredVersions = allVersions.filter(isSupported);
     const versions = filteredVersions
