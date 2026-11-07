@@ -8,10 +8,10 @@ import { showAnnotaterShortcut } from "../logic/Settings";
 import AnnotaterIcon from "../ui/annotater.svg?react";
 import AnnotaterSadIcon from "../ui/annotater-sad.svg?react";
 import { activateJavadocFile, activeJavadocFile, activeJavadocToken, deactivateJavadocFile } from "./Javadoc";
+import { readAnnotaterDirectory } from "./AnnotaterProject";
 import { flushJavadocDrafts } from "./JavadocAutosave";
 import {
     createJavadocFile,
-    readAnnotaterDirectory,
     readJavadocDirectory,
     readJavadocFile,
     type JavadocFormat,

@@ -9,6 +9,7 @@ version = version + (ENV.GITHUB_ACTIONS ? "" : "+local")
 
 repositories {
     mavenCentral()
+    maven { url = "https://maven.fabricmc.net/" }
 }
 
 sourceSets {
@@ -21,10 +22,12 @@ sourceSets {
 
 dependencies {
     api libs.asm
+    implementation libs.unpick
     api libs.asm.commons
     api libs.asm.util
     api libs.mapping.io
     api libs.mapping.io.extras
+    teavmImplementation libs.teavm.core
     wasmImplementation sourceSets.main.output
     wasmImplementation libs.mapping.io
     wasmImplementation libs.teavm.jso

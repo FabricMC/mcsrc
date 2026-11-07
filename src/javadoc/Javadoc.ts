@@ -1,4 +1,5 @@
 import { BehaviorSubject, map, type Observable } from "rxjs";
+import { activeJavadocFile } from "./JavadocState";
 import { bytecode } from "../logic/Settings";
 import type { Token } from "../logic/Tokens";
 import {
@@ -10,9 +11,10 @@ import {
     type JavadocTarget,
 } from "./JavadocStorage";
 
+export { activeJavadocFile } from "./JavadocState";
+
 export type JavadocString = string;
 
-export const activeJavadocFile = new BehaviorSubject<JavadocSource | null>(null);
 export const activeJavadocToken = new BehaviorSubject<Token | null>(null);
 export const javadocRevision = new BehaviorSubject(0);
 

@@ -1,3 +1,5 @@
+import type { RuntimeLibrariesConfig } from "../../javadoc/RuntimeLibraries";
+import type { UnpickConfig } from "./Unpick";
 import * as Comlink from "comlink";
 import type * as vf from "../../logic/vineflower/vineflower";
 import { DecompileJar, type DecompileResult } from "./types";
@@ -120,7 +122,7 @@ export function decompileEntireJar(jar: Jar, version: Version, options?: Decompi
     };
 }
 
-export async function decompileClass(className: ClassName, jar: Jar, version: Version): Promise<DecompileResult> {
+export async function decompileClass(className: ClassName, jar: Jar, version: Version, unpick?: UnpickConfig, runtimeLibraries?: RuntimeLibrariesConfig): Promise<DecompileResult> {
     const entry = jar.entries[toClassFilePath(className)];
 
     if (!entry) return {
@@ -135,7 +137,7 @@ export async function decompileClass(className: ClassName, jar: Jar, version: Ve
 
     await setVersion(version);
     const worker = await findWorker();
-    return await worker.decompile(className, jar.name, jar.blob);
+    return await worker.decompile(className, jar.name, jar.blob, unpick, runtimeLibraries);
 }
 
 export async function getClassBytecode(className: ClassName, jar: Jar): Promise<DecompileResult> {

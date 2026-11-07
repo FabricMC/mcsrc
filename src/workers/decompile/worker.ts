@@ -1,3 +1,6 @@
+import { javadocAltersDecompileOutput } from "../../javadoc/JavadocState";
+import { RuntimeLibraries, type RuntimeLibrariesConfig } from "../../javadoc/RuntimeLibraries";
+import { UnpickProcessor, type UnpickConfig } from "./Unpick";
 import * as vf from "../../logic/vineflower/vineflower";
 import * as Comlink from "comlink";
 import Dexie, { type EntityTable, type Table } from "dexie";
@@ -8,7 +11,15 @@ import { JarIndexer } from "../jar-index/types";
 import { DEFAULT_VERSION, type Version } from "../../logic/vineflower/versions";
 import { classNameFromDottedClassName, toClassName, type ClassName } from "../../utils/Names";
 
+interface DecompileContext {
+    useCache: boolean;
+    runtimeLibraries?: RuntimeLibraries;
+    unpick?: UnpickProcessor;
+}
+
 export class DecompileWorker {
+    #unpick: UnpickProcessor | undefined;
+    #runtimeLibraries = new RuntimeLibraries();
     #lastPromise: Promise<unknown> | undefined = undefined;
     #promiseCount = 0;
     #preferWasmRuntime = true;
@@ -160,14 +171,30 @@ export class DecompileWorker {
         className: ClassName,
         jarName: string,
         jarBlob: Blob,
+        unpick?: UnpickConfig,
+        runtimeLibraries?: RuntimeLibrariesConfig,
     ): Promise<DecompileResult> => this.schedule(async () => {
         try {
             const jar = new DecompileJar(await openJar(jarName, jarBlob));
             const checksum = jar.proxy[className]?.checksum;
-            const dbResult = await this.db.results7.get([className, checksum, "java", jarName, this.#version]);
-            if (dbResult) return dbResult;
+            this.#runtimeLibraries.load(runtimeLibraries);
+            const useCache = !javadocAltersDecompileOutput({ kind: "directory", unpick, runtimeLibraries });
+            if (unpick && unpick.definitions.length > 0 && runtimeLibraries?.files.length) {
+                this.#unpick ??= new UnpickProcessor();
+                await this.#unpick.load(unpick, jar.jar, this.#runtimeLibraries);
+            } else if (this.#unpick) {
+                await this.#unpick.reset();
+                this.#unpick = undefined;
+            }
 
-            const result = await this.#decompile(jarName, jar.classes, [className], jar.proxy);
+            if (useCache) {
+                const cached = await this.db.results7.get([className, checksum, "java", jarName, this.#version]);
+                if (cached) return cached;
+            }
+
+            const context: DecompileContext = { useCache, unpick: this.#unpick };
+            if (!useCache) context.runtimeLibraries = this.#runtimeLibraries;
+            const result = await this.#decompile(jarName, jar.classes, [className], jar.proxy, undefined, context);
             return result[0];
         } catch (e) {
             console.error(`Error during decompilation of class '${className}':`, e);
@@ -189,6 +216,7 @@ export class DecompileWorker {
         classNames: ClassName[],
         classData: DecompileData,
         logger?: (className: ClassName) => void,
+        context: DecompileContext = { useCache: true },
     ): Promise<DecompileResult[]> {
         await vf.loadRuntime(this.#preferWasmRuntime, this.#version);
 
@@ -203,6 +231,9 @@ export class DecompileWorker {
                 const data = await classData[className]?.data;
 
                 if (!data) {
+                    const libraryBytes = await context.runtimeLibraries?.getClassBytes(name);
+                    if (libraryBytes) return new Uint8Array(libraryBytes);
+
                     if (name.startsWith("net/minecraft/")) {
                         console.warn(`Class data not found for '${name}'`);
                     }
@@ -210,7 +241,8 @@ export class DecompileWorker {
                     return null;
                 }
 
-                return data;
+                const transform = context.unpick && classNames.some(target => className === target || className.startsWith(`${target}$`));
+                return transform ? context.unpick!.apply(data) : data;
             },
             resources: jarClasses,
             options: await this.getOptions(),
@@ -290,7 +322,7 @@ export class DecompileWorker {
             res.push({ className, checksum, jarName, source: sourceStr, tokens, language: "java", version: this.#version });
         }
 
-        await this.db.results7.bulkPut(res);
+        if (context.useCache) await this.db.results7.bulkPut(res);
         return res;
     }
 

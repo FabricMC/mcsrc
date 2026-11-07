@@ -121,6 +121,9 @@ export class JarIndexer {
 }
 
 interface Indexer {
+    resetUnpick(): void;
+    loadUnpickDefinitions(definitions: string[], source: (name: string) => Promise<ArrayBuffer | null>): Promise<void>;
+    applyUnpick(data: ArrayBuffer): Promise<Int8Array>;
     index(data: ArrayBufferLike): void;
     getReference(key: ReferenceKey): [ReferenceString];
     getReferenceSize(): number;

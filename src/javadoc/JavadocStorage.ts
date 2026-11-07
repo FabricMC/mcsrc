@@ -1,6 +1,9 @@
 import { defer, firstValueFrom, shareReplay, tap } from "rxjs";
 import { load } from "../../java/build/generated/teavm/wasm-gc/mcsrc.wasm-runtime.js";
 import mappingsWasm from "../../java/build/generated/teavm/wasm-gc/mcsrc.wasm?url";
+import { collectFiles } from "./DirectoryFiles";
+import type { RuntimeLibrariesConfig } from "./RuntimeLibraries";
+import type { UnpickConfig } from "../workers/decompile/Unpick";
 import type { DeclarationMetadata } from "./editor/JavadocDeclaration";
 import { outerClassName, type ClassName } from "../utils/Names";
 
@@ -29,16 +32,11 @@ export interface JavadocDirectorySource {
     kind: "directory";
     handle: FileSystemDirectoryHandle;
     files: Map<string, string[]>;
+    unpick?: UnpickConfig;
+    runtimeLibraries?: RuntimeLibrariesConfig;
 }
 
 export type JavadocSource = JavadocFileSource | JavadocDirectorySource;
-
-export interface AnnotaterConfig {
-    /** Path to the Enigma mappings subdirectory, relative to the project root. */
-    mappings: string;
-    /** Minecraft version ID. */
-    version: string;
-}
 
 interface JavadocMappingsBridge {
     getDeclarationMetadata(classBytes: ArrayBuffer, methodName: string, descriptor: string): DeclarationMetadata;
@@ -74,40 +72,6 @@ export async function readJavadocDeclarationMetadata(classBytes: ArrayBuffer, me
     return mappingsBridge.getDeclarationMetadata(classBytes, methodName, descriptor);
 }
 
-export async function readAnnotaterDirectory(handle: FileSystemDirectoryHandle): Promise<{
-    source: JavadocDirectorySource;
-    version: string;
-}> {
-    const configHandle = await handle.getFileHandle("config.json");
-    const configFile = await configHandle.getFile();
-    const config = parseAnnotaterConfig(await configFile.text());
-
-    let directory = handle;
-    for (const part of config.mappings.split("/")) {
-        directory = await directory.getDirectoryHandle(part);
-    }
-
-    const source = await readJavadocDirectory(directory);
-    return { source, version: config.version };
-}
-
-function parseAnnotaterConfig(json: string): AnnotaterConfig {
-    const config: unknown = JSON.parse(json);
-
-    if (typeof config !== "object" || config === null
-        || !("version" in config) || typeof config.version !== "string" || !config.version.trim()
-        || !("mappings" in config) || typeof config.mappings !== "string") {
-        throw new Error('config.json must contain a Minecraft "version" and a relative "mappings" directory path.');
-    }
-
-    const path = config.mappings.split("/");
-    if (path.some(part => !part || part === "." || part === ".." || /[\\:]/.test(part))) {
-        throw new Error('The "mappings" path must point to a subdirectory, using forward slashes.');
-    }
-
-    return { mappings: config.mappings, version: config.version.trim() };
-}
-
 export async function readJavadocFile(handle: FileSystemFileHandle): Promise<JavadocFileSource> {
     const selectedFile = await handle.getFile();
     const data = await selectedFile.arrayBuffer();
@@ -127,7 +91,7 @@ export async function readJavadocFile(handle: FileSystemFileHandle): Promise<Jav
 }
 
 export async function readJavadocDirectory(handle: FileSystemDirectoryHandle): Promise<JavadocDirectorySource> {
-    const mappingFiles = await collectMappingFiles(handle);
+    const mappingFiles = await collectFiles(handle, ".mapping");
     const mappingsBridge = await getBridge();
     const files = new Map<string, string[]>();
     mappingsBridge.beginJavadocDirectory();
@@ -225,34 +189,6 @@ async function writeBytes(handle: FileSystemFileHandle, bytes: Int8Array): Promi
         await writable.abort().catch(() => {});
         throw error;
     }
-}
-
-interface MappingFile {
-    handle: FileSystemFileHandle;
-    path: string[];
-}
-
-async function collectMappingFiles(
-    directory: FileSystemDirectoryHandle,
-    parentPath: string[] = [],
-): Promise<MappingFile[]> {
-    const result: MappingFile[] = [];
-
-    for await (const entry of directory.values()) {
-        const path = [...parentPath, entry.name];
-
-        if (entry.kind === "directory") {
-            result.push(...await collectMappingFiles(entry, path));
-        } else if (entry.name.endsWith(".mapping")) {
-            result.push({ handle: entry, path });
-        }
-    }
-
-    if (parentPath.length === 0) {
-        result.sort((a, b) => a.path.join("/").localeCompare(b.path.join("/")));
-    }
-
-    return result;
 }
 
 async function getFileHandle(
