@@ -376,6 +376,7 @@ const Code = () => {
                 options={{
                     readOnly: true,
                     domReadOnly: true,
+                    codeLens: javadocFile !== null,
                     tabSize: 3,
                     minimap: { enabled: !hideMinimap },
                     glyphMargin: true,

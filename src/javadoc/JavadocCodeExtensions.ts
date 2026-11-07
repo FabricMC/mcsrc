@@ -20,6 +20,7 @@ type monaco = typeof import("monaco-editor");
 const EDIT_JAVADOC_COMMAND_ID = 'editor.action.editJavadoc';
 
 export function applyJavadocCodeExtensions(monaco: monaco, editor: editor.IStandaloneCodeEditor, decompile: DecompileResult): IDisposable {
+    editor.updateOptions({ codeLens: true });
     const views: IDisposable[] = [];
     const symbols = new Map<ClassName, JavadocSymbols>();
     let index: JarIndex | undefined;
@@ -76,8 +77,12 @@ export function applyJavadocCodeExtensions(monaco: monaco, editor: editor.IStand
     });
 
     const codeLense = monaco.languages.registerCodeLensProvider("java", {
-        provideCodeLenses: function(model: editor.ITextModel, token: CancellationToken): languages.ProviderResult<languages.CodeLensList> {
+        provideCodeLenses: function (model: editor.ITextModel, token: CancellationToken): languages.ProviderResult<languages.CodeLensList> {
             const lenses: languages.CodeLens[] = [];
+
+            if (model !== editor.getModel() || model.getValue() !== decompile.source) {
+                return { lenses, dispose: () => { } };
+            }
 
             for (const token of decompile.tokens) {
                 if (!token.declaration || token.type == 'parameter' || token.type == 'local') {
@@ -111,7 +116,7 @@ export function applyJavadocCodeExtensions(monaco: monaco, editor: editor.IStand
     const editJavadocCommand = monaco.editor.addEditorAction({
         id: EDIT_JAVADOC_COMMAND_ID,
         label: 'Edit Javadoc',
-        run: function(editor, ...args) {
+        run: function (editor, ...args) {
             const token = args[0] as Token;
             activeJavadocToken.next(token);
         }
@@ -119,6 +124,7 @@ export function applyJavadocCodeExtensions(monaco: monaco, editor: editor.IStand
 
     return {
         dispose() {
+            editor.updateOptions({ codeLens: false });
             editJavadocCommand.dispose();
             codeLense.dispose();
             modelChangeListener.dispose();
