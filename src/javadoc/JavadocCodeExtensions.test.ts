@@ -62,6 +62,7 @@ function setupEditor() {
     const modelChange = vi.fn((_listener: () => void) => ({ dispose: vi.fn() }));
     const configurationChange = vi.fn((_listener: (event: editor.ConfigurationChangedEvent) => void) => ({ dispose: vi.fn() }));
     const codeEditor = {
+        updateOptions: vi.fn(),
         getModel: () => ({ getValue: () => result.source }),
         onDidChangeModel: modelChange,
         onDidChangeConfiguration: configurationChange,
