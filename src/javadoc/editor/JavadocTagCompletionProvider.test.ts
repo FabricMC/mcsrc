@@ -2,13 +2,13 @@ import { describe, expect, it, vi } from 'vitest';
 import type { editor, Position } from 'monaco-editor';
 import type { ParameterToken, Token } from '../../logic/Tokens';
 import type { DecompileResult } from '../../workers/decompile/types';
-import { toClassName } from '../../utils/Names';
+import { toClassName, type ClassName } from '../../utils/Names';
 import { getJavadocDeclaration, type DeclarationMetadata, type JavadocDeclaration } from './JavadocDeclaration';
 import { JavadocTagCompletionProvider } from './JavadocTagCompletionProvider';
 
 vi.mock('monaco-editor', () => ({
     languages: {
-        CompletionItemKind: { Snippet: 27 },
+        CompletionItemKind: { Snippet: 27, Class: 5 },
         CompletionItemInsertTextRule: { InsertAsSnippet: 4 },
     },
 }));
@@ -28,7 +28,7 @@ function target(type: Token['type'] = 'method') {
     return { result, token };
 }
 
-function complete(markdown: string, declaration = method) {
+function complete(markdown: string, declaration = method, jarClasses?: ReadonlySet<ClassName>) {
     const cursor = markdown.indexOf('|');
     const value = markdown.replace('|', '');
     const lines = value.split('\n');
@@ -38,7 +38,7 @@ function complete(markdown: string, declaration = method) {
         getValue: () => value,
         getLineContent: (lineNumber: number) => lines[lineNumber - 1],
     } as editor.ITextModel;
-    return new JavadocTagCompletionProvider(declaration, model).provideCompletionItems(model, position).suggestions;
+    return new JavadocTagCompletionProvider(declaration, model, jarClasses).provideCompletionItems(model, position).suggestions;
 }
 
 describe('Javadoc declaration metadata', () => {
@@ -143,5 +143,54 @@ describe('Declared exception completion', () => {
             insert: { startLineNumber: 1, startColumn: 9, endLineNumber: 1, endColumn: 19 },
             replace: { startLineNumber: 1, startColumn: 9, endLineNumber: 1, endColumn: 28 },
         });
+    });
+});
+
+describe('JAR class completion in exception tags', () => {
+    const jarClasses = new Set([
+        toClassName('example/Example$Inner'),
+        toClassName('other/Example$Inner'),
+        toClassName('example/Example$1'),
+        toClassName('example/Example$1Local'),
+    ]);
+
+    it.each(['throws', 'exception'])('offers qualified classes for @%s', tag => {
+        const suggestions = complete(`@${tag} Inn|`, method, jarClasses);
+        const classes = suggestions.filter(item => item.kind === 5);
+        expect(classes.map(item => item.label)).toEqual([
+            { label: 'Example.Inner', description: 'example.Example.Inner' },
+            { label: 'Example.Inner', description: 'other.Example.Inner' },
+        ]);
+        expect(classes.map(item => item.insertText)).toEqual([
+            'example.Example.Inner ${1:description}$0',
+            'other.Example.Inner ${1:description}$0',
+        ]);
+        expect(classes[0].filterText).toBe('Inner');
+    });
+
+    it('replaces qualified names and preserves descriptions', () => {
+        const suggestions = complete('@throws example.Example.Inn|er explanation', method, jarClasses);
+        const inner = suggestions.find(item => item.detail === 'example.Example.Inner');
+        expect(inner?.insertText).toBe('example.Example.Inner$0');
+        expect(inner?.filterText).toBe('example.Example.Inner');
+        expect(inner?.range).toEqual({
+            insert: { startLineNumber: 1, startColumn: 9, endLineNumber: 1, endColumn: 28 },
+            replace: { startLineNumber: 1, startColumn: 9, endLineNumber: 1, endColumn: 30 },
+        });
+    });
+
+    it('uses implicit java.lang names from attached libraries', () => {
+        const classes = new Set([toClassName('java/lang/RuntimeException')]);
+        const suggestions = complete('@throws Run|', method, classes);
+        const exception = suggestions.find(item => item.detail === 'java.lang.RuntimeException');
+        expect(exception?.insertText).toBe('RuntimeException ${1:description}$0');
+        expect(exception?.filterText).toBe('RuntimeException');
+    });
+
+    it('shortens declared java.lang exceptions in tag and name completion', () => {
+        const declaration = { ...method, exceptions: ['java.lang.RuntimeException'] };
+        expect(complete('@throws Run|', declaration)[0].insertText).toBe('RuntimeException ${1:description}$0');
+        expect(complete('@thr|', declaration).find(item => item.label === '@throws RuntimeException')?.insertText)
+            .toBe('@throws RuntimeException ${1:description}$0');
     });
 });

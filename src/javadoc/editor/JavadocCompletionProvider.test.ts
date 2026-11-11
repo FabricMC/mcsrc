@@ -40,12 +40,15 @@ function memberData(owner: string, methods: string[] = [], fields: string[] = []
     };
 }
 
-async function complete(markdown: string, owner = 'example/Owner') {
+async function complete(markdown: string, owner = 'example/Owner', libraryClasses: string[] = []) {
     const { model, position } = documentAtCursor(markdown);
     const members = [
         memberData('example/Owner', ['run:(I)V', 'run:([Ljava/lang/String;)V']),
         memberData('example/Parent', ['<init>:()V', 'inherited:()I'], ['VALUE:I']),
         memberData('example/Owner$Nested', ['<init>:(I)V', 'nestedOnly:()V']),
+        memberData('other/Remote$Nested'),
+        memberData('example/Owner$1'),
+        memberData('example/Owner$1Local'),
         memberData('other/Remote', ['remote:()V']),
         memberData('example/Remote', ['localRemote:()V']),
         memberData('unimported/Unimported'),
@@ -61,7 +64,9 @@ async function complete(markdown: string, owner = 'example/Owner') {
         getMemberData: async () => members,
     } as unknown as JarIndex;
     const result = { source: 'import other.Remote;', tokens: [] } as unknown as DecompileResult;
-    const provider = new JavadocCompletionProvider(result, toClassName(owner), index, model);
+    const jarClasses = new Set(members.filter(data => data.className !== 'unimported/Unimported').map(data => data.className));
+    const completionClasses = new Set([...jarClasses, ...libraryClasses.map(toClassName)]);
+    const provider = new JavadocCompletionProvider(result, toClassName(owner), index, model, jarClasses, completionClasses);
     const completions = await provider.provideCompletionItems(model, position, {} as languages.CompletionContext, { isCancellationRequested: false } as CancellationToken);
     return { provider, suggestions: completions.suggestions };
 }
@@ -102,20 +107,20 @@ describe('Javadoc reference context', () => {
 describe('@see reference completion', () => {
     it('completes classes without adding Markdown brackets', async () => {
         const { suggestions } = await complete('@see |');
-        expect(suggestions.find(item => item.detail === 'other.Remote')?.insertText).toBe('Remote$0');
-        expect(suggestions.find(item => item.detail === 'unimported.Unimported')?.insertText).toBe('unimported.Unimported$0');
+        expect(suggestions.find(item => item.detail === 'other.Remote')?.insertText).toBe('other.Remote$0');
+        expect(suggestions.some(item => item.detail === 'example.Constructed')).toBe(true);
+        expect(suggestions.some(item => item.detail === 'unimported.Unimported')).toBe(false);
     });
 
-    it('completes imported and qualified member owners', async () => {
-        for (const owner of ['Remote', 'other.Remote']) {
-            const { suggestions } = await complete(`@see ${owner}#|`);
-            expect(suggestions.map(item => item.insertText)).toEqual([`${owner}#remote()$0`]);
-        }
+    it('completes members for qualified class owners without using imports', async () => {
+        expect((await complete('@see Remote#|')).suggestions.map(item => item.insertText)).toEqual(['example.Remote#localRemote()$0']);
+        const { suggestions } = await complete('@see other.Remote#|');
+        expect(suggestions.map(item => item.insertText)).toEqual(['other.Remote#remote()$0']);
     });
 
     it('replaces only the reference, preserving its custom label', async () => {
         const { suggestions } = await complete('@see #ru|n(int) custom label');
-        const suggestion = suggestions.find(item => item.insertText === '#run(int)$0');
+        const suggestion = suggestions.find(item => item.insertText === 'example.Owner#run(int)$0');
         expect(suggestion?.range).toEqual({
             insert: { startLineNumber: 1, startColumn: 6, endLineNumber: 1, endColumn: 9 },
             replace: { startLineNumber: 1, startColumn: 6, endLineNumber: 1, endColumn: 15 },
@@ -125,7 +130,7 @@ describe('@see reference completion', () => {
     it('preserves the member suffix when completing a class name', async () => {
         const { suggestions } = await complete('@see Rem|ote#remote() custom label');
         const suggestion = suggestions.find(item => item.detail === 'other.Remote');
-        expect(suggestion?.insertText).toBe('Remote$0');
+        expect(suggestion?.insertText).toBe('other.Remote$0');
         expect(suggestion?.range).toEqual({
             insert: { startLineNumber: 1, startColumn: 6, endLineNumber: 1, endColumn: 9 },
             replace: { startLineNumber: 1, startColumn: 6, endLineNumber: 1, endColumn: 12 },
@@ -134,7 +139,7 @@ describe('@see reference completion', () => {
 
     it('replaces a full method signature including spaces between arguments', async () => {
         const { suggestions } = await complete('@see #run(int, |String[]) label');
-        const suggestion = suggestions.find(item => item.insertText === '#run(int)$0');
+        const suggestion = suggestions.find(item => item.insertText === 'example.Owner#run(int)$0');
         expect(suggestion?.range).toEqual({
             insert: { startLineNumber: 1, startColumn: 6, endLineNumber: 1, endColumn: 16 },
             replace: { startLineNumber: 1, startColumn: 6, endLineNumber: 1, endColumn: 25 },
@@ -147,7 +152,7 @@ describe('Javadoc completion', () => {
         const { suggestions } = await complete('[#ru|n]');
         const overloads = suggestions.filter(item => typeof item.label !== 'string' && item.label.label.startsWith('run('));
         expect(overloads).toHaveLength(2);
-        expect(overloads.map(item => item.insertText)).toEqual(['#run(int)$0', '#run(java.lang.String\\\\[\\\\])$0']);
+        expect(overloads.map(item => item.insertText)).toEqual(['example.Owner#run(int)$0', 'example.Owner#run(java.lang.String\\\\[\\\\])$0']);
         expect(overloads[0].range).toEqual({
             insert: { startLineNumber: 1, startColumn: 2, endLineNumber: 1, endColumn: 5 },
             replace: { startLineNumber: 1, startColumn: 2, endLineNumber: 1, endColumn: 6 },
@@ -156,9 +161,9 @@ describe('Javadoc completion', () => {
 
     it('includes inherited members without leaking nested-class declarations', async () => {
         const { suggestions, provider } = await complete('[#|]');
-        expect(suggestions.map(item => item.insertText)).toContain('#inherited()$0');
-        expect(suggestions.map(item => item.insertText)).toContain('#VALUE$0');
-        expect(suggestions.map(item => item.insertText)).not.toContain('#nestedOnly()$0');
+        expect(suggestions.map(item => item.insertText)).toContain('example.Owner#inherited()$0');
+        expect(suggestions.map(item => item.insertText)).toContain('example.Owner#VALUE$0');
+        expect(suggestions.map(item => item.insertText)).not.toContain('example.Owner#nestedOnly()$0');
         expect(provider.resolveCompletionItem(suggestions[0]).documentation).toEqual({ value: 'Stored documentation', isTrusted: false });
     });
 
@@ -166,11 +171,32 @@ describe('Javadoc completion', () => {
         const { suggestions } = await complete('[|', 'example/Owner$Nested');
         const remote = suggestions.find(item => item.detail === 'other.Remote');
         const parent = suggestions.find(item => item.detail === 'example.Parent');
-        expect(remote?.insertText).toBe('Remote$0]');
-        expect(parent?.insertText).toBe('Parent$0]');
+        expect(remote?.insertText).toBe('other.Remote$0]');
+        expect(parent?.insertText).toBe('example.Parent$0]');
         expect(suggestions.find(item => item.detail === 'example.Remote')?.insertText).toBe('example.Remote$0]');
-        expect(suggestions.find(item => item.detail === 'unimported.Unimported')?.insertText).toBe('unimported.Unimported$0]');
-        expect(suggestions.find(item => item.detail === 'java.lang.String')?.insertText).toBe('String$0]');
+        expect(suggestions.find(item => item.detail === 'unimported.Unimported')).toBeUndefined();
+        expect(suggestions.find(item => item.detail === 'java.lang.String')).toBeUndefined();
+    });
+
+    it('shows enclosing class names and excludes anonymous and local classes', async () => {
+        const { suggestions } = await complete('[Nested|]');
+        const nested = suggestions.filter(item => item.detail?.endsWith('.Nested'));
+        expect(nested.map(item => item.label)).toEqual([
+            { label: 'Owner.Nested', description: 'example.Owner.Nested' },
+            { label: 'Remote.Nested', description: 'other.Remote.Nested' },
+        ]);
+        expect(suggestions.some(item => item.detail === 'example.Owner.1')).toBe(false);
+        expect(suggestions.some(item => item.detail === 'example.Owner.1Local')).toBe(false);
+    });
+
+    it('includes attached library classes in class suggestions', async () => {
+        const { suggestions } = await complete('[|]', 'example/Owner', ['library/Widget$Inner']);
+        expect(suggestions.find(item => item.detail === 'library.Widget.Inner')?.insertText).toBe('library.Widget.Inner$0');
+    });
+
+    it('uses implicit names for java.lang classes found in attached libraries', async () => {
+        const { suggestions } = await complete('[Run|]', 'example/Owner', ['java/lang/RuntimeException']);
+        expect(suggestions.find(item => item.detail === 'java.lang.RuntimeException')?.insertText).toBe('RuntimeException$0');
     });
 });
 
@@ -187,15 +213,15 @@ describe('Constructor reference completion', () => {
         } as unknown as DecompileResult;
         const provider = new JavadocCompletionProvider(result, className, undefined, model);
         const completions = await provider.provideCompletionItems(model, position, {} as languages.CompletionContext, { isCancellationRequested: false } as CancellationToken);
-        expect(completions.suggestions.map(item => item.insertText)).toEqual(['#SourceOnly(int)$0']);
+        expect(completions.suggestions.map(item => item.insertText)).toEqual(['example.SourceOnly#SourceOnly(int)$0']);
     });
 
     it('offers constructor overloads with source names and the constructor icon', async () => {
         const { suggestions } = await complete('[Constructed#|]');
         expect(suggestions.map(item => item.insertText)).toEqual([
-            'Constructed#Constructed()$0',
-            'Constructed#Constructed(int)$0',
-            'Constructed#Constructed(java.lang.String\\\\[\\\\])$0',
+            'example.Constructed#Constructed()$0',
+            'example.Constructed#Constructed(int)$0',
+            'example.Constructed#Constructed(java.lang.String\\\\[\\\\])$0',
         ]);
         expect(suggestions[0].label).toEqual({ label: 'Constructed()', description: 'example.Constructed' });
         expect(suggestions.every(item => item.kind === languages.CompletionItemKind.Constructor)).toBe(true);
@@ -203,21 +229,21 @@ describe('Constructor reference completion', () => {
 
     it('supports local and fully qualified constructor references in @see', async () => {
         const local = await complete('@see #|', 'example/Constructed');
-        expect(local.suggestions.map(item => item.insertText)).toContain('#Constructed(int)$0');
+        expect(local.suggestions.map(item => item.insertText)).toContain('example.Constructed#Constructed(int)$0');
         const qualified = await complete('@see example.Constructed#|');
         expect(qualified.suggestions.map(item => item.insertText)).toContain('example.Constructed#Constructed(java.lang.String[])$0');
     });
 
     it('uses the simple constructor name for nested classes', async () => {
         const { suggestions } = await complete('[Nested#|]');
-        expect(suggestions.map(item => item.insertText)).toContain('Nested#Nested(int)$0');
+        expect(suggestions.map(item => item.insertText)).toContain('example.Owner.Nested#Nested(int)$0');
     });
 
     it('never inherits constructors or suggests static initializers', async () => {
         const owner = await complete('[#|]');
         expect(owner.suggestions.some(item => item.kind === languages.CompletionItemKind.Constructor)).toBe(false);
         const parent = await complete('[Parent#|]');
-        expect(parent.suggestions.map(item => item.insertText)).toContain('Parent#Parent()$0');
+        expect(parent.suggestions.map(item => item.insertText)).toContain('example.Parent#Parent()$0');
         const constructed = await complete('[Constructed#|]');
         expect(constructed.suggestions.some(item => item.insertText.includes('<clinit>'))).toBe(false);
     });

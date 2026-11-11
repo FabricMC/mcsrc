@@ -36,7 +36,8 @@ async function createSymbols() {
         ],
     } as unknown as JarIndex;
     const result = { source: 'import other.Remote;', tokens } as DecompileResult;
-    const symbols = new JavadocSymbols(result, owner, index);
+    const jarClasses = new Set([owner, parent, nested, toClassName('other/Remote')]);
+    const symbols = new JavadocSymbols(result, owner, index, jarClasses);
     await symbols.ready;
     return symbols;
 }
@@ -61,10 +62,10 @@ describe('Javadoc Markdown', () => {
     });
 
     it('resolves shortcut and labelled references with exact member targets', async () => {
-        const { element, links } = await render('[Remote], [nested class][Owner.Nested], [#run(int)], [#run(String\\[\\])], [#inherited()], [#VALUE], [Owner#Owner()]');
+        const { element, links } = await render('[other.Remote], [nested class][example.Owner.Nested], [#run(int)], [#run(String\\[\\])], [#inherited()], [#VALUE], [example.Owner#Owner()]');
         const anchors = [...element.querySelectorAll('a')];
         expect(anchors.map(anchor => anchor.textContent)).toEqual([
-            'Remote', 'nested class', 'run(int)', 'run(String[])', 'inherited()', 'VALUE', 'Owner()',
+            'other.Remote', 'nested class', 'run(int)', 'run(String[])', 'inherited()', 'VALUE', 'Owner()',
         ]);
         expect([...links.values()].map(token => token.className)).toEqual([
             'other/Remote', 'example/Owner$Nested', 'example/Owner', 'example/Owner', 'example/Parent', 'example/Parent', 'example/Owner',
@@ -87,11 +88,11 @@ describe('Javadoc Markdown', () => {
 @param <T> the **type**
 @param value the value
 @return the result
-@throws Remote when unavailable
-@exception Remote another case
-@see Owner#run(int) custom description
+@throws other.Remote when unavailable
+@exception other.Remote another case
+@see example.Owner#run(int) custom description
 @since 1.0
-@deprecated Use [Remote].
+@deprecated Use [other.Remote].
 @apiNote
 API guidance.
 
@@ -109,13 +110,13 @@ API guidance.
         expect(element.querySelector('dd code')?.textContent).toBe('T');
         expect(element.querySelector('dd strong')?.textContent).toBe('type');
         expect(element.querySelectorAll('dd ul:not(.tag-list) > li')).toHaveLength(2);
-        expect(element.querySelector('.deprecation-block')?.textContent).toBe('Deprecated.Use Remote.');
+        expect(element.querySelector('.deprecation-block')?.textContent).toBe('Deprecated.Use other.Remote.');
         expect(links.size).toBe(4);
         expect(element.textContent).toContain('custom description');
     });
 
     it('supports Markdown and HTML @see links and leaves unresolved targets readable', async () => {
-        const { element } = await render('@see [the class][Remote]\n@see <a href="https://example.com">a website</a>\n@see Unknown missing class\n@custom Some **custom** tag');
+        const { element } = await render('@see [the class][other.Remote]\n@see <a href="https://example.com">a website</a>\n@see Unknown missing class\n@custom Some **custom** tag');
         expect(element.querySelectorAll('a')).toHaveLength(2);
         expect(element.textContent).toContain('Unknown missing class');
         expect(element.querySelector('strong')?.textContent).toBe('custom');
@@ -164,5 +165,8 @@ describe('Javadoc reference resolution', () => {
         expect(symbols.resolveReference('#VALUE()')).toBeUndefined();
         expect(symbols.resolveReference('#run(java.lang.String...)')).toMatchObject({ descriptor: '([Ljava/lang/String;)V' });
         expect(symbols.resolveReference('example.Owner.Nested')).toMatchObject({ className: 'example/Owner$Nested' });
+        expect(symbols.resolveReference('Remote')).toBeUndefined();
+        expect(symbols.resolveReference('other.Remote')).toMatchObject({ className: 'other/Remote' });
+        expect(symbols.resolveReference('java.lang.String')).toBeUndefined();
     });
 });

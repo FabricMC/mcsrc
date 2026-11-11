@@ -12,7 +12,7 @@ import { jarIndex, type JarIndex } from "../workers/jar-index/client";
 import { isDarkMode } from "../logic/Browser";
 import { JavadocSymbols } from "./editor/JavadocSymbols";
 import { createJavadocView, createRawJavadocView } from "./JavadocView";
-import type { ClassName } from "../utils/Names";
+import { classNameFromClassFilePath, isClassFilePath, type ClassName } from "../utils/Names";
 import { autoJarIndex, renderJavadoc } from "../logic/Settings";
 
 type monaco = typeof import("monaco-editor");
@@ -24,10 +24,12 @@ export function applyJavadocCodeExtensions(monaco: monaco, editor: editor.IStand
     const views: IDisposable[] = [];
     const symbols = new Map<ClassName, JavadocSymbols>();
     let index: JarIndex | undefined;
+    let activeJarIndex: JarIndex | undefined;
+    let jarClasses: ReadonlySet<ClassName> | undefined;
     const symbolsFor = (owner: ClassName) => {
         let result = symbols.get(owner);
         if (!result) {
-            result = new JavadocSymbols(decompile, owner, index);
+            result = new JavadocSymbols(decompile, owner, index, jarClasses);
             symbols.set(owner, result);
         }
         return result;
@@ -44,8 +46,12 @@ export function applyJavadocCodeExtensions(monaco: monaco, editor: editor.IStand
                 view.dispose();
             }
             views.length = 0;
-            if (index !== nextIndex) {
+            if (activeJarIndex !== jarIndex || index !== nextIndex) {
                 index = nextIndex;
+                activeJarIndex = jarIndex;
+                jarClasses = new Set(Object.keys(jarIndex.minecraftJar.jar.entries)
+                    .filter(isClassFilePath)
+                    .map(classNameFromClassFilePath));
                 symbols.clear();
             }
             if (editor.getModel()?.getValue() !== decompile.source) return EMPTY;

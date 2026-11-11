@@ -53,6 +53,7 @@ function disposeExtensions() {
 
 function createIndex(classes: Promise<ClassData[]> = Promise.resolve([])): JarIndex {
     return {
+        minecraftJar: { jar: { entries: { 'Owner.class': {} } } },
         getClassData: () => classes,
         getMemberData: async () => [],
     } as unknown as JarIndex;

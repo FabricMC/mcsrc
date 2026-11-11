@@ -7,7 +7,7 @@ import { parseFieldDescriptor, parseMethodDescriptor } from '../../utils/JavaDes
 import { getJavadocForToken } from '../Javadoc';
 import { getJavadocReference, type JavadocReference } from './JavadocReference';
 import { escapeSnippet, getCompletionRange, type CompletionRange } from './JavadocCompletionUtils';
-import { JavadocSymbols, simpleName, sourceName, type InheritedMember } from './JavadocSymbols';
+import { classFilterText, completionName, displayName, isSuggestibleClass, JavadocSymbols, simpleName, sourceName, type InheritedMember } from './JavadocSymbols';
 
 interface ReferenceCompletionItem extends languages.CompletionItem {
     target: Token;
@@ -40,10 +40,14 @@ export class JavadocCompletionProvider implements languages.CompletionItemProvid
     readonly triggerCharacters = ['[', '#', '.', '(', ',', ' '];
     private readonly symbols: JavadocSymbols;
     private readonly model: editor.ITextModel;
+    private readonly jarClasses?: ReadonlySet<ClassName>;
+    private readonly completionClasses?: ReadonlySet<ClassName>;
 
-    constructor(result: DecompileResult, owner: ClassName, index: JarIndex | undefined, model: editor.ITextModel) {
-        this.symbols = new JavadocSymbols(result, owner, index);
+    constructor(result: DecompileResult, owner: ClassName, index: JarIndex | undefined, model: editor.ITextModel, jarClasses?: ReadonlySet<ClassName>, completionClasses?: ReadonlySet<ClassName>) {
+        this.symbols = new JavadocSymbols(result, owner, index, jarClasses);
         this.model = model;
+        this.jarClasses = jarClasses;
+        this.completionClasses = completionClasses;
     }
 
     async provideCompletionItems(
@@ -71,7 +75,8 @@ export class JavadocCompletionProvider implements languages.CompletionItemProvid
         if (reference.prefix.includes('#')) {
             return { suggestions: this.createMemberSuggestions(context) };
         }
-        return { suggestions: [...this.symbols.classNames].map(className => this.createClassSuggestion(className, context)) };
+        const classes = this.completionClasses ?? this.jarClasses ?? this.symbols.classNames;
+        return { suggestions: [...classes].filter(isSuggestibleClass).map(className => this.createClassSuggestion(className, context)) };
     }
 
     resolveCompletionItem(item: languages.CompletionItem): languages.CompletionItem {
@@ -87,15 +92,13 @@ export class JavadocCompletionProvider implements languages.CompletionItemProvid
 
     private createClassSuggestion(className: ClassName, context: ReferenceContext): ReferenceCompletionItem {
         const qualifiedName = sourceName(className);
-        const qualified = context.reference.prefix.includes('.');
-        const referenceName = qualified ? qualifiedName : this.symbols.referenceName(className);
         return {
-            label: { label: simpleName(className), description: qualifiedName },
+            label: { label: displayName(className), description: qualifiedName },
             kind: languages.CompletionItemKind.Class,
             detail: qualifiedName,
-            insertText: createReferenceSnippet(referenceName, context.reference),
+            insertText: createReferenceSnippet(completionName(className), context.reference),
             insertTextRules: languages.CompletionItemInsertTextRule.InsertAsSnippet,
-            filterText: qualified ? qualifiedName : simpleName(className),
+            filterText: classFilterText(className, context.reference.prefix),
             sortText: `${this.symbols.classRank(className)}:${simpleName(className)}:${className}`,
             range: context.range,
             target: { type: 'class', className, declaration: true, start: 0, length: 0 },
@@ -108,7 +111,8 @@ export class JavadocCompletionProvider implements languages.CompletionItemProvid
         if (!className) {
             return [];
         }
-        return this.symbols.getMembers(className).map(candidate => this.createMemberSuggestion(candidate, classReference, context));
+        const ownerReference = completionName(className);
+        return this.symbols.getMembers(className).map(candidate => this.createMemberSuggestion(candidate, ownerReference, context));
     }
 
     private createMemberSuggestion(candidate: InheritedMember, classReference: string, context: ReferenceContext): ReferenceCompletionItem {

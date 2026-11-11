@@ -26,6 +26,25 @@ export function simpleName(className: ClassName): string {
     return sourceName(className).split('.').pop()!;
 }
 
+export function displayName(className: ClassName): string {
+    return sourceName(className).slice(packageName(className).length);
+}
+
+export function completionName(className: ClassName): string {
+    return packageName(className) === 'java/lang/' ? displayName(className) : sourceName(className);
+}
+
+export function isSuggestibleClass(className: ClassName): boolean {
+    return !className.split('$').slice(1).some(name => /^\d/.test(name));
+}
+
+export function classFilterText(className: ClassName, prefix: string): string {
+    if (!prefix.includes('.')) return simpleName(className);
+
+    const qualifiedName = sourceName(className);
+    return qualifiedName.startsWith(prefix) ? qualifiedName : displayName(className);
+}
+
 function getEnclosingClasses(owner: ClassName): ClassName[] {
     const classes = [owner];
     let separator = owner.lastIndexOf('$');
@@ -43,9 +62,8 @@ export class JavadocSymbols {
     private readonly classes = new Map<ClassName, ClassData>();
     private readonly members = new Map<ClassName, MemberToken[]>();
     private readonly access = new Map<string, number>();
-    private readonly imports = new Set<string>();
-    private readonly wildcardImports = new Set<string>();
     private readonly aliases = new Map<string, { className: ClassName; rank: number }[]>();
+    private readonly jarClasses?: ReadonlySet<ClassName>;
     readonly owner: ClassName;
     private readonly enclosingClasses: ClassName[];
     readonly ready: Promise<void>;
@@ -54,12 +72,18 @@ export class JavadocSymbols {
         result: DecompileResult,
         owner: ClassName,
         index: JarIndex | undefined,
+        jarClasses?: ReadonlySet<ClassName>,
     ) {
         this.owner = owner;
+        this.jarClasses = jarClasses;
         this.enclosingClasses = getEnclosingClasses(owner);
         this.classNames.add(owner);
         this.addSourceDeclarations(result);
-        this.readImports(result.source);
+        if (jarClasses) {
+            for (const className of jarClasses) {
+                this.classNames.add(className);
+            }
+        }
         this.ready = this.loadIndex(index);
     }
 
@@ -69,20 +93,17 @@ export class JavadocSymbols {
                 return 0;
             }
         }
-        if (this.imports.has(sourceName(className))) {
+        if (packageName(className) === packageName(this.owner)) {
             return 1;
         }
-        if (packageName(className) === packageName(this.owner)) {
+        const classPackage = packageName(className).replaceAll('/', '.').replace(/\.$/, '');
+        if (classPackage === 'java.lang') {
             return 2;
         }
-        const classPackage = packageName(className).replaceAll('/', '.').replace(/\.$/, '');
-        if (classPackage === 'java.lang' || this.wildcardImports.has(classPackage)) {
-            return 3;
-        }
-        return 4;
+        return 3;
     }
 
-    resolveClass(reference: string): ClassName | undefined {
+    resolveClass(reference: string, requireJarClass = true): ClassName | undefined {
         const candidates = this.aliases.get(reference);
         if (!candidates?.length) {
             return undefined;
@@ -90,12 +111,8 @@ export class JavadocSymbols {
         if (candidates.length > 1 && candidates[0].rank === candidates[1].rank) {
             return undefined;
         }
-        return candidates[0].className;
-    }
-
-    referenceName(className: ClassName): string {
-        const shortName = this.shortReferenceName(className);
-        return this.resolveClass(shortName) === className ? shortName : sourceName(className);
+        const className = candidates[0].className;
+        return requireJarClass && this.jarClasses && !this.jarClasses.has(className) ? undefined : className;
     }
 
     resolveReference(reference: string): Token | undefined {
@@ -104,6 +121,7 @@ export class JavadocSymbols {
 
         const className = match[1] ? this.resolveClass(match[1]) : this.owner;
         if (!className) return undefined;
+        if (this.jarClasses && !this.jarClasses.has(className)) return undefined;
         if (!match[2]) {
             return { type: 'class', className, declaration: true, start: 0, length: 0 };
         }
@@ -120,7 +138,7 @@ export class JavadocSymbols {
                 const expected = parameters[index];
                 const arraySuffix = /(?:\[\])*$/.exec(expected)![0];
                 const referenceType = expected.slice(0, expected.length - arraySuffix.length);
-                const resolved = this.resolveClass(referenceType);
+                const resolved = this.resolveClass(referenceType, false);
                 const parameterType = resolved ? sourceName(resolved) + arraySuffix : expected;
                 return type.replaceAll('$', '.') === parameterType;
             });
@@ -180,16 +198,6 @@ export class JavadocSymbols {
         }
     }
 
-    private readImports(source: string): void {
-        for (const match of source.matchAll(/^\s*import\s+(?!static\b)([^\s;]+)\s*;/gm)) {
-            if (match[1].endsWith('.*')) {
-                this.wildcardImports.add(match[1].slice(0, -2));
-            } else {
-                this.imports.add(match[1].replaceAll('$', '.'));
-            }
-        }
-    }
-
     private async loadIndex(index: JarIndex | undefined): Promise<void> {
         if (index) {
             try {
@@ -205,16 +213,7 @@ export class JavadocSymbols {
                 console.warn('Unable to load Javadoc completion index; using source declarations', error);
             }
         }
-        this.addImportedClasses();
         this.buildAliases();
-    }
-
-    private addImportedClasses(): void {
-        for (const imported of this.imports) {
-            if (![...this.classNames].some(className => sourceName(className) === imported)) {
-                this.classNames.add(toClassName(imported.replaceAll('.', '/')));
-            }
-        }
     }
 
     private buildAliases(): void {
@@ -259,9 +258,6 @@ export class JavadocSymbols {
 
     private shortReferenceName(className: ClassName): string {
         const fullName = sourceName(className);
-        if (this.imports.has(fullName)) {
-            return simpleName(className);
-        }
         for (const enclosing of this.enclosingClasses) {
             if (className === enclosing) {
                 return simpleName(className);
@@ -272,7 +268,7 @@ export class JavadocSymbols {
         }
         const classPackage = packageName(className).replaceAll('/', '.').replace(/\.$/, '');
         if (classPackage === packageName(this.owner).replaceAll('/', '.').replace(/\.$/, '')
-            || classPackage === 'java.lang' || this.wildcardImports.has(classPackage)) {
+            || classPackage === 'java.lang') {
             return sourceName(toClassName(className.slice(packageName(className).length)));
         }
         return fullName;

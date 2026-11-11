@@ -1,11 +1,14 @@
 import { languages, type editor, type Position } from 'monaco-editor';
+import type { ClassName } from '../../utils/Names';
 import type { JavadocDeclaration } from './JavadocDeclaration';
 import { getMarkdownContext } from './JavadocReference';
 import { readJavadocBlockTags, type JavadocBlockTag } from './JavadocBlockTags';
 import { escapeSnippet, getCompletionRange, type CompletionRange } from './JavadocCompletionUtils';
+import { classFilterText, completionName, displayName, isSuggestibleClass, sourceName } from './JavadocSymbols';
 
 interface TagContext {
     kind: 'tag' | 'parameter' | 'exception';
+    prefix: string;
     range: CompletionRange;
     hasDescription: boolean;
 }
@@ -78,6 +81,7 @@ function getTagContext(model: editor.ITextModel, position: Position): TagContext
     const endColumn = position.column + suffix.length;
     return {
         kind,
+        prefix,
         range: getCompletionRange(position, startColumn, endColumn),
         hasDescription: line.slice(endColumn - 1).trim().length > 0,
     };
@@ -116,6 +120,9 @@ function createNamedTagSuggestions(tag: 'param' | 'throws', names: string[], con
         return [{ label: '@param', insertText: '@param$0', detail: 'Document a parameter' }];
     }
     return names.map(name => {
+        if (tag === 'throws' && name.startsWith('java.lang.')) {
+            name = name.slice('java.lang.'.length);
+        }
         const label = context.kind === 'tag' ? `@${tag} ${name}` : name;
         const description = context.hasDescription ? '' : ' ${1:description}';
         let detail = 'Document a parameter';
@@ -159,10 +166,12 @@ export class JavadocTagCompletionProvider implements languages.CompletionItemPro
     readonly triggerCharacters = ['@', ' ', '<', '.'];
     private readonly declaration: JavadocDeclaration;
     private readonly model: editor.ITextModel;
+    private readonly jarClasses?: ReadonlySet<ClassName>;
 
-    constructor(declaration: JavadocDeclaration, model: editor.ITextModel) {
+    constructor(declaration: JavadocDeclaration, model: editor.ITextModel, jarClasses?: ReadonlySet<ClassName>) {
         this.declaration = declaration;
         this.model = model;
+        this.jarClasses = jarClasses;
     }
 
     provideCompletionItems(model: editor.ITextModel, position: Position): languages.CompletionList {
@@ -193,15 +202,32 @@ export class JavadocTagCompletionProvider implements languages.CompletionItemPro
         if (context.kind === 'tag') {
             suggestions.push(...createTagSuggestions(this.declaration, documented, context));
         }
-        return {
-            suggestions: suggestions.map((suggestion, index) => ({
+        const completions: languages.CompletionItem[] = suggestions.map((suggestion, index) => ({
                 ...suggestion,
                 filterText: suggestion.label,
                 insertTextRules: languages.CompletionItemInsertTextRule.InsertAsSnippet,
                 kind: languages.CompletionItemKind.Snippet,
                 range: context.range,
                 sortText: String(index).padStart(2, '0'),
-            })),
-        };
+        }));
+        if (context.kind === 'exception' && this.jarClasses) {
+            for (const className of this.jarClasses) {
+                if (!isSuggestibleClass(className)) continue;
+
+                const qualifiedName = sourceName(className);
+                const description = context.hasDescription ? '' : ' ${1:description}';
+                completions.push({
+                    label: { label: displayName(className), description: qualifiedName },
+                    kind: languages.CompletionItemKind.Class,
+                    detail: qualifiedName,
+                    insertText: `${escapeSnippet(completionName(className))}${description}$0`,
+                    insertTextRules: languages.CompletionItemInsertTextRule.InsertAsSnippet,
+                    filterText: classFilterText(className, context.prefix),
+                    range: context.range,
+                    sortText: `99:${displayName(className)}:${className}`,
+                });
+            }
+        }
+        return { suggestions: completions };
     }
 }

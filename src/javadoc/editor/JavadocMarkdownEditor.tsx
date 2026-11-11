@@ -2,7 +2,7 @@ import { defer } from "rxjs";
 import { Editor, useMonaco } from "@monaco-editor/react";
 import { useObservable } from "../../utils/UseObservable";
 import { currentResult } from "../../logic/Decompiler";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { editor, IDisposable } from "monaco-editor";
 import { JavadocCompletionProvider } from "./JavadocCompletionProvider";
 import { JavadocTagCompletionProvider } from "./JavadocTagCompletionProvider";
@@ -13,10 +13,11 @@ import { getJavadocDeclaration, type DeclarationMetadata } from "./JavadocDeclar
 import { isDarkMode } from "../../logic/Browser";
 import { JAVADOC_MARKDOWN_LANGUAGE } from "./JavadocMarkdownLanguage";
 import { minecraftJar } from "../../logic/MinecraftApi";
-import { toClassFilePath } from "../../utils/Names";
+import { classNameFromClassFilePath, isClassFilePath, toClassFilePath } from "../../utils/Names";
 import { toArrayBuffer } from "../../utils/ArrayBuffer";
 import { readJavadocDeclarationMetadata } from "../JavadocStorage";
 import { autoJarIndex } from "../../logic/Settings";
+import { runtimeLibraryClassNames } from "../JavadocLibraryClasses";
 
 const MIN_EDITOR_HEIGHT = 84;
 const MAX_EDITOR_HEIGHT = 320;
@@ -38,6 +39,11 @@ const JavadocMarkdownEditor = ({
     const indexAutomatically = useObservable(autoJarIndex.observable);
     const index = indexAutomatically ? loadedIndex : undefined;
     const jar = useObservable(minecraftJar);
+    const jarClasses = useMemo(() => jar && new Set(Object.keys(jar.jar.entries)
+        .filter(isClassFilePath)
+        .map(classNameFromClassFilePath)), [jar]);
+    const libraryClasses = useObservable(runtimeLibraryClassNames);
+    const completionClasses = useMemo(() => new Set([...(jarClasses ?? []), ...(libraryClasses ?? [])]), [jarClasses, libraryClasses]);
     const [codeEditor, setCodeEditor] = useState<editor.IStandaloneCodeEditor | null>(null);
     const model = codeEditor?.getModel();
     const [height, setHeight] = useState(MIN_EDITOR_HEIGHT);
@@ -59,7 +65,7 @@ const JavadocMarkdownEditor = ({
         if (!monaco || !decompileResult || !model || !jar || jar.jar.name !== decompileResult.jarName) return;
 
         const disposables: IDisposable[] = [
-            monaco.languages.registerCompletionItemProvider(JAVADOC_MARKDOWN_LANGUAGE, new JavadocCompletionProvider(decompileResult, token.className, index, model)),
+            monaco.languages.registerCompletionItemProvider(JAVADOC_MARKDOWN_LANGUAGE, new JavadocCompletionProvider(decompileResult, token.className, index, model, jarClasses, completionClasses)),
         ];
         const subscription = defer(async () => {
             let metadata: DeclarationMetadata = { typeParameters: [], exceptions: [], recordComponents: [] };
@@ -78,7 +84,7 @@ const JavadocMarkdownEditor = ({
                 if (model.isDisposed()) return;
 
                 disposables.push(
-                    monaco.languages.registerCompletionItemProvider(JAVADOC_MARKDOWN_LANGUAGE, new JavadocTagCompletionProvider(declaration, model)),
+                    monaco.languages.registerCompletionItemProvider(JAVADOC_MARKDOWN_LANGUAGE, new JavadocTagCompletionProvider(declaration, model, completionClasses)),
                     applyJavadocDiagnostics(monaco, model, declaration),
                 );
             },
@@ -90,7 +96,7 @@ const JavadocMarkdownEditor = ({
                 disposable.dispose();
             }
         };
-    }, [monaco, decompileResult, token, index, model, jar]);
+    }, [monaco, decompileResult, token, index, model, jar, jarClasses, completionClasses]);
 
     return (
         <Editor

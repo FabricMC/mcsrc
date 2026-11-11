@@ -1,6 +1,6 @@
 import { openJar, type Jar } from "../utils/Jar";
 import { toArrayBuffer } from "../utils/ArrayBuffer";
-import { toClassFilePath } from "../utils/Names";
+import { classNameFromClassFilePath, isClassFilePath, toClassFilePath, type ClassName } from "../utils/Names";
 
 export interface RuntimeLibrariesConfig {
     id: string;
@@ -18,11 +18,28 @@ export class RuntimeLibraries {
         this.#jars = undefined;
     }
 
+    async getClassNames(): Promise<Set<ClassName>> {
+        const jars = await this.getJars();
+        const names = new Set<ClassName>();
+        for (const jar of jars) {
+            for (const path of Object.keys(jar.entries)) {
+                if (isClassFilePath(path) && !path.startsWith('META-INF/') && !path.endsWith('module-info.class')) {
+                    names.add(classNameFromClassFilePath(path));
+                }
+            }
+        }
+        return names;
+    }
+
     async getClassBytes(name: string): Promise<ArrayBuffer | null> {
-        this.#jars ??= Promise.all((this.#config?.files ?? []).map(file => openJar(file.name, file)));
         const path = toClassFilePath(name);
-        const jars = await this.#jars;
+        const jars = await this.getJars();
         const entry = jars.find(jar => jar.entries[path])?.entries[path];
         return entry ? toArrayBuffer(await entry.bytes()) : null;
+    }
+
+    private getJars(): Promise<Jar[]> {
+        this.#jars ??= Promise.all((this.#config?.files ?? []).map(file => openJar(file.name, file)));
+        return this.#jars;
     }
 }
