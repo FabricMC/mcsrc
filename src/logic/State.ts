@@ -1,7 +1,7 @@
 import { BehaviorSubject, combineLatest } from "rxjs";
 import { pairwise } from "rxjs/operators";
 import { Tab, CodeTab, InheritanceViewTab } from "./tabs";
-import { getInitialState } from "./Permalink";
+import { getInitialState, type SymbolLink } from "./Permalink";
 import { loadSavedTabState, persistTabState, type SavedTab } from "./TabPersistence";
 import { enableTabs } from "./Settings";
 import { DEFAULT_VERSION, getVersionFromPermalink, type Version } from "./vineflower/versions";
@@ -80,6 +80,7 @@ export interface SelectedLines {
     lineEnd?: number;
 }
 export const selectedLines = new BehaviorSubject<SelectedLines | null>(initialState.selectedLines);
+export const initialSymbol: SymbolLink | undefined = initialState.symbol;
 
 export const diffView = new BehaviorSubject<boolean>(!!initialState.diff);
 export const diffLeftSelectedMinecraftVersion = new BehaviorSubject<string | null>(initialState.diff?.leftMinecraftVersion ?? null);

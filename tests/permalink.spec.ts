@@ -74,6 +74,22 @@ test.describe('Permalinks and Line Highlighting', () => {
         await expect(versionSelect).toContainText('26.1-mock-2');
     });
 
+    test('Method link with a Minecraft version opens and selects the requested overload', async ({ page }) => {
+        await page.goto('/2/26.1-mock-3/net/minecraft/NavigationChild#value(int)');
+
+        await waitForDecompiledContent(page, 'String value(int');
+        await expect(page).toHaveURL(/\/2\/26\.1-mock-3\/net\/minecraft\/NavigationChild$/);
+        await expect(page.locator('.monaco-editor .selected-text')).toBeVisible();
+    });
+
+    test('Field link with a Minecraft version opens its class', async ({ page }) => {
+        await page.goto('/2/26.1-mock-3/net/minecraft/ChatFormatting#EXAMPLE');
+
+        await waitForDecompiledContent(page, 'enum ChatFormatting');
+        await expect(page).toHaveURL(/\/2\/26\.1-mock-3\/net\/minecraft\/ChatFormatting$/);
+        await expect(page.locator('.monaco-editor .selected-text')).toBeVisible();
+    });
+
     test('Shift-clicking line number creates line range (normal mode)', async ({ page }) => {
         await page.goto('/');
         await page.getByText('ChatFormatting', { exact: true }).click();

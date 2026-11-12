@@ -23,9 +23,61 @@ vi.mock('./MinecraftApi', () => ({
 }));
 
 // Import the actual parsing function
-import { parsePathToState } from './Permalink';
+import { parsePathToState, symbolPermalink } from './Permalink';
 
 describe('Permalink', () => {
+    describe('symbol links', () => {
+        it('parses a readable method link with its parameter types', () => {
+            const state = parsePathToState('2/26.1-mock-2/net/minecraft/NavigationChild#value(int,java.lang.String[])');
+
+            expect(state?.file).toBe('net/minecraft/NavigationChild.class');
+            expect(state?.minecraftVersion).toBe('26.1-mock-2');
+            expect(state?.symbol).toEqual({
+                type: 'method',
+                name: 'value',
+                parameterTypes: ['int', 'java.lang.String[]'],
+                owner: 'net/minecraft/NavigationChild'
+            });
+        });
+
+        it('distinguishes no-argument methods from fields', () => {
+            expect(parsePathToState('2/26.1-mock-2/net/minecraft/ChatFormatting#getName()')?.symbol?.type).toBe('method');
+            expect(parsePathToState('2/26.1-mock-2/net/minecraft/ChatFormatting#RED')?.symbol?.type).toBe('field');
+        });
+
+        it('uses the outer class file for a nested field', () => {
+            const state = parsePathToState('2/26.1-mock-2/net/minecraft/NavigationChild$Nested#example');
+
+            expect(state?.file).toBe('net/minecraft/NavigationChild.class');
+            expect(state?.symbol?.owner).toBe('net/minecraft/NavigationChild$Nested');
+            expect(state?.symbol?.name).toBe('example');
+        });
+
+        it('copies a /2/ link with a Minecraft version', () => {
+            const link = symbolPermalink('26.1-mock-2', 'net/minecraft/NavigationChild', {
+                type: 'method', name: 'value', parameterTypes: ['int']
+            });
+
+            expect(link).toBe('/2/26.1-mock-2/net/minecraft/NavigationChild#value(int)');
+            expect(symbolPermalink('26.1-mock-2', 'net/minecraft/ChatFormatting', {
+                type: 'method', name: 'getName', parameterTypes: []
+            })).toBe('/2/26.1-mock-2/net/minecraft/ChatFormatting#getName()');
+            expect(symbolPermalink('26.1-mock-2', 'net/minecraft/Example', {
+                type: 'method', name: 'setNames', parameterTypes: ['java.lang.String[]']
+            })).toBe('/2/26.1-mock-2/net/minecraft/Example#setNames(java.lang.String[])');
+        });
+
+        it('rejects symbol links without a Minecraft version', () => {
+            expect(parsePathToState('2/net/minecraft/ChatFormatting#RED')).toBeNull();
+            expect(parsePathToState('2/net/minecraft/ChatFormatting#getName()')).toBeNull();
+        });
+
+        it('rejects symbol links outside /2/', () => {
+            expect(parsePathToState('net/minecraft/ChatFormatting#RED')).toBeNull();
+            expect(parsePathToState('1/26.1-mock-2/net/minecraft/ChatFormatting#RED')?.symbol).toBeUndefined();
+        });
+    });
+
     describe('parsePathToState', () => {
         describe('Default State', () => {
             it('should return default state when path is empty', () => {
