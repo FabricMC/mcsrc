@@ -55,6 +55,13 @@
   font-family: inherit;
 }
 
+.javadoc-rendered :not(pre) > code {
+  color: var(--vscode-textPreformat-foreground);
+  background: var(--vscode-textPreformat-background);
+  padding: 0.1em 0.3em;
+  border-radius: 3px;
+}
+
 .javadoc-rendered h1,
 .javadoc-rendered h2,
 .javadoc-rendered h3,
