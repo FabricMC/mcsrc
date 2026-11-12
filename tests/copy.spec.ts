@@ -70,4 +70,32 @@ test.describe('Copy Actions in Code Context Actions', () => {
             .replace('$(server_origin)', (new URL(page.url())).origin);
         expect(clipboardText).toEqual(expected);
     });
+
+    test('Copy Link to Method includes the Minecraft version', async ({ page }) => {
+        await page.goto('/2/26.1-mock-3/net/minecraft/NavigationChild');
+        await waitForDecompiledContent(page, 'class NavigationChild');
+
+        await page.getByRole('code').getByText('value', { exact: true }).first().click({ button: 'right' });
+        await page.waitForTimeout(150);
+        await expect(page.getByRole('menuitem', { name: 'Copy Link to Field' })).toHaveCount(0);
+        await page.getByRole('menuitem', { name: 'Copy Link to Method' }).click();
+        await expect(page.getByText('Copied Link to Method')).toBeVisible();
+
+        const link = await page.evaluate(() => (window as any).__clipboardText);
+        expect(link).toMatch(/\/2\/26\.1-mock-3\/net\/minecraft\/NavigationChild#value\(java.lang.String\)$/);
+    });
+
+    test('Copy Link to Field uses only the field name', async ({ page }) => {
+        await page.goto('/2/26.1-mock-3/net/minecraft/ChatFormatting');
+        await waitForDecompiledContent(page, 'enum ChatFormatting');
+
+        await page.getByRole('code').getByText('EXAMPLE', { exact: true }).click({ button: 'right' });
+        await page.waitForTimeout(150);
+        await expect(page.getByRole('menuitem', { name: 'Copy Link to Method' })).toHaveCount(0);
+        await page.getByRole('menuitem', { name: 'Copy Link to Field' }).click();
+        await expect(page.getByText('Copied Link to Field')).toBeVisible();
+
+        const link = await page.evaluate(() => (window as any).__clipboardText);
+        expect(link).toBe(`${new URL(page.url()).origin}/2/26.1-mock-3/net/minecraft/ChatFormatting#EXAMPLE`);
+    });
 });

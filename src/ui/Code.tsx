@@ -25,7 +25,9 @@ import {
     createCopyQualifiedNameAction,
     createFindAllReferencesAction,
     createViewInheritanceAction,
-    createCopyPermalinkAction
+    createCopyPermalinkAction,
+    createCopySymbolPermalinkAction,
+    installSymbolContextKeys
 } from './CodeContextActions';
 import {
     clearTokenJump,
@@ -36,8 +38,8 @@ import {
     pendingTokenJump
 } from './CodeExtensions';
 import { bytecode } from '../logic/Settings';
-import { selectedFile, diffView, openTabs, selectedLines, tabHistory, referencesQuery, mobileDrawerOpen } from '../logic/State';
-import { toClassFilePath } from '../utils/Names';
+import { selectedFile, diffView, openTabs, selectedLines, initialSymbol, tabHistory, referencesQuery, mobileDrawerOpen } from '../logic/State';
+import { toClassFilePath, toClassName } from '../utils/Names';
 
 const JavadocCode = lazy(() => import('../javadoc/JavadocCode'));
 const IS_ANDROID_CHROME = /Android/.test(navigator.userAgent) && /Chrome/.test(navigator.userAgent);
@@ -62,6 +64,7 @@ const Code = () => {
     const decompileResultRef = useRef(decompileResult);
     const classListRef = useRef(classList);
     const selectedLineRef = useRef(selectedLine);
+    const initialSymbolRef = useRef(initialSymbol);
 
     const [messageApi, contextHolder] = message.useMessage();
 
@@ -126,6 +129,8 @@ const Code = () => {
         );
 
         const copyLink = monaco.editor.addEditorAction(createCopyPermalinkAction(messageApi));
+        const copyMethodLink = monaco.editor.addEditorAction(createCopySymbolPermalinkAction(decompileResultRef, classListRef, messageApi, 'method'));
+        const copyFieldLink = monaco.editor.addEditorAction(createCopySymbolPermalinkAction(decompileResultRef, classListRef, messageApi, 'field'));
 
         const copyAw = monaco.editor.addEditorAction(
             createCopyAwAction(decompileResultRef, classListRef, messageApi)
@@ -165,6 +170,8 @@ const Code = () => {
             copyMixin.dispose();
             copyAt.dispose();
             copyAw.dispose();
+            copyFieldLink.dispose();
+            copyMethodLink.dispose();
             copyLink.dispose();
             foldingRange.dispose();
             editorOpener.dispose();
@@ -172,6 +179,11 @@ const Code = () => {
             definitionProvider.dispose();
         };
     }, [monaco, decompileResult, classList, resetViewTrigger, messageApi]);
+
+    useEffect(() => {
+        if (!codeEditor) return;
+        return installSymbolContextKeys(codeEditor, decompileResultRef, classListRef);
+    }, [codeEditor, decompileResult, classList]);
 
     // Scroll to top when source changes, or to specific line if specified
     useEffect(() => {
@@ -311,6 +323,23 @@ const Code = () => {
             return () => cancelAnimationFrame(frame);
         }
     }, [decompileResult, tokenJump]);
+
+    useEffect(() => {
+        const symbol = initialSymbolRef.current;
+        if (!symbol || !decompileResult || !editorRef.current) return;
+        if (toClassFilePath(decompileResult.className) !== selectedFile.value) return;
+
+        const frame = requestAnimationFrame(() => {
+            if (initialSymbolRef.current !== symbol || editorRef.current?.getModel()?.getValue() !== decompileResult.source) return;
+            let target = symbol.name;
+            if (symbol.type === 'method') {
+                target = `${symbol.name}(${symbol.parameterTypes.join(',')})`;
+            }
+            initialSymbolRef.current = undefined;
+            jumpToToken(decompileResult, symbol.type, target, editorRef.current, symbol.owner ? toClassName(symbol.owner) : undefined);
+        });
+        return () => cancelAnimationFrame(frame);
+    }, [decompileResult]);
 
     // Handle gutter clicks for line linking
     useEffect(() => {

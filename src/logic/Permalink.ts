@@ -2,7 +2,7 @@ import { combineLatest } from "rxjs";
 import { resetPermalinkAffectingSettings, supportsPermalinking } from "./Settings";
 import { diffLeftSelectedMinecraftVersion, diffSelectionSide, diffView, vineflowerVersion, selectedFile, selectedLines, selectedMinecraftVersion } from "./State";
 import { vineflowerVersionToPermalinkVersion } from "./vineflower/versions";
-import { toClassFilePath, withoutClassExtension, type ClassFilePath } from "../utils/Names";
+import { outerClassFilePath, toClassFilePath, withoutClassExtension, type ClassFilePath } from "../utils/Names";
 
 export interface State {
     version: number; // Allows us to change the permalink structure in the future
@@ -12,10 +12,33 @@ export interface State {
         line: number;
         lineEnd?: number;
     } | null;
+    symbol?: SymbolLink;
     diff?: {
         leftMinecraftVersion: string;
         selectionSide?: 'left' | 'right'; // if it's undefined, default to right
     };
+}
+
+export interface FieldSymbolLink {
+    type: 'field';
+    name: string;
+    owner?: string;
+}
+
+export interface MethodSymbolLink {
+    type: 'method';
+    name: string;
+    parameterTypes: string[];
+    owner?: string;
+}
+
+export type SymbolLink = FieldSymbolLink | MethodSymbolLink;
+
+export function symbolPermalink(minecraftVersion: string, className: string, symbol: SymbolLink): string {
+    const name = encodeURIComponent(symbol.name);
+    if (symbol.type === 'field') return `/2/${encodeURIComponent(minecraftVersion)}/${className}#${name}`;
+
+    return `/2/${encodeURIComponent(minecraftVersion)}/${className}#${name}(${symbol.parameterTypes.join(',')})`;
 }
 
 const DEFAULT_STATE: State = {
@@ -26,6 +49,32 @@ const DEFAULT_STATE: State = {
 };
 
 export const parsePathToState = (path: string): State | null => {
+    const symbolMatch = path.match(/#([^:()]+)(?:\(([^()]*)\))?$/);
+    const lineMatch = path.match(/(?:#|%23)([LR])(\d+)(?:-(\d+))?$/);
+    if (symbolMatch && !lineMatch && path.startsWith('2/') && !path.startsWith('2/diff/')) {
+        const symbolPath = path.slice(0, symbolMatch.index).match(/^2\/(\d[^/]*)\/(.+)$/);
+        if (!symbolPath) return null;
+        const minecraftVersion = parsePathToState(`2/${symbolPath[1]}`)!.minecraftVersion;
+        const className = symbolPath[2];
+        const name = decodeURIComponent(symbolMatch[1]);
+        let symbol: SymbolLink;
+        if (symbolMatch[2] !== undefined) {
+            symbol = {
+                type: 'method', name, owner: className,
+                parameterTypes: decodeURIComponent(symbolMatch[2]).split(',').filter(Boolean)
+            };
+        } else {
+            symbol = { type: 'field', name, owner: className };
+        }
+        return {
+            ...DEFAULT_STATE,
+            minecraftVersion,
+            file: outerClassFilePath(toClassFilePath(className)),
+            symbol
+        };
+    }
+    if (!/^\d+(?:\/|$)/.test(path)) return null;
+
     // Check for line number marker (e.g., #L123 or #L10-20, or #R123)
     // In normal mode L stands for line
     // In diff mode L stands for left, R stands for right
@@ -33,7 +82,6 @@ export const parsePathToState = (path: string): State | null => {
     let lineNumber: number | null = null;
     let lineEnd: number | null = null;
     let diffSide: 'left' | 'right' | undefined = undefined;
-    const lineMatch = path.match(/(?:#|%23)([LR])(\d+)(?:-(\d+))?$/);
     if (lineMatch) {
         if (!lineMatch[1] || !lineMatch[2]) {
             return null;
@@ -108,8 +156,8 @@ export const getInitialState = (): State => {
         ? pathname.slice(1) // Remove leading /
         : (hash.startsWith('#/') ? hash.slice(2) : (hash.startsWith('#') ? hash.slice(1) : ''));
 
-    // For new style (pathname-based), append hash if it contains line number
-    if (newStyle && (hash.startsWith('#L') || hash.startsWith('#R'))) {
+    // For pathname-based links, append line fragments and /2/ symbol fragments.
+    if (newStyle && (hash.startsWith('#L') || hash.startsWith('#R') || (path.startsWith('2/') && hash.startsWith('#')))) {
         path += hash;
     }
 

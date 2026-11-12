@@ -7,6 +7,7 @@ import type { DecompileResult } from "../workers/decompile/types";
 import { BehaviorSubject } from "rxjs";
 import { classNameFromClassFilePath, outerClassFilePath, toClassFilePath, type ClassFilePath, type ClassName } from "../utils/Names";
 import { findDeclaration } from "../logic/FindDeclaration.ts";
+import { parseMethodDescriptor } from "../utils/JavaDescriptors";
 
 export type TokenJumpTarget = {
     className: ClassFilePath;
@@ -46,6 +47,10 @@ export function jumpToToken(
             tokenIdentifier = token.className;
         }
 
+        if (targetType === 'method' && tokenIdentifier !== target && 'descriptor' in token) {
+            const parameterTypes = parseMethodDescriptor(token.descriptor).parameterTypes;
+            tokenIdentifier = `${token.name}(${parameterTypes.join(',')})`;
+        }
         if (tokenIdentifier !== target) continue;
 
         const { line, column } = getTokenLocation(result, token);

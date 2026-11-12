@@ -6,8 +6,34 @@ import { dottedClassNameFromClassName, dollarToDottedClassName, type ClassFilePa
 import type { ReferenceKey } from "../workers/jar-index/types";
 import { supportsPermalinking } from "../logic/Settings";
 import { firstValueFrom } from "rxjs";
+import { selectedMinecraftVersion } from "../logic/State";
+import { symbolPermalink } from "../logic/Permalink";
+import { parseMethodDescriptor } from "../utils/JavaDescriptors";
 
 export const IS_DEFINITION_CONTEXT_KEY_NAME = "is_definition";
+const IS_METHOD_CONTEXT_KEY_NAME = "is_method_symbol";
+const IS_FIELD_CONTEXT_KEY_NAME = "is_field_symbol";
+
+export function installSymbolContextKeys(
+    codeEditor: editor.IStandaloneCodeEditor,
+    decompileResultRef: { current: DecompileResult | undefined; },
+    classListRef: { current: ClassFilePath[] | undefined; }
+): () => void {
+    const methodContext = codeEditor.createContextKey<boolean>(IS_METHOD_CONTEXT_KEY_NAME, false);
+    const fieldContext = codeEditor.createContextKey<boolean>(IS_FIELD_CONTEXT_KEY_NAME, false);
+    const update = () => {
+        const token = findTokenAtPosition(codeEditor, decompileResultRef.current, classListRef.current);
+        methodContext.set(token?.type === 'method');
+        fieldContext.set(token?.type === 'field');
+    };
+    update();
+    const cursor = codeEditor.onDidChangeCursorPosition(update);
+    return () => {
+        cursor.dispose();
+        methodContext.reset();
+        fieldContext.reset();
+    };
+}
 
 async function setClipboard(text: string): Promise<void> {
     await navigator.clipboard.writeText(text);
@@ -37,6 +63,46 @@ export function createCopyPermalinkAction(
             await setClipboard(urlWithoutHash + "#L" + position.lineNumber);
 
             messageApi.success("Copied Permalink to clipboard.");
+        }
+    };
+}
+
+export function createCopySymbolPermalinkAction(
+    decompileResultRef: { current: DecompileResult | undefined; },
+    classListRef: { current: ClassFilePath[] | undefined; },
+    messageApi: { error: (msg: string) => void; success: (msg: string) => void; },
+    type: 'method' | 'field'
+) {
+    const memberName = type === 'method' ? 'Method' : 'Field';
+    return {
+        id: `copy_${type}_permalink`,
+        label: `Copy Link to ${memberName}`,
+        contextMenuGroupId: '9_cutcopypaste',
+        precondition: type === 'method' ? IS_METHOD_CONTEXT_KEY_NAME : IS_FIELD_CONTEXT_KEY_NAME,
+        run: async function (editor: editor.ICodeEditor): Promise<void> {
+            if (!await firstValueFrom(supportsPermalinking)) {
+                messageApi.error("Permalinks are not supported in this environment.");
+                return;
+            }
+
+            const token = findTokenAtPosition(editor, decompileResultRef.current, classListRef.current);
+            if (!token || token.type !== type) {
+                messageApi.error(`Place the cursor on a ${type}.`);
+                return;
+            }
+
+            const version = selectedMinecraftVersion.value;
+            if (!version) {
+                messageApi.error("Select a Minecraft version before copying a symbol link.");
+                return;
+            }
+
+            const symbol = token.type === 'method'
+                ? { type: 'method' as const, name: token.name, parameterTypes: parseMethodDescriptor(token.descriptor).parameterTypes }
+                : { type: 'field' as const, name: token.name };
+            const link = window.location.origin + symbolPermalink(version, token.className, symbol);
+            await setClipboard(link);
+            messageApi.success(`Copied Link to ${memberName} to clipboard.`);
         }
     };
 }
