@@ -2,7 +2,7 @@ import DOMPurify from 'dompurify';
 import { Lexer, Marked } from 'marked';
 import type { Token } from '../logic/Tokens';
 import { readJavadocBlockTags, type JavadocBlockTag } from './editor/JavadocBlockTags';
-import type { JavadocSymbols } from './editor/JavadocSymbols';
+import { displayName, type JavadocSymbols } from './editor/JavadocSymbols';
 
 const tagLabels: Record<string, string> = {
     typeParam: 'Type Parameters:',
@@ -37,10 +37,19 @@ export function renderJavadocMarkdown(markdown: string, symbols: JavadocSymbols,
     };
     const referenceLabel = (reference: string) => {
         const [owner, member] = reference.split('#');
-        if (!member) return reference;
+        const target = symbols.resolveReference(reference);
+        if (!member) {
+            return target?.type === 'class' ? displayName(target.className) : reference;
+        }
+        if (target?.type === 'method' && target.name === '<init>') {
+            return member;
+        }
+        if (target && target.type !== 'class') {
+            return target.className === symbols.owner ? member : `${displayName(target.className)}.${member}`;
+        }
 
         const className = owner ? symbols.resolveClass(owner) : symbols.owner;
-        return className === symbols.owner ? member : `${owner}.${member}`;
+        return className ? (className === symbols.owner ? member : `${displayName(className)}.${member}`) : reference;
     };
     const parser = new Marked({
         async: false,
