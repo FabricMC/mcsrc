@@ -65,13 +65,21 @@ describe('Javadoc Markdown', () => {
         const { element, links } = await render('[other.Remote], [nested class][example.Owner.Nested], [#run(int)], [#run(String\\[\\])], [#inherited()], [#VALUE], [example.Owner#Owner()]');
         const anchors = [...element.querySelectorAll('a')];
         expect(anchors.map(anchor => anchor.textContent)).toEqual([
-            'other.Remote', 'nested class', 'run(int)', 'run(String[])', 'inherited()', 'VALUE', 'Owner()',
+            'Remote', 'nested class', 'run(int)', 'run(String[])', 'Parent.inherited()', 'Parent.VALUE', 'Owner()',
         ]);
         expect([...links.values()].map(token => token.className)).toEqual([
             'other/Remote', 'example/Owner$Nested', 'example/Owner', 'example/Owner', 'example/Parent', 'example/Parent', 'example/Owner',
         ]);
         expect([...links.values()][3]).toMatchObject({ type: 'method', name: 'run', descriptor: '([Ljava/lang/String;)V' });
         expect([...links.values()][6]).toMatchObject({ type: 'method', name: '<init>', descriptor: '()V' });
+    });
+
+    it('uses Javadoc-style simple names for qualified references', async () => {
+        const { element, links } = await render('[example.Owner.Nested] [other.Remote]\n\n@see other.Remote\n@throws other.Remote reason');
+        expect([...element.querySelectorAll('a')].map(anchor => anchor.textContent)).toEqual([
+            'Owner.Nested', 'Remote', 'Remote', 'Remote',
+        ]);
+        expect(links.size).toBe(4);
     });
 
     it('preserves ordinary Markdown links, definitions, escaped brackets, and code', async () => {
@@ -110,7 +118,7 @@ API guidance.
         expect(element.querySelector('dd code')?.textContent).toBe('T');
         expect(element.querySelector('dd strong')?.textContent).toBe('type');
         expect(element.querySelectorAll('dd ul:not(.tag-list) > li')).toHaveLength(2);
-        expect(element.querySelector('.deprecation-block')?.textContent).toBe('Deprecated.Use other.Remote.');
+        expect(element.querySelector('.deprecation-block')?.textContent).toBe('Deprecated.Use Remote.');
         expect(links.size).toBe(4);
         expect(element.textContent).toContain('custom description');
     });
