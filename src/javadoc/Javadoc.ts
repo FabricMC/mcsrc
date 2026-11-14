@@ -10,6 +10,7 @@ import {
     type JavadocSource,
     type JavadocTarget,
 } from "./JavadocStorage";
+import { writeServerJavadoc } from "./JavadocServer";
 
 export { activeJavadocFile } from "./JavadocState";
 
@@ -45,7 +46,11 @@ export async function saveTokenJavadoc(token: Token, javadoc: JavadocString | un
     setStoredJavadoc(target, next);
 
     try {
-        await writeJavadocSource(file, target.owner);
+        if (file.kind === "server") {
+            await writeServerJavadoc(file, target, next);
+        } else {
+            await writeJavadocSource(file, target.owner);
+        }
     } catch (error) {
         setStoredJavadoc(target, previous);
         throw error;
