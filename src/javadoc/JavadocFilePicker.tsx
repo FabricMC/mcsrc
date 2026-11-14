@@ -171,7 +171,7 @@ const JavadocFilePicker = ({ annotaterShortcut = false, onOpen }: {
                     if (!pickerSupported) handleUnsupported();
                 }}
             >
-                {selectedFile?.handle.name ?? "Javadoc mappings"}
+                {selectedFile?.kind === "server" ? selectedFile.host : selectedFile?.handle.name ?? "Javadoc mappings"}
                 <DownOutlined />
             </Button>
         </Dropdown>
