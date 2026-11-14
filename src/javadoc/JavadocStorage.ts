@@ -38,7 +38,13 @@ export interface JavadocDirectorySource {
     runtimeLibraries?: RuntimeLibrariesConfig;
 }
 
-export type JavadocSource = JavadocFileSource | JavadocDirectorySource;
+export interface JavadocServerSource {
+    kind: "server";
+    host: string;
+}
+
+export type JavadocWritableSource = JavadocFileSource | JavadocDirectorySource;
+export type JavadocSource = JavadocWritableSource | JavadocServerSource;
 
 interface JavadocMappingsBridge extends UnpickValidationBridge {
     readClassMembers(classBytes: ArrayBuffer): ClassMember[];
@@ -133,7 +139,10 @@ export async function createJavadocFile(
     return { kind: "file", handle, format };
 }
 
-export async function writeJavadocSource(source: JavadocSource, owner: ClassName): Promise<void> {
+export async function writeJavadocSource(
+    source: JavadocWritableSource,
+    owner: ClassName,
+): Promise<void> {
     if (source.kind === "file") {
         await writeBytes(source.handle, requireBridge().writeJavadocs(source.format));
         return;
@@ -186,6 +195,27 @@ export function setStoredJavadoc(
     comment: string | null,
 ): void {
     requireBridge().setJavadoc(target.kind, target.owner, target.name, target.descriptor, comment);
+}
+
+export async function ensureJavadocBridge(): Promise<void> {
+    await getBridge();
+}
+
+export function clearStoredJavadocs(): void {
+    requireBridge().resetJavadocs();
+}
+
+export function storeJavadocClassMapping(data: ArrayBuffer, path: string): void {
+    const bridge = requireBridge();
+    bridge.beginJavadocDirectory();
+
+    try {
+        bridge.readJavadocDirectoryFile(data, path);
+        bridge.finishJavadocDirectory();
+    } catch (error) {
+        bridge.abortJavadocDirectory();
+        throw error;
+    }
 }
 
 async function writeBytes(handle: FileSystemFileHandle, bytes: Int8Array): Promise<void> {
