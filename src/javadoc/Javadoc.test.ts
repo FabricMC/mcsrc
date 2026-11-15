@@ -12,7 +12,13 @@ const storage = vi.hoisted(() => ({
 }));
 const settings = vi.hoisted(() => ({ bytecode: { value: true } }));
 
+const server = vi.hoisted(() => ({
+    writeServerJavadoc: vi.fn(),
+    invalidateServerJavadocLoad: vi.fn(),
+}));
+
 vi.mock("./JavadocStorage", () => storage);
+vi.mock("./JavadocServer", () => server);
 vi.mock("../logic/Settings", () => settings);
 
 import {

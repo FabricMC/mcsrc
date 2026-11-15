@@ -4,6 +4,7 @@ import * as monaco from 'monaco-editor';
 import { loader } from '@monaco-editor/react';
 import App from './ui/App.tsx';
 import { editorFontZoom } from './logic/Settings.ts';
+import { autoConnectAnnotaterServer } from './javadoc/JavadocServer.ts';
 
 import "./index.css";
 import MonacoWorker from "monaco-editor/editor/editor.worker.js?worker";
@@ -25,6 +26,8 @@ globalThis.MonacoEnvironment = {
         return new MonacoWorker();
     }
 };
+
+autoConnectAnnotaterServer();
 
 createRoot(document.getElementById('root')!).render(
     <StrictMode>
