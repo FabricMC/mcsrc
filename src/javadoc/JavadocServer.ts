@@ -42,8 +42,11 @@ export async function connectJavadocServer(host: string): Promise<JavadocServerC
     return { source: { kind: "server", host: normalizedHost }, version: config.version };
 }
 
-export async function readServerJavadocClass(source: JavadocServerSource, owner: ClassName): Promise<void> {
-    const request = ++serverClassRequest;
+export async function readServerJavadocClass(
+    source: JavadocServerSource,
+    owner: ClassName,
+    request: number,
+): Promise<void> {
     await ensureJavadocBridge();
 
     const response = await fetch(`${source.host}/get-mapping`, {
@@ -161,9 +164,12 @@ combineLatest([activeJavadocFile, selectedFile]).pipe(
     })),
     distinctUntilChanged((previous, current) => previous.source === current.source && previous.owner === current.owner),
     switchMap(({ source, owner }) => {
+        // Invalidates any in-flight fetch of a previous source or class before starting a new one.
+        const request = ++serverClassRequest;
+
         if (!source || !owner) return EMPTY;
 
-        return from(readServerJavadocClass(source, owner)).pipe(
+        return from(readServerJavadocClass(source, owner, request)).pipe(
             catchError(error => {
                 console.error("Unable to load Javadoc mappings from the annotater server", error);
                 return EMPTY;
@@ -174,12 +180,6 @@ combineLatest([activeJavadocFile, selectedFile]).pipe(
     filter(source => source === activeJavadocFile.value),
 ).subscribe(() => {
     javadocRevision.next(javadocRevision.value + 1);
-});
-
-// Any change of the active Javadoc source invalidates in-flight mapping loads,
-// so they can no longer write into the storage of another source.
-activeJavadocFile.pipe(distinctUntilChanged()).subscribe(() => {
-    serverClassRequest++;
 });
 
 export const annotaterServerOffline = new BehaviorSubject<string | null>(null);
