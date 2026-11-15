@@ -1,4 +1,4 @@
-import { BehaviorSubject, catchError, combineLatest, distinctUntilChanged, EMPTY, filter, from, map, switchMap } from "rxjs";
+import { BehaviorSubject, catchError, combineLatest, distinctUntilChanged, EMPTY, exhaustMap, filter, from, map, switchMap, timer } from "rxjs";
 import { activateJavadocFile, activeJavadocFile, javadocRevision } from "./Javadoc";
 import {
     clearStoredJavadocs,
@@ -181,6 +181,46 @@ combineLatest([activeJavadocFile, selectedFile]).pipe(
 activeJavadocFile.pipe(distinctUntilChanged()).subscribe(() => {
     serverClassRequest++;
 });
+
+export const annotaterServerOffline = new BehaviorSubject<string | null>(null);
+const SERVER_PING_INTERVAL = 5000;
+
+async function pingServer(source: JavadocServerSource): Promise<void> {
+    const response = await fetch(`${source.host}/ping`);
+
+    if (!response.ok) {
+        throw await serverResponseError(response);
+    }
+}
+
+// Periodically ping the server.
+activeJavadocFile.pipe(
+    map(source => source?.kind === "server" ? source : null),
+    distinctUntilChanged(),
+    switchMap(source => {
+        annotaterServerOffline.next(null);
+
+        if (!source) return EMPTY;
+
+        return timer(SERVER_PING_INTERVAL, SERVER_PING_INTERVAL).pipe(
+            exhaustMap(async () => {
+                try {
+                    await pingServer(source);
+
+                    if (activeJavadocFile.value === source && annotaterServerOffline.value !== null) {
+                        annotaterServerOffline.next(null);
+                    }
+                } catch (error) {
+                    console.warn("The annotater server is unreachable", error);
+
+                    if (activeJavadocFile.value === source && annotaterServerOffline.value === null) {
+                        annotaterServerOffline.next(error instanceof Error ? error.message : String(error));
+                    }
+                }
+            }),
+        );
+    }),
+).subscribe();
 
 export function autoConnectAnnotaterServer(): void {
     const host = new URLSearchParams(window.location.search).get("annotater-server");
