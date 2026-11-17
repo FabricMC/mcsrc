@@ -83,7 +83,7 @@ export const selectedLines = new BehaviorSubject<SelectedLines | null>(initialSt
 export const initialSymbol: SymbolLink | undefined = initialState.symbol;
 
 export const diffView = new BehaviorSubject<boolean>(!!initialState.diff);
-export const diffLeftSelectedMinecraftVersion = new BehaviorSubject<string | null>(initialState.diff?.leftMinecraftVersion ?? null);
+export const diffRightSelectedMinecraftVersion = new BehaviorSubject<string | null>(initialState.diff?.rightMinecraftVersion ?? null);
 export const diffSelectionSide = new BehaviorSubject<'left' | 'right' | null>(initialState.diff?.selectionSide ?? null);
 
 export function swapDiffSelectionSideIfPresent() {

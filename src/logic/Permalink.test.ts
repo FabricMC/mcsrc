@@ -11,7 +11,7 @@ vi.mock('./State', () => ({
     selectedMinecraftVersion: { subscribe: vi.fn() },
     selectedFile: { subscribe: vi.fn() },
     selectedLines: { subscribe: vi.fn() },
-    diffLeftSelectedMinecraftVersion: { subscribe: vi.fn() },
+    diffRightSelectedMinecraftVersion: { subscribe: vi.fn() },
     diffSelectionSide: { subscribe: vi.fn() },
     diffView: { subscribe: vi.fn() },
     vineflowerVersion: { subscribe: vi.fn() }
@@ -240,17 +240,17 @@ describe('Permalink', () => {
                 const state = parsePathToState('1/diff/1.21/1.21.4/net/minecraft/ChatFormatting')!;
 
                 expect(state.version).toBe(2);
-                expect(state.minecraftVersion).toBe('1.21.4');
+                expect(state.minecraftVersion).toBe('1.21');
                 expect(state.file).toBe('net/minecraft/ChatFormatting.class');
                 expect(state.selectedLines).toBe(null);
-                expect(state.diff).toEqual({ leftMinecraftVersion: '1.21' });
+                expect(state.diff).toEqual({ rightMinecraftVersion: '1.21.4' });
             });
 
             it('should parse a diff permalink with a nested file path', () => {
                 const state = parsePathToState('1/diff/1.21/1.21.4/net/minecraft/world/entity/player/Player')!;
 
                 expect(state.file).toBe('net/minecraft/world/entity/player/Player.class');
-                expect(state.diff).toEqual({ leftMinecraftVersion: '1.21' });
+                expect(state.diff).toEqual({ rightMinecraftVersion: '1.21.4' });
             });
 
             it('should not append .class if already present in diff path', () => {
@@ -260,18 +260,18 @@ describe('Permalink', () => {
 
             it('should URL-decode versions in diff path', () => {
                 const state = parsePathToState('1/diff/1.21%2B/1.21.4%2B/net/minecraft/ChatFormatting')!;
-                expect(state.diff).toEqual({ leftMinecraftVersion: '1.21+' });
-                expect(state.minecraftVersion).toBe('1.21.4+');
+                expect(state.diff).toEqual({ rightMinecraftVersion: '1.21.4+' });
+                expect(state.minecraftVersion).toBe('1.21+');
             });
 
             it('should parse a diff permalink without a file', () => {
                 const state = parsePathToState('1/diff/1.21/1.21.4')!;
 
                 expect(state.version).toBe(2);
-                expect(state.minecraftVersion).toBe('1.21.4');
+                expect(state.minecraftVersion).toBe('1.21');
                 expect(state.file).toBeUndefined();
                 expect(state.selectedLines).toBe(null);
-                expect(state.diff).toEqual({ leftMinecraftVersion: '1.21' });
+                expect(state.diff).toEqual({ rightMinecraftVersion: '1.21.4' });
             });
 
             it('should return null when diff path has insufficient segments', () => {
@@ -293,7 +293,7 @@ describe('Permalink', () => {
                     line: 123,
                     lineEnd: undefined
                 });
-                expect(state.diff).toEqual({ leftMinecraftVersion: '1.21', selectionSide: 'left' });
+                expect(state.diff).toEqual({ rightMinecraftVersion: '1.21.4', selectionSide: 'left' });
             });
 
             it('should parse line range with #L', () => {
@@ -303,7 +303,7 @@ describe('Permalink', () => {
                     line: 10,
                     lineEnd: 20
                 });
-                expect(state.diff).toEqual({ leftMinecraftVersion: '1.21', selectionSide: 'left' });
+                expect(state.diff).toEqual({ rightMinecraftVersion: '1.21.4', selectionSide: 'left' });
             });
 
             it('should parse single line number with #R', () => {
@@ -313,7 +313,7 @@ describe('Permalink', () => {
                     line: 123,
                     lineEnd: undefined
                 });
-                expect(state.diff).toEqual({ leftMinecraftVersion: '1.21', selectionSide: 'right' });
+                expect(state.diff).toEqual({ rightMinecraftVersion: '1.21.4', selectionSide: 'right' });
             });
 
             it('should parse line range with #R', () => {
@@ -323,7 +323,7 @@ describe('Permalink', () => {
                     line: 10,
                     lineEnd: 20
                 });
-                expect(state.diff).toEqual({ leftMinecraftVersion: '1.21', selectionSide: 'right' });
+                expect(state.diff).toEqual({ rightMinecraftVersion: '1.21.4', selectionSide: 'right' });
             });
 
             it('should handle URL-encoded line marker (%23) with L', () => {
@@ -333,7 +333,7 @@ describe('Permalink', () => {
                     line: 50,
                     lineEnd: undefined
                 });
-                expect(state.diff).toEqual({ leftMinecraftVersion: '1.21', selectionSide: 'left' });
+                expect(state.diff).toEqual({ rightMinecraftVersion: '1.21.4', selectionSide: 'left' });
             });
 
             it('should handle URL-encoded line marker (%23) with R', () => {
@@ -343,7 +343,7 @@ describe('Permalink', () => {
                     line: 50,
                     lineEnd: undefined
                 });
-                expect(state.diff).toEqual({ leftMinecraftVersion: '1.21', selectionSide: 'right' });
+                expect(state.diff).toEqual({ rightMinecraftVersion: '1.21.4', selectionSide: 'right' });
             });
 
             it('should handle URL-encoded line range (%23) with L', () => {
@@ -353,7 +353,7 @@ describe('Permalink', () => {
                     line: 10,
                     lineEnd: 20
                 });
-                expect(state.diff).toEqual({ leftMinecraftVersion: '1.21', selectionSide: 'left' });
+                expect(state.diff).toEqual({ rightMinecraftVersion: '1.21.4', selectionSide: 'left' });
             });
 
             it('should handle URL-encoded line range (%23) with R', () => {
@@ -363,7 +363,7 @@ describe('Permalink', () => {
                     line: 10,
                     lineEnd: 20
                 });
-                expect(state.diff).toEqual({ leftMinecraftVersion: '1.21', selectionSide: 'right' });
+                expect(state.diff).toEqual({ rightMinecraftVersion: '1.21.4', selectionSide: 'right' });
             });
 
             it('should handle line number at end of complex path', () => {
@@ -373,7 +373,7 @@ describe('Permalink', () => {
                     line: 123,
                     lineEnd: undefined
                 });
-                expect(state.diff).toEqual({ leftMinecraftVersion: '1.21', selectionSide: 'left' });
+                expect(state.diff).toEqual({ rightMinecraftVersion: '1.21.4', selectionSide: 'left' });
             });
 
             it('should return null selectedLines when no line number present', () => {
@@ -406,7 +406,7 @@ describe('Permalink', () => {
 
             expect(state.file).toBe('net/minecraft/ChatFormatting.class');
             expect(state.selectedLines).toBe(null);
-            expect(state.diff).toEqual({ leftMinecraftVersion: '1.21' });
+            expect(state.diff).toEqual({ rightMinecraftVersion: '1.21.4' });
         });
 
         describe('Version 2 URLs (/2/)', () => {
@@ -432,18 +432,18 @@ describe('Permalink', () => {
                 const state = parsePathToState('2/diff/1.21/1.21.4/net/minecraft/ChatFormatting')!;
 
                 expect(state.version).toBe(2);
-                expect(state.minecraftVersion).toBe('1.21.4');
+                expect(state.minecraftVersion).toBe('1.21');
                 expect(state.file).toBe('net/minecraft/ChatFormatting.class');
-                expect(state.diff).toEqual({ leftMinecraftVersion: '1.21' });
+                expect(state.diff).toEqual({ rightMinecraftVersion: '1.21.4' });
             });
 
             it('should parse a /2/ diff permalink without a file', () => {
                 const state = parsePathToState('2/diff/1.21/1.21.4')!;
 
                 expect(state.version).toBe(2);
-                expect(state.minecraftVersion).toBe('1.21.4');
+                expect(state.minecraftVersion).toBe('1.21');
                 expect(state.file).toBeUndefined();
-                expect(state.diff).toEqual({ leftMinecraftVersion: '1.21' });
+                expect(state.diff).toEqual({ rightMinecraftVersion: '1.21.4' });
             });
         });
 
@@ -464,9 +464,9 @@ describe('Permalink', () => {
                 const state = parsePathToState('2/diff/1.21.4/1.21.5/net/minecraft/server/MinecraftServer#R250-260')!;
 
                 expect(state.version).toBe(2);
-                expect(state.minecraftVersion).toBe('1.21.5');
+                expect(state.minecraftVersion).toBe('1.21.4');
                 expect(state.file).toBe('net/minecraft/server/MinecraftServer.class');
-                expect(state.diff).toEqual({ leftMinecraftVersion: '1.21.4', selectionSide: 'right' });
+                expect(state.diff).toEqual({ rightMinecraftVersion: '1.21.5', selectionSide: 'right' });
                 expect(state.selectedLines).toEqual({
                     line: 250,
                     lineEnd: 260
