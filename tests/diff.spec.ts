@@ -39,6 +39,17 @@ test.describe('Diff View', () => {
         await expect(editor).toContainText('net.minecraft.client.renderer');
     });
 
+    test('Defaults the left side to the selected version and the right side to the fallback version', async ({ page }) => {
+        await page.goto('/');
+        await waitForBlockingModalToClose(page);
+
+        await page.getByRole('button', { name: 'Compare' }).click();
+
+        const selectors = page.locator('.diff-sidebar-panel button:has(.anticon-down)');
+        await expect(selectors.nth(0)).toContainText('26.1-mock-3');
+        await expect(selectors.nth(1)).toContainText('26.1-mock-2');
+    });
+
     test('Selects the latest two snapshots from the swap button menu', async ({ page }) => {
         await page.goto('/');
         await waitForBlockingModalToClose(page);

@@ -165,11 +165,9 @@ test.describe('Permalinks and Line Highlighting', () => {
         const diffEditor = page.locator('.monaco-diff-editor');
         await expect(diffEditor).toBeVisible();
 
-        const leftVersionSelect = page.getByRole('button', { name: /26\.1-mock-1/ }).first();
-        const rightVersionSelect = page.getByRole('button', { name: /26\.1-mock-2/ }).first();
-
-        await expect(leftVersionSelect).toContainText('26.1-mock-1');
-        await expect(rightVersionSelect).toContainText('26.1-mock-2');
+        const selectors = page.locator('.diff-sidebar-panel button:has(.anticon-down)');
+        await expect(selectors.nth(0)).toContainText('26.1-mock-1');
+        await expect(selectors.nth(1)).toContainText('26.1-mock-2');
 
         const decompilingMessage = page.getByText('Decompiling...');
         await expect(decompilingMessage).toBeHidden();
@@ -188,11 +186,9 @@ test.describe('Permalinks and Line Highlighting', () => {
         const diffEditor = page.locator('.monaco-diff-editor');
         await expect(diffEditor).toBeVisible();
 
-        const leftVersionSelect = page.getByRole('button', { name: /26\.1-mock-1/ }).first();
-        const rightVersionSelect = page.getByRole('button', { name: /26\.1-mock-2/ }).first();
-
-        await expect(leftVersionSelect).toContainText('26.1-mock-1');
-        await expect(rightVersionSelect).toContainText('26.1-mock-2');
+        const selectors = page.locator('.diff-sidebar-panel button:has(.anticon-down)');
+        await expect(selectors.nth(0)).toContainText('26.1-mock-1');
+        await expect(selectors.nth(1)).toContainText('26.1-mock-2');
 
         const decompilingMessage = page.getByText('Decompiling...');
         await expect(decompilingMessage).toBeHidden();

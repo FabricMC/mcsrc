@@ -1,6 +1,6 @@
 import { combineLatest } from "rxjs";
 import { resetPermalinkAffectingSettings, supportsPermalinking } from "./Settings";
-import { diffLeftSelectedMinecraftVersion, diffSelectionSide, diffView, vineflowerVersion, selectedFile, selectedLines, selectedMinecraftVersion } from "./State";
+import { diffRightSelectedMinecraftVersion, diffSelectionSide, diffView, vineflowerVersion, selectedFile, selectedLines, selectedMinecraftVersion } from "./State";
 import { vineflowerVersionToPermalinkVersion } from "./vineflower/versions";
 import { outerClassFilePath, toClassFilePath, withoutClassExtension, type ClassFilePath } from "../utils/Names";
 
@@ -14,7 +14,7 @@ export interface State {
     } | null;
     symbol?: SymbolLink;
     diff?: {
-        leftMinecraftVersion: string;
+        rightMinecraftVersion: string;
         selectionSide?: 'left' | 'right'; // if it's undefined, default to right
     };
 }
@@ -113,11 +113,11 @@ export const parsePathToState = (path: string): State | null => {
         const supportsLineNumbers = version === 2;
         return {
             version: DEFAULT_STATE.version, // Version 1 diff links have no line selection and can be safely upgraded.
-            minecraftVersion: rightMinecraftVersion,
+            minecraftVersion: leftMinecraftVersion,
             file: filePath ? toClassFilePath(filePath) : undefined,
             selectedLines: supportsLineNumbers && lineNumber ? { line: lineNumber, lineEnd: lineEnd || undefined } : null,
             diff: {
-                leftMinecraftVersion,
+                rightMinecraftVersion,
                 ...(supportsLineNumbers && diffSide ? { selectionSide: diffSide } : {})
             }
         };
@@ -179,7 +179,7 @@ if (typeof window !== "undefined") {
     window.addEventListener('load', () => {
         combineLatest([
             selectedMinecraftVersion,
-            diffLeftSelectedMinecraftVersion,
+            diffRightSelectedMinecraftVersion,
             selectedFile,
             selectedLines,
             supportsPermalinking,
@@ -188,7 +188,7 @@ if (typeof window !== "undefined") {
             vineflowerVersion
         ]).subscribe(([
             minecraftVersion,
-            diffLeftMinecraftVersion,
+            diffRightMinecraftVersion,
             file,
             selectedLines,
             supported,
@@ -217,7 +217,7 @@ if (typeof window !== "undefined") {
             let url = `/${vineflowerVersionToPermalinkVersion(vineflowerVersion)}/`;
 
             if (diffView) {
-                url += `diff/${diffLeftMinecraftVersion}/${minecraftVersion}`;
+                url += `diff/${minecraftVersion}/${diffRightMinecraftVersion}`;
                 if (file) {
                     url += `/${withoutClassExtension(file)}`;
                 }

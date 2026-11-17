@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { Button, Flex, Popover, Typography } from 'antd';
 import { CloseOutlined } from '@ant-design/icons';
 import type { VersionListEntry } from '../../logic/MinecraftApi';
-import { diffLeftSelectedMinecraftVersion, diffSelectionSide, diffView, selectedLines, selectedMinecraftVersion } from '../../logic/State';
+import { diffRightSelectedMinecraftVersion, diffSelectionSide, diffView, selectedLines, selectedMinecraftVersion } from '../../logic/State';
 import { openCodeTab } from '../../logic/tabs';
 import { toClassFilePath, type ClassName } from '../../utils/Names';
 import { ClassHistoryList } from './ClassHistoryList';
@@ -18,7 +18,7 @@ export interface HistoryChooser {
     y: number;
 }
 
-export function ClassHistoryPopup({ chooser, onClose }: { chooser: HistoryChooser; onClose: () => void }) {
+export function ClassHistoryPopup({ chooser, onClose }: { chooser: HistoryChooser; onClose: () => void; }) {
     const javadocMode = useObservable(activeJavadocFile) !== null;
     // Popup motion changes row coordinates without triggering a resize.
     const [ready, setReady] = useState(false);
@@ -33,8 +33,8 @@ export function ClassHistoryPopup({ chooser, onClose }: { chooser: HistoryChoose
 
     function compareVersion(version: string) {
         onClose();
-        diffLeftSelectedMinecraftVersion.next(chooser.currentVersion);
-        selectedMinecraftVersion.next(version);
+        diffRightSelectedMinecraftVersion.next(version);
+        selectedMinecraftVersion.next(chooser.currentVersion);
         diffSelectionSide.next(null);
         selectedLines.next(null);
         openCodeTab(toClassFilePath(chooser.className));

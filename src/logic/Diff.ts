@@ -2,7 +2,7 @@ import { BehaviorSubject, combineLatest, from, map, Observable, switchMap, share
 import { minecraftJar, minecraftJarPipeline, minecraftVersionIds, type MinecraftJar } from "./MinecraftApi";
 import { currentResult, decompileResultPipeline } from "./Decompiler";
 import { calculatedLineChanges } from "./LineChanges";
-import { diffLeftSelectedMinecraftVersion, diffView, selectedMinecraftVersion } from "./State";
+import { diffRightSelectedMinecraftVersion, diffView, selectedMinecraftVersion } from "./State";
 import type { DecompileResult } from "../workers/decompile/types";
 import { classNameFromClassFilePath, isClassFilePath, toClassFilePath, withoutClassExtension, type ClassFilePath, type ClassName } from "../utils/Names";
 
@@ -19,29 +19,29 @@ export interface DiffSide {
 
 export const leftDownloadProgress = new BehaviorSubject<number | undefined>(undefined);
 
-let leftDiff: DiffSide | null = null;
-export function getLeftDiff(): DiffSide {
-    if (!leftDiff) {
-        leftDiff = {} as DiffSide;
-        leftDiff.selectedVersion = diffLeftSelectedMinecraftVersion;
-        combineLatest([diffView, leftDiff.selectedVersion, minecraftVersionIds]).subscribe(([isDiffView, version, versions]) => {
-            if (isDiffView && !version && versions.length > 0) {
-                leftDiff!.selectedVersion.next(versions[1] || versions[0] || null);
-            }
-        });
-        leftDiff.jar = minecraftJarPipeline(leftDiff.selectedVersion);
-        leftDiff.entries = leftDiff.jar.pipe(
-            switchMap(jar => from(getEntriesWithCRC(jar)))
-        );
-        leftDiff.result = decompileResultPipeline(leftDiff.jar);
-    }
-    return leftDiff;
-}
-
 let rightDiff: DiffSide | null = null;
 export function getRightDiff(): DiffSide {
     if (!rightDiff) {
-        rightDiff = {
+        rightDiff = {} as DiffSide;
+        rightDiff.selectedVersion = diffRightSelectedMinecraftVersion;
+        combineLatest([diffView, rightDiff.selectedVersion, minecraftVersionIds]).subscribe(([isDiffView, version, versions]) => {
+            if (isDiffView && !version && versions.length > 0) {
+                rightDiff!.selectedVersion.next(versions[1] || versions[0] || null);
+            }
+        });
+        rightDiff.jar = minecraftJarPipeline(rightDiff.selectedVersion);
+        rightDiff.entries = rightDiff.jar.pipe(
+            switchMap(jar => from(getEntriesWithCRC(jar)))
+        );
+        rightDiff.result = decompileResultPipeline(rightDiff.jar);
+    }
+    return rightDiff;
+}
+
+let leftDiff: DiffSide | null = null;
+export function getLeftDiff(): DiffSide {
+    if (!leftDiff) {
+        leftDiff = {
             selectedVersion: selectedMinecraftVersion,
             jar: minecraftJar,
             entries: minecraftJar.pipe(
@@ -50,7 +50,7 @@ export function getRightDiff(): DiffSide {
             result: currentResult
         };
     }
-    return rightDiff;
+    return leftDiff;
 }
 
 export interface DiffSummary {
@@ -71,7 +71,7 @@ function ensureClearLineChangesSubscription() {
     clearLineChangesSubscriptionStarted = true;
 
     combineLatest([
-        diffLeftSelectedMinecraftVersion,
+        diffRightSelectedMinecraftVersion,
         selectedMinecraftVersion
     ]).subscribe(() => {
         calculatedLineChanges.next(new Map());
