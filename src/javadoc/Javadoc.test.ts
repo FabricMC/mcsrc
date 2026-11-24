@@ -51,6 +51,7 @@ describe("saveTokenJavadoc", () => {
 
     it.each([
         { documentation: "New docs", stored: "New docs" },
+        { documentation: "First line\r\nSecond line\nThird line", stored: "First line\nSecond line\nThird line" },
         { documentation: "", stored: null },
     ])("saves '$documentation' and publishes after the write", async ({ documentation, stored }) => {
         const source = activeJavadocFile.value;

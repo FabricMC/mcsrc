@@ -39,7 +39,7 @@ export async function saveTokenJavadoc(token: Token, javadoc: JavadocString | un
     if (!target) throw new Error("This token cannot have Javadoc");
 
     const previous = getStoredJavadoc(target);
-    const next = javadoc || null;
+    const next = javadoc?.replace(/\r\n?/g, "\n") || null;
     if (previous === next) return;
 
     setStoredJavadoc(target, next);
