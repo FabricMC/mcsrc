@@ -5,6 +5,9 @@ import { readJavadocBlockTags, type JavadocBlockTag } from './editor/JavadocBloc
 import type { JavadocSymbols } from './editor/JavadocSymbols';
 
 const tagLabels: Record<string, string> = {
+    apiNote: 'API Note:',
+    implSpec: 'Implementation Requirements:',
+    implNote: 'Implementation Note:',
     typeParam: 'Type Parameters:',
     param: 'Parameters:',
     return: 'Returns:',
@@ -12,11 +15,8 @@ const tagLabels: Record<string, string> = {
     since: 'Since:',
     version: 'Version:',
     author: 'Author:',
-    see: 'See Also:',
-    apiNote: 'API Note:',
-    implSpec: 'Implementation Requirements:',
-    implNote: 'Implementation Note:',
     hidden: 'Hidden:',
+    see: 'See Also:',
 };
 
 function escapeHtml(text: string): string {
@@ -154,7 +154,8 @@ export function renderJavadocMarkdown(markdown: string, symbols: JavadocSymbols,
     }
     html += `<div class="block">${parser.parse(body, { async: false })}</div>`;
     const order = [...Object.keys(tagLabels), ...groups.keys()];
-    const names = [...new Set(order)].filter(name => groups.has(name));
+    const names = [...new Set(order)].filter(name => name !== 'see' && groups.has(name));
+    if (groups.has('see')) names.push('see');
     if (names.length) {
         html += `<dl class="notes javadoc-tags">${names.map(renderGroup).join('')}</dl>`;
     }

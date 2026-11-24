@@ -104,8 +104,8 @@ API guidance.
 @version 2.0
 @hidden`);
         expect([...element.querySelectorAll('dt')].map(tag => tag.textContent)).toEqual([
-            'Type Parameters:', 'Parameters:', 'Returns:', 'Throws:', 'Since:', 'Version:', 'Author:', 'See Also:', 'API Note:',
-            'Implementation Requirements:', 'Implementation Note:', 'Hidden:',
+            'Type Parameters:', 'API Note:', 'Implementation Requirements:', 'Implementation Note:',
+            'Parameters:', 'Returns:', 'Throws:', 'Since:', 'Version:', 'Author:', 'Hidden:', 'See Also:',
         ]);
         expect(element.querySelector('dd code')?.textContent).toBe('T');
         expect(element.querySelector('dd strong')?.textContent).toBe('type');
@@ -117,6 +117,7 @@ API guidance.
 
     it('supports Markdown and HTML @see links and leaves unresolved targets readable', async () => {
         const { element } = await render('@see [the class][other.Remote]\n@see <a href="https://example.com">a website</a>\n@see Unknown missing class\n@custom Some **custom** tag');
+        expect([...element.querySelectorAll('dt')].map(tag => tag.textContent)).toEqual(['@custom', 'See Also:']);
         expect(element.querySelectorAll('a')).toHaveLength(2);
         expect(element.textContent).toContain('Unknown missing class');
         expect(element.querySelector('strong')?.textContent).toBe('custom');
