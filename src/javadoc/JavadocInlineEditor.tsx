@@ -109,7 +109,6 @@ function createInlineHost(codeEditor: editor.IStandaloneCodeEditor, result: Deco
         codeEditor.changeViewZones(accessor => accessor.layoutZone(zoneId));
     });
     let phase: "opening" | "open" | "closing" = "opening";
-    codeEditor.revealLineInCenter(location.line);
 
     return {
         token,
@@ -118,6 +117,9 @@ function createInlineHost(codeEditor: editor.IStandaloneCodeEditor, result: Deco
             if (phase === "closing") return;
 
             if (phase === "opening") {
+                animation.setHeight(height);
+                codeEditor.revealLine(location.line, editor.ScrollType.Immediate);
+                codeEditor.render();
                 animation.animateTo({ height, opacity: 1 }, () => {
                     phase = "open";
                 });
