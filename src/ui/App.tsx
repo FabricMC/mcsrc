@@ -124,7 +124,7 @@ const MobileApp = () => {
                 }
             </Flex>
             <FilepathHeader />
-            <div style={{ flex: 1, minHeight: 0, overflow: "auto" }}>
+            <div style={{ flex: 1, minHeight: 0 }}>
                 <MainView />
             </div>
         </Flex>

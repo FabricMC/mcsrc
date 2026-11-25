@@ -138,7 +138,6 @@ html, body, #root {
 .diff-code-frame {
   flex: 1;
   min-height: 0;
-  overflow: hidden;
 }
 
 .diff-code-frame .monaco-editor,

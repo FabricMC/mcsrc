@@ -49,9 +49,11 @@ export function UnpickSplitView({ children }: PropsWithChildren) {
 
     return (
         <Splitter orientation="vertical">
-            <Splitter.Panel defaultSize="50%" min="20%">{children}</Splitter.Panel>
+            <Splitter.Panel defaultSize="50%" min="20%" style={{ minHeight: 0, overflow: "visible" }}>
+                {children}
+            </Splitter.Panel>
             {open && (
-                <Splitter.Panel min="20%">
+                <Splitter.Panel min="20%" style={{ minHeight: 0, overflow: "visible" }}>
                     <Suspense fallback={null}>
                         <UnpickEditor source={source} directory={source.unpickDirectory} />
                     </Suspense>

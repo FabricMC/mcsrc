@@ -41,9 +41,9 @@ const UnpickEditor = ({ source, directory }: {
             role="region"
             aria-label="Unpick definitions"
             gap="small"
-            style={{ height: "100%", boxSizing: "border-box", padding: 8, overflow: "auto" }}
+            style={{ height: "100%", boxSizing: "border-box", padding: 8 }}
         >
-            <Flex vertical gap={4} style={{ width: sidebarOpen ? "min(220px, 45%)" : 24, flexShrink: 0 }}>
+            <Flex vertical gap={4} style={{ width: sidebarOpen ? "min(220px, 45%)" : 24, flexShrink: 0, overflow: "auto" }}>
                 <Flex align="center" vertical={!sidebarOpen} gap={sidebarOpen ? 0 : 4}>
                     <Tooltip title={sidebarOpen ? "Hide files" : "Show files"}>
                         <Button
