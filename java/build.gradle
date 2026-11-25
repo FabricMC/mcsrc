@@ -23,6 +23,7 @@ sourceSets {
 dependencies {
     api libs.asm
     implementation libs.unpick
+    implementation libs.unpick.format.utils
     api libs.asm.commons
     api libs.asm.util
     api libs.mapping.io
@@ -30,6 +31,7 @@ dependencies {
     teavmImplementation libs.teavm.core
     wasmImplementation sourceSets.main.output
     wasmImplementation libs.mapping.io
+    wasmImplementation libs.unpick.format.utils
     wasmImplementation libs.teavm.jso
     testImplementation sourceSets.wasm.output
     testImplementation libs.junit
@@ -44,6 +46,10 @@ java {
 
 tasks.test {
     useJUnitPlatform()
+}
+
+tasks.compileTestJava {
+    options.compilerArgs += '-parameters'
 }
 
 tasks.register('dummy1Jar', Jar) {

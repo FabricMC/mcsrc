@@ -1,9 +1,10 @@
 import { defer, firstValueFrom, shareReplay, tap } from "rxjs";
 import { load } from "../../java/build/generated/teavm/wasm-gc/mcsrc.wasm-runtime.js";
 import mappingsWasm from "../../java/build/generated/teavm/wasm-gc/mcsrc.wasm?url";
-import { collectFiles } from "./DirectoryFiles";
+import type { ClassMember } from "../../java/build/generated/teavm/js/mcsrc.js";
+import { collectFiles, isNotFoundError, writeFile } from "./DirectoryFiles";
 import type { RuntimeLibrariesConfig } from "./RuntimeLibraries";
-import type { UnpickConfig } from "../workers/decompile/Unpick";
+import type { UnpickConfig, UnpickValidationBridge } from "../unpick/UnpickDefinitions";
 import type { DeclarationMetadata } from "./editor/JavadocDeclaration";
 import { outerClassName, type ClassName } from "../utils/Names";
 
@@ -32,13 +33,15 @@ export interface JavadocDirectorySource {
     kind: "directory";
     handle: FileSystemDirectoryHandle;
     files: Map<string, string[]>;
+    unpickDirectory?: FileSystemDirectoryHandle;
     unpick?: UnpickConfig;
     runtimeLibraries?: RuntimeLibrariesConfig;
 }
 
 export type JavadocSource = JavadocFileSource | JavadocDirectorySource;
 
-interface JavadocMappingsBridge {
+interface JavadocMappingsBridge extends UnpickValidationBridge {
+    readClassMembers(classBytes: ArrayBuffer): ClassMember[];
     getDeclarationMetadata(classBytes: ArrayBuffer, methodName: string, descriptor: string): DeclarationMetadata;
     readJavadocs(data: ArrayBuffer): string;
     beginJavadocDirectory(): void;
@@ -65,6 +68,14 @@ interface JavadocMappingsBridge {
 }
 
 let bridge: JavadocMappingsBridge | null = null;
+
+export function getUnpickValidationBridge(): Promise<UnpickValidationBridge> {
+    return getBridge();
+}
+
+export async function readClassMembers(classBytes: ArrayBuffer): Promise<ClassMember[]> {
+    return (await getBridge()).readClassMembers(classBytes);
+}
 
 /** Queries class or method declaration metadata using the existing Javadoc runtime. */
 export async function readJavadocDeclarationMetadata(classBytes: ArrayBuffer, methodName = "", descriptor = ""): Promise<DeclarationMetadata> {
@@ -178,17 +189,9 @@ export function setStoredJavadoc(
 }
 
 async function writeBytes(handle: FileSystemFileHandle, bytes: Int8Array): Promise<void> {
-    const writable = await handle.createWritable();
     const output = new Uint8Array(bytes.byteLength);
     output.set(bytes);
-
-    try {
-        await writable.write(output);
-        await writable.close();
-    } catch (error) {
-        await writable.abort().catch(() => {});
-        throw error;
-    }
+    await writeFile(handle, output);
 }
 
 async function getFileHandle(
@@ -215,10 +218,6 @@ async function deleteFile(root: FileSystemDirectoryHandle, path: string[]): Prom
     }
 
     await directory.removeEntry(path[path.length - 1]);
-}
-
-function isNotFoundError(error: unknown): boolean {
-    return error instanceof DOMException && error.name === "NotFoundError";
 }
 
 const bridgeLoad = defer(async () => {

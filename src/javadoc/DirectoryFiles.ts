@@ -6,6 +6,21 @@ export async function getDirectory(root: FileSystemDirectoryHandle, path: string
     return directory;
 }
 
+export async function writeFile(handle: FileSystemFileHandle, data: FileSystemWriteChunkType): Promise<void> {
+    const writable = await handle.createWritable();
+    try {
+        await writable.write(data);
+        await writable.close();
+    } catch (error) {
+        await writable.abort().catch(() => {});
+        throw error;
+    }
+}
+
+export function isNotFoundError(error: unknown): boolean {
+    return error instanceof DOMException && error.name === "NotFoundError";
+}
+
 interface DirectoryFile {
     handle: FileSystemFileHandle;
     path: string[];

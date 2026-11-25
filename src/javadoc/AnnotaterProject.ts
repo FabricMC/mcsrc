@@ -1,7 +1,7 @@
-import { collectFiles, getDirectory } from "./DirectoryFiles";
+import { collectFiles, getDirectory, isNotFoundError } from "./DirectoryFiles";
 import { readJavadocDirectory, type JavadocDirectorySource } from "./JavadocStorage";
 import type { RuntimeLibrariesConfig } from "./RuntimeLibraries";
-import type { UnpickConfig } from "../workers/decompile/Unpick";
+import { readUnpickFiles } from "../unpick/UnpickFiles";
 
 export interface AnnotaterConfig {
     /** Path to the Enigma mappings subdirectory, relative to the project root. */
@@ -30,23 +30,20 @@ export async function readAnnotaterDirectory(handle: FileSystemDirectoryHandle):
         }
     }
 
-    let unpick: UnpickConfig | undefined;
-    if (config.unpickDefinitions && runtimeLibraries) {
-        const definitionsDirectory = await getDirectory(handle, config.unpickDefinitions);
-        const definitionFiles = await collectFiles(definitionsDirectory, ".unpick");
-        if (definitionFiles.length > 0) {
-            const definitions = await Promise.all(definitionFiles.map(async file => ({
-                path: file.path.join("/"),
-                content: await (await file.handle.getFile()).text(),
-            })));
-            unpick = { id: crypto.randomUUID(), definitions };
-        }
+    let unpickDirectory: FileSystemDirectoryHandle | undefined;
+    if (config.unpickDefinitions) {
+        unpickDirectory = await getDirectory(handle, config.unpickDefinitions).catch((error: unknown) => {
+            if (runtimeLibraries || !isNotFoundError(error)) throw error;
+            return undefined;
+        });
     }
+    const definitions = unpickDirectory && runtimeLibraries ? await readUnpickFiles(unpickDirectory) : [];
 
     const directory = await getDirectory(handle, config.mappings);
     const source = await readJavadocDirectory(directory);
     if (runtimeLibraries) source.runtimeLibraries = runtimeLibraries;
-    if (unpick) source.unpick = unpick;
+    if (unpickDirectory) source.unpickDirectory = unpickDirectory;
+    if (definitions.length > 0) source.unpick = { id: crypto.randomUUID(), definitions };
     return { source, version: config.version };
 }
 

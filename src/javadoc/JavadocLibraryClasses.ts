@@ -3,15 +3,20 @@ import type { ClassName } from '../utils/Names';
 import { activeJavadocFile } from './JavadocState';
 import { RuntimeLibraries } from './RuntimeLibraries';
 
-export const runtimeLibraryClassNames = activeJavadocFile.pipe(
+export const javadocRuntimeLibraries = activeJavadocFile.pipe(
     map(file => file?.kind === 'directory' ? file.runtimeLibraries : undefined),
     distinctUntilChanged((previous, current) => previous?.id === current?.id),
-    switchMap(config => {
-        const empty = new Set<ClassName>();
-        if (!config) return of(empty);
-
+    map(config => {
         const libraries = new RuntimeLibraries();
         libraries.load(config);
+        return libraries;
+    }),
+    shareReplay({ bufferSize: 1, refCount: false }),
+);
+
+export const runtimeLibraryClassNames = javadocRuntimeLibraries.pipe(
+    switchMap(libraries => {
+        const empty = new Set<ClassName>();
         return from(libraries.getClassNames()).pipe(
             startWith(empty),
             catchError(error => {

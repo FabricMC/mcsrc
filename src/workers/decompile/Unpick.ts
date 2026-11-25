@@ -2,12 +2,7 @@ import { JarIndexer } from "../jar-index/types";
 import type { RuntimeLibraries } from "../../javadoc/RuntimeLibraries";
 import type { Jar } from "../../utils/Jar";
 import { toArrayBuffer } from "../../utils/ArrayBuffer";
-import { toClassFilePath } from "../../utils/Names";
-
-export interface UnpickConfig {
-    id: string;
-    definitions: { path: string; content: string }[];
-}
+import { createClassSource, definitionContents, type UnpickConfig } from "../../unpick/UnpickDefinitions";
 
 export class UnpickProcessor {
     #indexer = new JarIndexer();
@@ -24,11 +19,7 @@ export class UnpickProcessor {
                 throw new Error(`Empty Unpick definition: ${definition.path}`);
             }
         }
-        await bridge.loadUnpickDefinitions(config.definitions.map(definition => definition.content), async name => {
-            const path = toClassFilePath(name);
-            const entry = jar.entries[path];
-            return entry ? toArrayBuffer(await entry.bytes()) : libraries.getClassBytes(name);
-        });
+        await bridge.loadUnpickDefinitions(definitionContents(config.definitions), createClassSource(jar, libraries));
         this.#id = config.id;
         this.#jarName = jar.name;
     }

@@ -3,10 +3,11 @@ import { SwapOutlined } from "@ant-design/icons";
 import { SettingsModalButton } from "./settings/SettingsModal";
 import VersionSelector from "./VersionSelector";
 import { diffView } from "../logic/State";
-import { activeJavadocFile } from "../javadoc/Javadoc";
+import { activeJavadocFile } from "../javadoc/JavadocState";
 import { useObservable } from "../utils/UseObservable";
 import { showAnnotaterShortcut } from "../logic/Settings";
 import JavadocFilePicker from "../javadoc/JavadocFilePicker";
+import { UnpickEditorButton } from "../unpick/UnpickView";
 
 const Header = () => {
     return (
@@ -45,6 +46,7 @@ const HeaderBody = () => {
                 </Tooltip>
             )}
             {(showAnnotaterShortcutValue || javadocMode) && <JavadocFilePicker annotaterShortcut />}
+            <UnpickEditorButton />
             <div style={{ flex: "0 0 auto" }}>
                 <SettingsModalButton />
             </div>
