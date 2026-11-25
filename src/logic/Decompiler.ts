@@ -1,5 +1,5 @@
 import type { RuntimeLibrariesConfig } from "../javadoc/RuntimeLibraries";
-import type { UnpickConfig } from "../workers/decompile/Unpick";
+import type { UnpickConfig } from "../unpick/UnpickDefinitions";
 import { activeJavadocFile } from "../javadoc/Javadoc";
 import {
     BehaviorSubject,

@@ -1,6 +1,8 @@
 package net.minecraft.client.renderer;
 
 public class LevelRenderer {
+    public static final int DEFAULT_RENDER_DISTANCE = 12;
+
     public void sayHello() {
         System.out.println("hello world 1");
     }

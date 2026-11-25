@@ -1,5 +1,5 @@
 import type { RuntimeLibrariesConfig } from "../../javadoc/RuntimeLibraries";
-import type { UnpickConfig } from "./Unpick";
+import type { UnpickConfig } from "../../unpick/UnpickDefinitions";
 import * as Comlink from "comlink";
 import type * as vf from "../../logic/vineflower/vineflower";
 import { DecompileJar, type DecompileResult } from "./types";

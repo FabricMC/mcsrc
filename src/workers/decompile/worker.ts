@@ -1,6 +1,7 @@
 import { javadocAltersDecompileOutput } from "../../javadoc/JavadocState";
 import { RuntimeLibraries, type RuntimeLibrariesConfig } from "../../javadoc/RuntimeLibraries";
-import { UnpickProcessor, type UnpickConfig } from "./Unpick";
+import { UnpickProcessor } from "./Unpick";
+import type { UnpickConfig } from "../../unpick/UnpickDefinitions";
 import * as vf from "../../logic/vineflower/vineflower";
 import * as Comlink from "comlink";
 import Dexie, { type EntityTable, type Table } from "dexie";
@@ -179,9 +180,15 @@ export class DecompileWorker {
             const checksum = jar.proxy[className]?.checksum;
             this.#runtimeLibraries.load(runtimeLibraries);
             const useCache = !javadocAltersDecompileOutput({ kind: "directory", unpick, runtimeLibraries });
+            const context: DecompileContext = { useCache };
             if (unpick && unpick.definitions.length > 0 && runtimeLibraries?.files.length) {
                 this.#unpick ??= new UnpickProcessor();
-                await this.#unpick.load(unpick, jar.jar, this.#runtimeLibraries);
+                try {
+                    await this.#unpick.load(unpick, jar.jar, this.#runtimeLibraries);
+                    context.unpick = this.#unpick;
+                } catch (error) {
+                    console.warn("Unable to load Unpick definitions:", error);
+                }
             } else if (this.#unpick) {
                 await this.#unpick.reset();
                 this.#unpick = undefined;
@@ -192,7 +199,6 @@ export class DecompileWorker {
                 if (cached) return cached;
             }
 
-            const context: DecompileContext = { useCache, unpick: this.#unpick };
             if (!useCache) context.runtimeLibraries = this.#runtimeLibraries;
             const result = await this.#decompile(jarName, jar.classes, [className], jar.proxy, undefined, context);
             return result[0];

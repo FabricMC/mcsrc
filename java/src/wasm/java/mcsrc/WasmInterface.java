@@ -5,6 +5,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
@@ -16,6 +17,7 @@ import org.teavm.jso.JSExport;
 import org.teavm.jso.JSFunctor;
 import org.teavm.jso.JSBody;
 import org.teavm.jso.JSObject;
+import org.teavm.jso.core.JSBoolean;
 import org.teavm.jso.core.JSMap;
 import org.teavm.jso.core.JSString;
 import org.teavm.jso.core.JSPromise;
@@ -73,6 +75,18 @@ public final class WasmInterface {
                 .map(WasmInterface::serialize)
                 .toArray(String[]::new);
     }
+
+    @JSExport
+    public static JSObject[] readClassMembers(ArrayBuffer classBytes) {
+        return ClassMemberReader.read(toBytes(classBytes)).stream()
+                .map(member -> classMember(member.kind().name().toLowerCase(Locale.ROOT), member.name(), member.descriptor(),
+                        member.isStatic(), member.parameterNames().toArray(String[]::new)))
+                .toArray(JSObject[]::new);
+    }
+
+    @JSBody(params = { "kind", "name", "descriptor", "isStatic", "parameterNames" },
+            script = "return { kind: kind, name: name, descriptor: descriptor, isStatic: isStatic, parameterNames: parameterNames };")
+    private static native JSObject classMember(String kind, String name, String descriptor, boolean isStatic, String[] parameterNames);
 
     @JSExport
     public static JSObject getDeclarationMetadata(ArrayBuffer classBytes, String methodName, String descriptor) {
@@ -197,6 +211,11 @@ public final class WasmInterface {
         JSPromise<ArrayBuffer> source(String name);
     }
 
+    @JSFunctor
+    public interface UnpickPackageLookup extends JSObject {
+        JSPromise<JSBoolean> hasPackage(String name);
+    }
+
     @JSExport
     public static void resetUnpick() {
         unpick = null;
@@ -205,15 +224,39 @@ public final class WasmInterface {
     @JSExport
     public static JSPromise<JSObject> loadUnpickDefinitions(String[] definitions, UnpickClassSource source) {
         return JSPromise.callAsync(() -> {
-            var instance = new Unpick(name -> {
-                ArrayBuffer bytes = source.source(name).await();
-                return bytes == null ? null : toBytes(bytes);
-            });
+            var instance = createUnpick(source);
             instance.loadDefinitions(definitions);
             unpick = instance;
             return null;
         });
     }
+
+    @JSExport
+    public static JSPromise<JSObject> validateUnpickDefinitions(String[] definitions, UnpickClassSource source, UnpickPackageLookup packages) {
+        return JSPromise.callAsync(() -> {
+            var error = createUnpick(source).validateDefinitions(definitions, name -> packages.hasPackage(name).await().booleanValue());
+            if (error == null) {
+                return null;
+            }
+
+            var exception = error.exception();
+            var line = exception.getLineNumber();
+            var column = exception.getColumnNumber();
+            return unpickDiagnostic(error.definitionIndex(), line == null ? 0 : line,
+                    column == null ? 0 : column, exception.getMessage());
+        });
+    }
+
+    private static Unpick createUnpick(UnpickClassSource source) {
+        return new Unpick(name -> {
+            ArrayBuffer bytes = source.source(name).await();
+            return bytes == null ? null : toBytes(bytes);
+        });
+    }
+
+    @JSBody(params = { "definitionIndex", "lineNumber", "columnNumber", "message" },
+            script = "return { definitionIndex: definitionIndex < 0 ? null : definitionIndex, lineNumber: lineNumber || null, columnNumber: columnNumber || null, message: message };")
+    private static native JSObject unpickDiagnostic(int definitionIndex, int lineNumber, int columnNumber, String message);
 
     @JSExport
     public static JSPromise<Int8Array> applyUnpick(ArrayBuffer bytes) {

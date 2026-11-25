@@ -283,7 +283,11 @@ const Code = () => {
         // so this is quite important to keep!
         if (!tab.key.includes(decompileResult.className)) return;
 
-        tab.editorRef = editorRef.current;
+        const currentEditor = editorRef.current;
+        tab.editorRef = currentEditor;
+        const previousViewState = javadocFile && tab.model && currentEditor?.getModel() === tab.model
+            ? currentEditor.saveViewState()
+            : null;
 
         // Set new model with the current decompilation source
         tab.setModel(monaco.editor.createModel(
@@ -291,6 +295,7 @@ const Code = () => {
             bytecode.value ? "bytecode" : "java",
             monaco.Uri.parse(`inmemory://${Date.now()}`)
         ));
+        if (previousViewState) tab.viewState = previousViewState;
 
         // Only restore view state if there's no line to jump to
         // Otherwise the line highlighting effect will handle scrolling
