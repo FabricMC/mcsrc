@@ -22,6 +22,9 @@ async function setupAnnotaterServer(page: import('@playwright/test').Page) {
 
     await page.route(`${SERVER}/ping`, route => route.fulfill(fulfill('', 'text/plain')));
 
+    await page.route(`${SERVER}/unpick/list`, route => route.fulfill(
+        fulfill(JSON.stringify({ entries: [] }), 'application/json')));
+
     await page.route(url => url.origin === SERVER && url.pathname === '/mapping', route => route.request().method() === 'POST'
         ? route.fulfill(fulfill(JSON.stringify({ details: 'Mapping updated' }), 'application/json'))
         : route.fulfill(fulfill('CLASS net/minecraft/client/renderer/LevelRenderer\n\tCOMMENT The level renderer\n', 'text/plain; charset=utf-8')));

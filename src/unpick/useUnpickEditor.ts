@@ -4,12 +4,12 @@ import { useEffect, useEffectEvent, useRef, useState } from "react";
 import { BehaviorSubject, concatMap, debounce, firstValueFrom, fromEvent, merge, Subject, timer } from "rxjs";
 import { javadocRuntimeLibraries } from "../javadoc/JavadocLibraryClasses";
 import { activeJavadocFile } from "../javadoc/JavadocState";
-import { getUnpickValidationBridge, type JavadocDirectorySource } from "../javadoc/JavadocStorage";
+import { getUnpickValidationBridge, type JavadocEditableUnpickSource } from "../javadoc/JavadocStorage";
 import { minecraftJar, type MinecraftJar } from "../logic/MinecraftApi";
 import { selectedMinecraftVersion } from "../logic/State";
 import { useObservable } from "../utils/UseObservable";
 import { validateUnpickDefinitions, type UnpickDefinition } from "./UnpickDefinitions";
-import { changeUnpickFile, readUnpickFiles } from "./UnpickFiles";
+import type { UnpickFileStore } from "./UnpickFiles";
 import { useUnpickMethodWarnings } from "./UnpickMethodWarnings";
 import { useUnpickSymbolCompletion } from "./useUnpickSymbolCompletion";
 
@@ -59,7 +59,7 @@ function syntaxMarkers(
     }];
 }
 
-export function useUnpickEditor(source: JavadocDirectorySource, directory: FileSystemDirectoryHandle) {
+export function useUnpickEditor(source: JavadocEditableUnpickSource, store: UnpickFileStore) {
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState<string>();
     const [validationError, setValidationError] = useState<ValidationError>();
@@ -121,7 +121,7 @@ export function useUnpickEditor(source: JavadocDirectorySource, directory: FileS
     };
 
     const validate = async (snapshot?: UnpickDefinition[]) => {
-        const definitions = snapshot ?? await readUnpickFiles(directory);
+        const definitions = snapshot ?? await store.read();
         if (activeJavadocFile.value !== source) return;
         try {
             if (definitions.length > 0) {
@@ -161,7 +161,7 @@ export function useUnpickEditor(source: JavadocDirectorySource, directory: FileS
     };
 
     const readDirectory = async () => {
-        const latest = await readUnpickFiles(directory);
+        const latest = await store.read();
         failedWrites.next(new Map());
         savedContents.next(new Map(latest.map(file => [file.path, file.content])));
         setFiles(latest);
@@ -188,7 +188,7 @@ export function useUnpickEditor(source: JavadocDirectorySource, directory: FileS
 
     useEffect(() => {
         loadDirectory();
-    }, [directory]);
+    }, [store]);
 
     const clearSaveError = (path: string) => {
         if (!failedWrites.value.has(path)) return;
@@ -203,7 +203,7 @@ export function useUnpickEditor(source: JavadocDirectorySource, directory: FileS
             const previous = savedContents.value.get(path);
             if (content !== previous) {
                 try {
-                    await changeUnpickFile(directory, path, previous, content);
+                    await store.write(path, previous, content);
                 } catch (error) {
                     failedWrites.next(new Map(failedWrites.value).set(path, error instanceof Error ? error.message : String(error)));
                     return;
@@ -222,7 +222,7 @@ export function useUnpickEditor(source: JavadocDirectorySource, directory: FileS
         }
         const path = `${name}.unpick`;
         const content = "unpick v4\n";
-        await changeUnpickFile(directory, path, undefined, content);
+        await store.write(path, undefined, content);
         savedContents.next(new Map(savedContents.value).set(path, content));
         setFiles(files => [...files, { path, content }].sort((a, b) => a.path.localeCompare(b.path)));
         setNewName(undefined);
@@ -232,7 +232,7 @@ export function useUnpickEditor(source: JavadocDirectorySource, directory: FileS
 
     const deleteFile = (path: string) => run(async () => {
         const previous = savedContents.value.get(path);
-        await changeUnpickFile(directory, path, previous, undefined);
+        await store.delete(path, previous);
         clearSaveError(path);
         const remaining = new Map(savedContents.value);
         remaining.delete(path);

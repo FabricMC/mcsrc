@@ -53,7 +53,7 @@ export function decompileResultPipeline(jar: Observable<MinecraftJar>): Observab
             }
 
             const options = getDecompilerOptions(displayLambdas);
-            const project = javadoc?.kind === "directory" ? javadoc : undefined;
+            const project = javadoc && javadoc.kind !== "file" ? javadoc : undefined;
             return from(worker.setOptions(options)).pipe(
                 switchMap(() => from(decompileClass(className, jar.jar, project?.unpick, project?.runtimeLibraries)))
             );

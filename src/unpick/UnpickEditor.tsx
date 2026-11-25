@@ -5,15 +5,16 @@ import * as monacoEditor from "monaco-editor";
 import { useState } from "react";
 import { isDarkMode } from "../logic/Browser";
 import { useObservable } from "../utils/UseObservable";
-import type { JavadocDirectorySource } from "../javadoc/JavadocStorage";
+import type { JavadocEditableUnpickSource } from "../javadoc/JavadocStorage";
 import { registerUnpickLanguage, UNPICK_LANGUAGE } from "./UnpickLanguage";
 import { useUnpickEditor } from "./useUnpickEditor";
+import type { UnpickFileStore } from "./UnpickFiles";
 
 registerUnpickLanguage(monacoEditor);
 
-const UnpickEditor = ({ source, directory }: {
-    source: JavadocDirectorySource;
-    directory: FileSystemDirectoryHandle;
+const UnpickEditor = ({ source, store }: {
+    source: JavadocEditableUnpickSource;
+    store: UnpickFileStore;
 }) => {
     const [sidebarOpen, setSidebarOpen] = useState(true);
     const darkMode = useObservable(isDarkMode);
@@ -34,7 +35,7 @@ const UnpickEditor = ({ source, directory }: {
         saveEdit,
         createFile,
         deleteFile,
-    } = useUnpickEditor(source, directory);
+    } = useUnpickEditor(source, store);
 
     return (
         <Flex

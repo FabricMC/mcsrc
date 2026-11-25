@@ -1,6 +1,14 @@
 import type { UnpickDefinition } from "./UnpickDefinitions";
 import { collectFiles, getDirectory, isNotFoundError, writeFile } from "../javadoc/DirectoryFiles";
 
+/** Reads and edits the `.unpick` files of a Javadoc source. */
+export interface UnpickFileStore {
+    read(): Promise<UnpickDefinition[]>;
+    /** `previous` is the content last read, to reject writes when the file changed elsewhere. */
+    write(path: string, previous: string | undefined, content: string): Promise<void>;
+    delete(path: string, previous: string | undefined): Promise<void>;
+}
+
 export async function readUnpickFiles(directory: FileSystemDirectoryHandle): Promise<UnpickDefinition[]> {
     const files = await collectFiles(directory, ".unpick");
     return Promise.all(files.map(async file => ({
@@ -9,7 +17,15 @@ export async function readUnpickFiles(directory: FileSystemDirectoryHandle): Pro
     })));
 }
 
-export async function changeUnpickFile(
+export function directoryUnpickFiles(directory: FileSystemDirectoryHandle): UnpickFileStore {
+    return {
+        read: () => readUnpickFiles(directory),
+        write: (path, previous, content) => changeUnpickFile(directory, path, previous, content),
+        delete: (path, previous) => changeUnpickFile(directory, path, previous, undefined),
+    };
+}
+
+async function changeUnpickFile(
     directory: FileSystemDirectoryHandle,
     path: string,
     previous: string | undefined,

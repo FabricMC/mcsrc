@@ -7,6 +7,7 @@ import {
     type JavadocServerSource,
     type JavadocTarget,
 } from "./JavadocStorage";
+import type { UnpickFileStore } from "../unpick/UnpickFiles";
 import { classNameFromClassFilePath, outerClassName, type ClassName } from "../utils/Names";
 import { selectedFile, selectedMinecraftVersion } from "../logic/State";
 
@@ -35,11 +36,105 @@ export async function connectJavadocServer(host: string): Promise<JavadocServerC
     const config: unknown = await response.json();
 
     if (typeof config !== "object" || config === null
-        || !("version" in config) || typeof config.version !== "string" || !config.version.trim()) {
-        throw new Error('The annotater server config must contain a Minecraft "version".');
+        || !("version" in config) || typeof config.version !== "string" || !config.version.trim()
+        || !("runtimeLibraries" in config) || !isStringArray(config.runtimeLibraries)) {
+        throw new Error('The annotater server config must contain a Minecraft "version" and "runtimeLibraries" paths.');
     }
 
-    return { source: { kind: "server", host: normalizedHost }, version: config.version };
+    return {
+        source: await readServerAnnotaterSource(normalizedHost, config.runtimeLibraries),
+        version: config.version,
+    };
+}
+
+function isStringArray(value: unknown): value is string[] {
+    return Array.isArray(value) && value.every(path => typeof path === "string");
+}
+
+async function readServerAnnotaterSource(host: string, runtimeLibraryPaths: string[]): Promise<JavadocServerSource> {
+    const unpickFiles = serverUnpickFiles(host);
+    const definitions = await unpickFiles.read();
+    const source: JavadocServerSource = { kind: "server", host, unpickFiles };
+
+    if (runtimeLibraryPaths.length > 0) {
+        const files = await Promise.all(runtimeLibraryPaths.map(async path => {
+            const response = await fetch(`${host}/library?${path}`);
+
+            if (!response.ok) {
+                throw await serverResponseError(response);
+            }
+
+            return new File([await response.blob()], path, { type: "application/java-archive" });
+        }));
+        source.runtimeLibraries = { id: crypto.randomUUID(), files };
+    }
+
+    if (definitions.length > 0) {
+        source.unpick = { id: crypto.randomUUID(), definitions };
+    }
+
+    return source;
+}
+
+function serverUnpickFiles(host: string): UnpickFileStore {
+    return {
+        read: async () => {
+            const response = await fetch(`${host}/unpick/list`);
+
+            if (!response.ok) {
+                throw await serverResponseError(response);
+            }
+
+            const { entries } = await response.json() as { entries: { path: string }[] };
+            return Promise.all(entries.map(async ({ path }) => ({
+                path,
+                content: await fetchUnpickContent(host, path) ?? "",
+            })));
+        },
+        write: async (path, previous, content) => {
+            await requireUnpickContent(host, path, previous);
+
+            const response = await fetch(`${host}/unpick`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ path, content } satisfies UpdateUnpickRequest),
+            });
+
+            if (!response.ok) {
+                throw await serverResponseError(response);
+            }
+        },
+        delete: async (path, previous) => {
+            await requireUnpickContent(host, path, previous);
+
+            const response = await fetch(`${host}/unpick?${path}`, { method: "DELETE" });
+
+            if (!response.ok) {
+                throw await serverResponseError(response);
+            }
+        },
+    };
+}
+
+/** Rejects the edit when the file on the server is not the content the editor last read. */
+async function requireUnpickContent(host: string, path: string, previous: string | undefined): Promise<void> {
+    const existing = await fetchUnpickContent(host, path);
+
+    if (existing !== previous) {
+        throw new Error(previous === undefined ? `${path} already exists.` : `${path} changed on disk.`);
+    }
+}
+
+async function fetchUnpickContent(host: string, path: string): Promise<string | undefined> {
+    const response = await fetch(`${host}/unpick?${path}`);
+
+    if (response.status === 404) return undefined;
+
+    if (!response.ok) {
+        throw await serverResponseError(response);
+    }
+
+    return await response.text();
 }
 
 export async function readServerJavadocClass(
@@ -104,7 +199,12 @@ interface UpdateMappingRequest {
     kind: (typeof SERVER_ELEMENT_KINDS)[number];
     name: string;
     desc: string;
-    comments: string | null;
+    comments: string;
+}
+
+interface UpdateUnpickRequest {
+    path: string;
+    content: string;
 }
 
 function parseServerHost(host: string): string {

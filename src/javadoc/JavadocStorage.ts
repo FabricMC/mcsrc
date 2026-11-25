@@ -5,6 +5,7 @@ import type { ClassMember } from "../../java/build/generated/teavm/js/mcsrc.js";
 import { collectFiles, isNotFoundError, writeFile } from "./DirectoryFiles";
 import type { RuntimeLibrariesConfig } from "./RuntimeLibraries";
 import type { UnpickConfig, UnpickValidationBridge } from "../unpick/UnpickDefinitions";
+import type { UnpickFileStore } from "../unpick/UnpickFiles";
 import type { DeclarationMetadata } from "./editor/JavadocDeclaration";
 import { outerClassName, type ClassName } from "../utils/Names";
 
@@ -29,21 +30,25 @@ export interface JavadocFileSource {
     format: JavadocFormat;
 }
 
-export interface JavadocDirectorySource {
-    kind: "directory";
-    handle: FileSystemDirectoryHandle;
-    files: Map<string, string[]>;
-    unpickDirectory?: FileSystemDirectoryHandle;
+export interface JavadocUnpickSource {
+    unpickFiles?: UnpickFileStore;
     unpick?: UnpickConfig;
     runtimeLibraries?: RuntimeLibrariesConfig;
 }
 
-export interface JavadocServerSource {
+export interface JavadocDirectorySource extends JavadocUnpickSource {
+    kind: "directory";
+    handle: FileSystemDirectoryHandle;
+    files: Map<string, string[]>;
+}
+
+export interface JavadocServerSource extends JavadocUnpickSource {
     kind: "server";
     host: string;
 }
 
 export type JavadocWritableSource = JavadocFileSource | JavadocDirectorySource;
+export type JavadocEditableUnpickSource = JavadocDirectorySource | JavadocServerSource;
 export type JavadocSource = JavadocWritableSource | JavadocServerSource;
 
 interface JavadocMappingsBridge extends UnpickValidationBridge {
