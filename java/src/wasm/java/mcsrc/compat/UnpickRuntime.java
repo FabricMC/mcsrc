@@ -3,6 +3,7 @@ package mcsrc.compat;
 import java.math.BigInteger;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.logging.Level;
 
 public final class UnpickRuntime {
     private UnpickRuntime() {
@@ -10,6 +11,12 @@ public final class UnpickRuntime {
 
     public static <T> Set<T> newKeySet() {
         return new HashSet<>();
+    }
+
+    public static void failTransformation(Level level, String message, Throwable cause) {
+        System.err.println(level.getName() + ": " + message);
+        cause.printStackTrace(System.err);
+        throw new IllegalStateException(message + ": " + cause, cause);
     }
 
     public static int parseUnsignedInt(String value, int radix) {

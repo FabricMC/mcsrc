@@ -230,9 +230,11 @@ export class DecompileWorker {
         let currentContent: string | undefined;
         let currentTokens: Token[] | undefined;
         let currentClassName: ClassName | undefined;
+        let unpickFailure: unknown;
 
         const sources = await vf.decompile(this.#version, classNames, {
             source: async (name) => {
+                if (unpickFailure) return null;
                 const className = toClassName(name);
                 const data = await classData[className]?.data;
 
@@ -247,8 +249,17 @@ export class DecompileWorker {
                     return null;
                 }
 
-                const transform = context.unpick && classNames.some(target => className === target || className.startsWith(`${target}$`));
-                return transform ? context.unpick!.apply(data) : data;
+                const unpick = context.unpick;
+                if (!unpick || !classNames.some(target => className === target || className.startsWith(`${target}$`))) {
+                    return data;
+                }
+                try {
+                    return await unpick.apply(data);
+                } catch (error) {
+                    // Rejecting the source callback can leave Vineflower waiting indefinitely.
+                    unpickFailure ??= error;
+                    return null;
+                }
             },
             resources: jarClasses,
             options: await this.getOptions(),
@@ -296,7 +307,8 @@ export class DecompileWorker {
                     currentTokens = undefined;
                 }
             },
-        });
+        }).catch(error => { throw unpickFailure ?? error; });
+        if (unpickFailure) throw unpickFailure;
 
         const res: DecompileResult[] = [];
         for (const [rawClassName, source] of Object.entries(sources)) {

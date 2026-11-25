@@ -14,6 +14,7 @@ import mcsrc.javadoc.DeclarationMetadata;
 import net.fabricmc.mappingio.format.MappingFormat;
 
 import org.teavm.jso.JSExport;
+import org.teavm.jso.JSExceptions;
 import org.teavm.jso.JSFunctor;
 import org.teavm.jso.JSBody;
 import org.teavm.jso.JSObject;
@@ -249,10 +250,20 @@ public final class WasmInterface {
 
     private static Unpick createUnpick(UnpickClassSource source) {
         return new Unpick(name -> {
-            ArrayBuffer bytes = source.source(name).await();
+            ArrayBuffer bytes = source.source(name).<ArrayBuffer>flatCatchError(error -> {
+                String message = logUnpickClassError(name, error);
+                var failure = new IllegalStateException("Unable to read Unpick class " + name + ": " + message);
+                return JSPromise.reject(JSExceptions.getJSException(failure));
+            }).await();
             return bytes == null ? null : toBytes(bytes);
         });
     }
+
+    @JSBody(params = { "name", "error" }, script = """
+            console.error("Unable to read Unpick class " + name, error);
+            return String(error);
+            """)
+    private static native String logUnpickClassError(String name, Object error);
 
     @JSBody(params = { "definitionIndex", "lineNumber", "columnNumber", "message" },
             script = "return { definitionIndex: definitionIndex < 0 ? null : definitionIndex, lineNumber: lineNumber || null, columnNumber: columnNumber || null, message: message };")
