@@ -256,6 +256,26 @@ export class HierarchyNavigation {
         return isAbstract(method?.access ?? 0);
     }
 
+    methodParents(className: ClassName, name: string, descriptor: string): HierarchyTarget[] {
+        const declared = this.methods.get(className)?.find(method => method.name === name && method.descriptor === descriptor);
+        const method = declared && this.visibleMethod(declared);
+        return method ? this.overriddenMethods(method) : [];
+    }
+
+    private overriddenMethods(method: MethodDeclaration): HierarchyTarget[] {
+        const variants = (this.methods.get(method.className) ?? []).filter(candidate => this.visibleMethod(candidate) === method);
+        const parents: HierarchyTarget[] = [];
+        for (const ancestor of this.ancestorNames(method.className)) {
+            for (const parent of this.methods.get(ancestor) ?? []) {
+                if (variants.some(child => this.overrides(child, parent))) {
+                    const visible = this.visibleMethod(parent);
+                    if (visible) parents.push(visible);
+                }
+            }
+        }
+        return this.uniqueTargets(parents);
+    }
+
     relations(token: Token): HierarchyRelations {
         if (!token.declaration) return { parents: [], children: [] };
         if (token.type === 'class') {
@@ -268,16 +288,6 @@ export class HierarchyNavigation {
         const ownMethods = this.methods.get(token.className) ?? [];
         const method = ownMethods.find(candidate => candidate.name === token.name && candidate.descriptor === token.descriptor);
         if (!method) return { parents: [], children: [] };
-        const variants = ownMethods.filter(candidate => this.visibleMethod(candidate) === method);
-        const parents: HierarchyTarget[] = [];
-        for (const ancestor of this.ancestorNames(token.className)) {
-            for (const parent of this.methods.get(ancestor) ?? []) {
-                if (variants.some(child => this.overrides(child, parent))) {
-                    const visible = this.visibleMethod(parent);
-                    if (visible) parents.push(visible);
-                }
-            }
-        }
         const children: HierarchyTarget[] = [];
         for (const child of this.methodsByName.get(method.name) ?? []) {
             if (!this.ancestorNames(child.className).has(token.className)) continue;
@@ -286,7 +296,7 @@ export class HierarchyNavigation {
                 if (visible) children.push(visible);
             }
         }
-        return { parents: this.uniqueTargets(parents), children: this.uniqueTargets(children) };
+        return { parents: this.overriddenMethods(method), children: this.uniqueTargets(children) };
     }
 
     private uniqueTargets(targets: HierarchyTarget[]): HierarchyTarget[] {
