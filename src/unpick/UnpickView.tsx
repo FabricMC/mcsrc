@@ -17,14 +17,23 @@ export function UnpickEditorButton() {
     const open = useObservable(unpickEditorOpen);
     if (source?.kind !== "directory" || !source.unpickDirectory) return null;
 
+    const disabled = !source.runtimeLibraries;
+    let title = open ? "Hide Unpick editor" : "Show Unpick editor";
+    if (disabled) {
+        title = "Unpick is disabled because runtime JARs are unavailable. Run ./gradlew prepareMcSrc and reopen the project.";
+    }
+
     return (
-        <Tooltip title={open ? "Hide Unpick editor" : "Show Unpick editor"}>
+        <Tooltip title={title} trigger={["hover", "focus"]}>
             <Button
                 type={open ? "primary" : "default"}
+                danger={disabled}
                 icon={<ProductFilled />}
                 aria-label="Unpick editor"
+                aria-disabled={disabled}
                 aria-pressed={open}
                 onClick={() => {
+                    if (disabled) return;
                     unpickEditorOpen.next(!unpickEditorOpen.value);
                     mobileDrawerOpen.next(false);
                 }}
@@ -36,7 +45,7 @@ export function UnpickEditorButton() {
 export function UnpickSplitView({ children }: PropsWithChildren) {
     const source = useObservable(activeJavadocFile);
     const open = useObservable(unpickEditorOpen);
-    if (source?.kind !== "directory" || !source.unpickDirectory) return children;
+    if (source?.kind !== "directory" || !source.unpickDirectory || !source.runtimeLibraries) return children;
 
     return (
         <Splitter orientation="vertical">

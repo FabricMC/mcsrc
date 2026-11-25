@@ -22,11 +22,16 @@ export async function readAnnotaterDirectory(handle: FileSystemDirectoryHandle):
 
     let runtimeLibraries: RuntimeLibrariesConfig | undefined;
     if (config.runtimeLibraries) {
-        const runtimeDirectory = await getDirectory(handle, config.runtimeLibraries);
-        const runtimeFiles = await collectFiles(runtimeDirectory, ".jar");
-        const files = await Promise.all(runtimeFiles.map(file => file.handle.getFile()));
-        if (files.length > 0) {
-            runtimeLibraries = { id: crypto.randomUUID(), files };
+        const runtimeDirectory = await getDirectory(handle, config.runtimeLibraries).catch((error: unknown) => {
+            if (!isNotFoundError(error)) throw error;
+            return undefined;
+        });
+        if (runtimeDirectory) {
+            const runtimeFiles = await collectFiles(runtimeDirectory, ".jar");
+            const files = await Promise.all(runtimeFiles.map(file => file.handle.getFile()));
+            if (files.length > 0) {
+                runtimeLibraries = { id: crypto.randomUUID(), files };
+            }
         }
     }
 

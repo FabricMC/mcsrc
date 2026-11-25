@@ -122,7 +122,6 @@ const UnpickEditor = ({ source, directory }: {
             </Flex>
             <Divider type="vertical" style={{ height: "auto", alignSelf: "stretch", margin: 0 }} />
             <Flex vertical gap={4} style={{ flex: 1, minWidth: 0 }}>
-                {!source.runtimeLibraries && <Alert type="info" title="Decompilation uses Unpick definitions when the project loads runtime JARs." />}
                 {selected ? (
                     <div style={{ flex: 1, minHeight: 80 }}>
                         <Editor

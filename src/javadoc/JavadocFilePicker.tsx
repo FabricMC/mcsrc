@@ -103,6 +103,9 @@ const JavadocFilePicker = ({ annotaterShortcut = false, onOpen }: {
                 showAnnotaterShortcut.value = true;
             }
             messageApi.success("Javadoc mappings opened.");
+            if (key === "annotater" && source.kind === "directory" && !source.runtimeLibraries) {
+                messageApi.warning("Unpick is disabled because runtime JARs are unavailable. Run ./gradlew prepareMcSrc and reopen the project.");
+            }
             onOpen?.();
         } catch (error) {
             if (!(error instanceof DOMException && error.name === "AbortError")) {
