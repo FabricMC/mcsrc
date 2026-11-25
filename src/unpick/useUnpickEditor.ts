@@ -10,6 +10,7 @@ import { selectedMinecraftVersion } from "../logic/State";
 import { useObservable } from "../utils/UseObservable";
 import { validateUnpickDefinitions, type UnpickDefinition } from "./UnpickDefinitions";
 import { changeUnpickFile, readUnpickFiles } from "./UnpickFiles";
+import { useUnpickMethodWarnings } from "./UnpickMethodWarnings";
 import { useUnpickSymbolCompletion } from "./useUnpickSymbolCompletion";
 
 const AUTOSAVE_DELAY = 2000;
@@ -68,6 +69,7 @@ export function useUnpickEditor(source: JavadocDirectorySource, directory: FileS
     const [model, setModel] = useState<editor.ITextModel | null>(null);
     const monaco = useMonaco();
     useUnpickSymbolCompletion(monaco, model);
+    useUnpickMethodWarnings(monaco, model);
     const [edits] = useState(() => new Subject<() => void>());
     const [flushEdits] = useState(() => new Subject<void>());
     const [savedContents] = useState(() => new BehaviorSubject(new Map<string, string>()));
