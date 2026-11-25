@@ -49,11 +49,7 @@ export async function readServerJavadocClass(
 ): Promise<void> {
     await ensureJavadocBridge();
 
-    const response = await fetch(`${source.host}/get-mapping`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ className: owner } satisfies GetMappingRequest),
-    });
+    const response = await fetch(`${source.host}/mapping?${owner}`);
 
     if (request !== serverClassRequest) return;
 
@@ -82,7 +78,7 @@ export async function writeServerJavadoc(
     target: JavadocTarget,
     comment: string | null,
 ): Promise<void> {
-    const response = await fetch(`${source.host}/update-mapping`, {
+    const response = await fetch(`${source.host}/mapping`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -90,7 +86,7 @@ export async function writeServerJavadoc(
             kind: SERVER_ELEMENT_KINDS[target.kind],
             name: target.name,
             desc: target.descriptor,
-            comments: comment,
+            comments: comment ?? "",
         } satisfies UpdateMappingRequest),
     });
 
@@ -102,10 +98,6 @@ export async function writeServerJavadoc(
 const SERVER_ELEMENT_KINDS = ["CLASS", "FIELD", "METHOD"] as const;
 
 let serverClassRequest = 0;
-
-interface GetMappingRequest {
-    className: string;
-}
 
 interface UpdateMappingRequest {
     className: string;
