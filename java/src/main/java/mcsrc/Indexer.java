@@ -18,9 +18,9 @@ public final class Indexer {
     private Map<String, ReferenceList> references = new HashMap<>();
     private Map<String, ClassData> classes = new HashMap<>();
     private Map<String, MutableMemberData> members = new HashMap<>();
-    private Map<Entry.Member, Integer> referenceIds;
+    private Map<Entry, Integer> referenceIds;
     private Map<String, String> strings;
-    private final ArrayList<Entry.Member> callers = new ArrayList<>();
+    private final ArrayList<Entry> callers = new ArrayList<>();
 
     public void index(byte[] classBytes) {
         new ClassReader(classBytes).accept(new ClassIndexVisitor(this), ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);
@@ -95,7 +95,7 @@ public final class Indexer {
         strings = null;
     }
 
-    int referenceId(Entry.Member caller) {
+    int referenceId(Entry caller) {
         if (referenceIds == null) {
             referenceIds = new HashMap<>();
             for (int i = 0; i < callers.size(); i++) {
