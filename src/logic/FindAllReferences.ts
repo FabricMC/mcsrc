@@ -6,6 +6,7 @@ import type { Token } from "./Tokens";
 import type { DecompileResult } from "../workers/decompile/types";
 import type { ReferenceKey, ReferenceString } from "../workers/jar-index/types";
 import { toClassFilePath, toClassName, type ClassName } from "../utils/Names";
+import { formatDescriptor, simpleTypeName } from "../utils/JavaDescriptors";
 import { hierarchyNavigation } from './Inheritance';
 import { includeMethodHierarchy } from './Settings';
 
@@ -69,43 +70,18 @@ export const referenceResults = jarIndex.pipe(
     shareReplay({ bufferSize: 1, refCount: true }),
 );
 
-export const isViewingReferences = referencesQuery.pipe(
-    map((query) => query.length > 0)
-);
-
-// Format the reference string to be displayed by the user
-export function formatReference(reference: ReferenceString): string {
-    if (reference.startsWith("m:")) {
-        const parts = reference.slice(2).split(":");
-        return `${parts[1]}${parts[2]}`;
-    }
-    if (reference.startsWith("f:")) {
-        const parts = reference.slice(2).split(":");
-        return parts[1];
-    }
-    if (reference.startsWith("c:")) {
-        return reference.slice(2);
-    }
-    return reference;
-}
-
 export function formatReferenceQuery(query: ReferenceKey): string {
-    const type = getQueryType(query);
+    const [owner, name, descriptor] = query.split(":");
+    const className = owner.slice(owner.lastIndexOf("/") + 1);
 
-    switch (type) {
-        case "class":
-            return query.split("/").pop() || query;
-        case "method": {
-            const parts = query.split(":");
-            const className = parts[0].split("/").pop() || parts[0];
-            return `${className}.${parts[1]}${parts[2]}`;
-        }
-        case "field": {
-            const parts = query.split(":");
-            const className = parts[0].split("/").pop() || parts[0];
-            return `${className}.${parts[1]}`;
-        }
+    if (name === undefined) {
+        return className;
     }
+
+    const memberName = `${className}.${name}`;
+    return descriptor.startsWith("(")
+        ? `${memberName}${formatDescriptor(descriptor, simpleTypeName)}`
+        : memberName;
 }
 
 function getQueryType(query: ReferenceKey): "class" | "method" | "field" {

@@ -1,4 +1,4 @@
-import { Button, Checkbox, Divider, Flex, Input, Select, Space } from "antd";
+import { Button, Checkbox, Divider, Flex, Input, Select, Space, Typography } from "antd";
 import Header from "./Header";
 import FileList from "./FileList";
 import type { InputProps, InputRef } from "antd/es/input";
@@ -6,7 +6,7 @@ import { useObservable } from "../utils/UseObservable";
 import { isSearching } from "../logic/JarFile";
 import SearchResults from "./SearchResults";
 import ReferenceResults from "./ReferenceResults";
-import { formatReferenceQuery, isViewingReferences, methodReferenceKeys } from "../logic/FindAllReferences";
+import { formatReferenceQuery, methodReferenceKeys } from "../logic/FindAllReferences";
 import { includeMethodHierarchy } from "../logic/Settings";
 import { ArrowLeftOutlined, CaretDownOutlined } from "@ant-design/icons";
 import { focusSearchEvent } from "../logic/Keybinds";
@@ -15,8 +15,8 @@ import { searchQuery, referencesQuery, searchType } from "../logic/State";
 import { ClassIcon, FieldIcon, MethodIcon } from "./intellij-icons";
 
 const SideBar = () => {
-    const showReference = useObservable(isViewingReferences);
     const currentReferenceQuery = useObservable(referencesQuery);
+    const showReference = currentReferenceQuery !== "";
     const hierarchyKeys = useObservable(methodReferenceKeys) ?? [];
     const includeHierarchy = useObservable(includeMethodHierarchy.observable);
     const currentSearchType = useObservable(searchType);
@@ -59,20 +59,23 @@ const SideBar = () => {
     return (
         <Flex vertical style={{ height: "100%", padding: "0 4px" }}>
             <Header />
-            {showReference ? (
+            {currentReferenceQuery ? (
                 <>
-                    <Button onClick={onBackClick} icon={<ArrowLeftOutlined />} block>
+                    <Button onClick={onBackClick} icon={<ArrowLeftOutlined />} type="text" style={{ alignSelf: "start" }}>
                         Back
                     </Button>
-                    <div style={{ fontSize: "12px", textAlign: "center" }}>
-                        References of: {currentReferenceQuery ? formatReferenceQuery(currentReferenceQuery) : ""}
-                    </div>
+                    <Flex vertical style={{ paddingInline: 8 }}>
+                        <Typography.Text type="secondary" style={{ fontSize: 12 }}>References to</Typography.Text>
+                        <Typography.Text strong ellipsis={{ tooltip: true }}>
+                            {formatReferenceQuery(currentReferenceQuery)}
+                        </Typography.Text>
+                    </Flex>
                     {hierarchyKeys.length > 1 && <Checkbox
                         checked={includeHierarchy}
                         onChange={event => {
                             includeMethodHierarchy.value = event.target.checked;
                         }}
-                        style={{ marginTop: 8, alignSelf: "center" }}
+                        style={{ margin: "8px 8px 0" }}
                     >Include method hierarchy</Checkbox>}
                 </>
             ) : (
@@ -107,7 +110,9 @@ const SideBar = () => {
             )}
             <Divider size="small" />
             <div style={{ flexGrow: 1, overflowY: "auto" }}>
-                <FileListOrSearchResults />
+                {currentReferenceQuery
+                    ? <ReferenceResults key={currentReferenceQuery} query={currentReferenceQuery} />
+                    : <FileListOrSearchResults />}
             </div>
         </Flex>
     );
@@ -115,15 +120,7 @@ const SideBar = () => {
 
 const FileListOrSearchResults = () => {
     const showSearchResults = useObservable(isSearching);
-    const showReference = useObservable(isViewingReferences);
-
-    if (showReference) {
-        return <ReferenceResults />;
-    } else if (showSearchResults) {
-        return <SearchResults />;
-    } else {
-        return <FileList />;
-    }
+    return showSearchResults ? <SearchResults /> : <FileList />;
 };
 
 export default SideBar;
