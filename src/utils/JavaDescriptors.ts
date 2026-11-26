@@ -60,11 +60,16 @@ export function parseFieldDescriptor(descriptor: string): string {
     return readType(descriptor, 0).type;
 }
 
+/** Removes the package prefix from a parsed Java type. */
+export function simpleTypeName(type: string): string {
+    return type.slice(type.lastIndexOf('.') + 1);
+}
+
 /** Formats a JVM field or method descriptor for display. */
-export function formatDescriptor(descriptor: string): string {
+export function formatDescriptor(descriptor: string, formatType = (type: string) => type): string {
     if (!descriptor.startsWith('(')) {
-        return parseFieldDescriptor(descriptor);
+        return formatType(parseFieldDescriptor(descriptor));
     }
     const { parameterTypes, returnType } = parseMethodDescriptor(descriptor);
-    return `(${parameterTypes.join(', ')}) → ${returnType}`;
+    return `(${parameterTypes.map(formatType).join(', ')}) → ${formatType(returnType)}`;
 }
