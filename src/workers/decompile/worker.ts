@@ -179,7 +179,7 @@ export class DecompileWorker {
             const jar = new DecompileJar(await openJar(jarName, jarBlob));
             const checksum = jar.proxy[className]?.checksum;
             this.#runtimeLibraries.load(runtimeLibraries);
-            const useCache = !javadocAltersDecompileOutput({ kind: "directory", unpick, runtimeLibraries });
+            const useCache = !javadocAltersDecompileOutput({ unpick, runtimeLibraries });
             const context: DecompileContext = { useCache };
             if (unpick && unpick.definitions.length > 0 && runtimeLibraries?.files.length) {
                 this.#unpick ??= new UnpickProcessor();

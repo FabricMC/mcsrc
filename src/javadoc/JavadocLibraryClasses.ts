@@ -4,7 +4,7 @@ import { activeJavadocFile } from './JavadocState';
 import { RuntimeLibraries } from './RuntimeLibraries';
 
 export const javadocRuntimeLibraries = activeJavadocFile.pipe(
-    map(file => file?.kind === 'directory' ? file.runtimeLibraries : undefined),
+    map(file => file && file.kind !== 'file' ? file.runtimeLibraries : undefined),
     distinctUntilChanged((previous, current) => previous?.id === current?.id),
     map(config => {
         const libraries = new RuntimeLibraries();

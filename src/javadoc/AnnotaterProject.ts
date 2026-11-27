@@ -1,7 +1,7 @@
 import { collectFiles, getDirectory, isNotFoundError } from "./DirectoryFiles";
 import { readJavadocDirectory, type JavadocDirectorySource } from "./JavadocStorage";
 import type { RuntimeLibrariesConfig } from "./RuntimeLibraries";
-import { readUnpickFiles } from "../unpick/UnpickFiles";
+import { readUnpickFiles, directoryUnpickFiles } from "../unpick/UnpickFiles";
 
 export interface AnnotaterConfig {
     /** Path to the Enigma mappings subdirectory, relative to the project root. */
@@ -42,12 +42,13 @@ export async function readAnnotaterDirectory(handle: FileSystemDirectoryHandle):
             return undefined;
         });
     }
-    const definitions = unpickDirectory && runtimeLibraries ? await readUnpickFiles(unpickDirectory) : [];
+    const unpickFiles = unpickDirectory && directoryUnpickFiles(unpickDirectory);
+    const definitions = unpickFiles && runtimeLibraries ? await unpickFiles.read() : [];
 
     const directory = await getDirectory(handle, config.mappings);
     const source = await readJavadocDirectory(directory);
     if (runtimeLibraries) source.runtimeLibraries = runtimeLibraries;
-    if (unpickDirectory) source.unpickDirectory = unpickDirectory;
+    if (unpickFiles) source.unpickFiles = unpickFiles;
     if (definitions.length > 0) source.unpick = { id: crypto.randomUUID(), definitions };
     return { source, version: config.version };
 }

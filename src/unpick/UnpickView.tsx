@@ -15,12 +15,14 @@ activeJavadocFile.pipe(distinctUntilChanged()).subscribe(() => unpickEditorOpen.
 export function UnpickEditorButton() {
     const source = useObservable(activeJavadocFile);
     const open = useObservable(unpickEditorOpen);
-    if (source?.kind !== "directory" || !source.unpickDirectory) return null;
+    if (source?.kind === "file" || !source?.unpickFiles) return null;
 
     const disabled = !source.runtimeLibraries;
     let title = open ? "Hide Unpick editor" : "Show Unpick editor";
     if (disabled) {
-        title = "Unpick is disabled because runtime JARs are unavailable. Run ./gradlew prepareMcSrc and reopen the project.";
+        title = source.kind === "server"
+            ? "Unpick is disabled because the annotater server did not provide runtime JARs."
+            : "Unpick is disabled because runtime JARs are unavailable. Run ./gradlew prepareMcSrc and reopen the project.";
     }
 
     return (
@@ -45,7 +47,7 @@ export function UnpickEditorButton() {
 export function UnpickSplitView({ children }: PropsWithChildren) {
     const source = useObservable(activeJavadocFile);
     const open = useObservable(unpickEditorOpen);
-    if (source?.kind !== "directory" || !source.unpickDirectory || !source.runtimeLibraries) return children;
+    if (source?.kind === "file" || !source?.unpickFiles || !source.runtimeLibraries) return children;
 
     return (
         <Splitter orientation="vertical">
@@ -55,7 +57,7 @@ export function UnpickSplitView({ children }: PropsWithChildren) {
             {open && (
                 <Splitter.Panel min="20%" style={{ minHeight: 0, overflow: "visible" }}>
                     <Suspense fallback={null}>
-                        <UnpickEditor source={source} directory={source.unpickDirectory} />
+                        <UnpickEditor source={source} store={source.unpickFiles} />
                     </Suspense>
                 </Splitter.Panel>
             )}
