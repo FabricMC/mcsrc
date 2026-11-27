@@ -1,11 +1,15 @@
 package mcsrc;
 
+import org.objectweb.asm.AnnotationVisitor;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.FieldVisitor;
 import org.objectweb.asm.Handle;
+import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.RecordComponentVisitor;
 import org.objectweb.asm.Type;
+import org.objectweb.asm.TypePath;
 
 // Based on code from Enigma
 final class ClassIndexVisitor extends ClassVisitor {
@@ -25,8 +29,9 @@ final class ClassIndexVisitor extends ClassVisitor {
 
 	@Override
 	public FieldVisitor visitField(int access, String name, String desc, String signature, Object value) {
-		indexField(new Entry.Field(this.name, name, desc));
-		return super.visitField(access, name, desc, signature, value);
+		Entry.Field field = new Entry.Field(this.name, name, desc);
+		indexField(field);
+		return new IndexReferenceFieldVisitor(api, field);
 	}
 
 	@Override
@@ -35,6 +40,21 @@ final class ClassIndexVisitor extends ClassVisitor {
 		int callerId = indexer.referenceId(method);
 		indexMethodDescriptor(callerId, method.desc());
 		return new IndexReferenceMethodVisitor(api, method, callerId, access);
+	}
+
+	@Override
+	public AnnotationVisitor visitAnnotation(String descriptor, boolean visible) {
+		return indexAnnotation(indexer.referenceId(new Entry.Class(name)), descriptor);
+	}
+
+	@Override
+	public AnnotationVisitor visitTypeAnnotation(int typeRef, TypePath typePath, String descriptor, boolean visible) {
+		return indexAnnotation(indexer.referenceId(new Entry.Class(name)), descriptor);
+	}
+
+	@Override
+	public RecordComponentVisitor visitRecordComponent(String name, String descriptor, String signature) {
+		return new IndexReferenceRecordComponentVisitor(api, new Entry.Field(this.name, name, descriptor));
 	}
 
 	private class IndexReferenceMethodVisitor extends MethodVisitor {
@@ -47,6 +67,41 @@ final class ClassIndexVisitor extends ClassVisitor {
             this.callerEntry = callerEntry;
 			this.callerId = callerId;
             this.bridge = (access & Opcodes.ACC_BRIDGE) != 0;
+		}
+
+		@Override
+		public AnnotationVisitor visitAnnotationDefault() {
+			return new IndexAnnotationVisitor(callerId);
+		}
+
+		@Override
+		public AnnotationVisitor visitAnnotation(String descriptor, boolean visible) {
+			return indexAnnotation(callerId, descriptor);
+		}
+
+		@Override
+		public AnnotationVisitor visitParameterAnnotation(int parameter, String descriptor, boolean visible) {
+			return indexAnnotation(callerId, descriptor);
+		}
+
+		@Override
+		public AnnotationVisitor visitTypeAnnotation(int typeRef, TypePath typePath, String descriptor, boolean visible) {
+			return indexAnnotation(callerId, descriptor);
+		}
+
+		@Override
+		public AnnotationVisitor visitInsnAnnotation(int typeRef, TypePath typePath, String descriptor, boolean visible) {
+			return indexAnnotation(callerId, descriptor);
+		}
+
+		@Override
+		public AnnotationVisitor visitLocalVariableAnnotation(int typeRef, TypePath typePath, Label[] start, Label[] end, int[] index, String descriptor, boolean visible) {
+			return indexAnnotation(callerId, descriptor);
+		}
+
+		@Override
+		public AnnotationVisitor visitTryCatchAnnotation(int typeRef, TypePath typePath, String descriptor, boolean visible) {
+			return indexAnnotation(callerId, descriptor);
 		}
 
 		@Override
@@ -194,4 +249,81 @@ final class ClassIndexVisitor extends ClassVisitor {
             indexer.addReference(owner, callerId);
         }
     }
+
+	private AnnotationVisitor indexAnnotation(int callerId, String descriptor) {
+		indexMethodType(callerId, Type.getType(descriptor));
+		return new IndexAnnotationVisitor(callerId);
+	}
+
+	private class IndexAnnotationVisitor extends AnnotationVisitor {
+		private final int callerId;
+
+		IndexAnnotationVisitor(int callerId) {
+			super(ClassIndexVisitor.this.api);
+			this.callerId = callerId;
+		}
+
+		@Override
+		public void visit(String name, Object value) {
+			if (value instanceof Type type) {
+				indexMethodType(callerId, type);
+			}
+		}
+
+		@Override
+		public void visitEnum(String name, String descriptor, String value) {
+			Type type = Type.getType(descriptor);
+			indexMethodType(callerId, type);
+			indexFieldReference(callerId, new Entry.Field(type.getInternalName(), value, descriptor));
+		}
+
+		@Override
+		public AnnotationVisitor visitAnnotation(String name, String descriptor) {
+			return indexAnnotation(callerId, descriptor);
+		}
+
+		@Override
+		public AnnotationVisitor visitArray(String name) {
+			return this;
+		}
+	}
+
+	private class IndexReferenceRecordComponentVisitor extends RecordComponentVisitor {
+		private final Entry.Field field;
+
+		IndexReferenceRecordComponentVisitor(int api, Entry.Field field) {
+			super(api);
+			this.field = field;
+		}
+
+		@Override
+		public AnnotationVisitor visitAnnotation(String descriptor, boolean visible) {
+			return indexAnnotation(indexer.referenceId(field), descriptor);
+		}
+
+		@Override
+		public AnnotationVisitor visitTypeAnnotation(int typeRef, TypePath typePath, String descriptor, boolean visible) {
+			return indexAnnotation(indexer.referenceId(field), descriptor);
+		}
+
+	}
+
+	private class IndexReferenceFieldVisitor extends FieldVisitor {
+		private final Entry.Field field;
+
+		IndexReferenceFieldVisitor(int api, Entry.Field field) {
+			super(api);
+			this.field = field;
+		}
+
+		@Override
+		public AnnotationVisitor visitAnnotation(String descriptor, boolean visible) {
+			return indexAnnotation(indexer.referenceId(field), descriptor);
+		}
+
+		@Override
+		public AnnotationVisitor visitTypeAnnotation(int typeRef, TypePath typePath, String descriptor, boolean visible) {
+			return indexAnnotation(indexer.referenceId(field), descriptor);
+		}
+	}
 }
