@@ -1,8 +1,9 @@
+import { formatDescriptor } from "../utils/JavaDescriptors";
 import { editor, type IMarkdownString, type IPosition, Range } from "monaco-editor";
 import { type Token } from '../logic/Tokens';
 import { findTokenAtPosition } from './CodeUtils';
 import type { DecompileResult } from "../workers/decompile/types";
-import { dottedClassNameFromClassName, toClassName, type ClassFilePath } from "../utils/Names";
+import { dottedClassNameFromClassName, type ClassFilePath } from "../utils/Names";
 
 interface IntegerLiteral {
     value: number;
@@ -75,66 +76,6 @@ function formatColorPreview(rgba: { r: number; g: number; b: number; a: number; 
     return `<span style="color:${hexColor};">rgba(${r}, ${g}, ${b}, ${alpha})</span>`;
 }
 
-export function parseDescriptor(descriptor: string): string {
-    // Parse method descriptor like "(Ljava/lang/String;I)V" or field descriptor like "Ljava/lang/String;"
-    const typeMap: Record<string, string> = {
-        'V': 'void',
-        'Z': 'boolean',
-        'B': 'byte',
-        'C': 'char',
-        'S': 'short',
-        'I': 'int',
-        'J': 'long',
-        'F': 'float',
-        'D': 'double'
-    };
-
-    function parseType(desc: string, index: number): [string, number] {
-        let arrayDepth = 0;
-        while (desc[index] === '[') {
-            arrayDepth++;
-            index++;
-        }
-
-        let type: string;
-        let endIndex: number;
-
-        if (desc[index] === 'L') {
-            endIndex = desc.indexOf(';', index);
-            type = dottedClassNameFromClassName(toClassName(desc.substring(index + 1, endIndex)));
-            endIndex++;
-        } else {
-            type = typeMap[desc[index]] || desc[index];
-            endIndex = index + 1;
-        }
-
-        type += '[]'.repeat(arrayDepth);
-        return [type, endIndex];
-    }
-
-    // Check if it's a method descriptor (starts with '(')
-    if (descriptor.startsWith('(')) {
-        const endParams = descriptor.indexOf(')');
-        const paramsStr = descriptor.substring(1, endParams);
-        const returnTypeStr = descriptor.substring(endParams + 1);
-
-        const params: string[] = [];
-        let i = 0;
-        while (i < paramsStr.length) {
-            const [type, nextIndex] = parseType(paramsStr, i);
-            params.push(type);
-            i = nextIndex;
-        }
-
-        const [returnType] = parseType(returnTypeStr, 0);
-        return `(${params.join(', ')}) → ${returnType}`;
-    } else {
-        // Field descriptor
-        const [type] = parseType(descriptor, 0);
-        return type;
-    }
-}
-
 export function createHoverProvider(
     editorRef: { current: editor.ICodeEditor | null },
     decompileResultRef: { current: DecompileResult | undefined },
@@ -163,14 +104,14 @@ export function createHoverProvider(
                         break;
 
                     case 'field':
-                        const fieldType = parseDescriptor(token.descriptor);
+                        const fieldType = formatDescriptor(token.descriptor);
                         contents.push({
                             value: `**Field**\n\n\`\`\`java\n${fieldType} ${token.name}\n\`\`\`\n\n**Declaring class:** \`${formattedClassName}\``
                         });
                         break;
 
                     case 'method':
-                        const signature = parseDescriptor(token.descriptor);
+                        const signature = formatDescriptor(token.descriptor);
                         contents.push({
                             value: `**Method**\n\n\`\`\`java\n${token.name}${signature}\n\`\`\`\n\n**Declaring class:** \`${formattedClassName}\``
                         });

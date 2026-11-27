@@ -29,6 +29,46 @@ describe('Search Algorithm', () => {
     });
 
     describe('CamelCase Matching', () => {
+        it('should match prefixes of consecutive CamelCase words', () => {
+            const classes = ['com/example/DataComponents'];
+
+            expect(performSearch('DComp', classes)).toEqual(classes);
+            expect(performSearch('DaCo', classes)).toEqual(classes);
+            expect(performSearch('DataComp', classes)).toEqual(classes);
+        });
+
+        it('should require matching case for CamelCase word prefixes', () => {
+            const classes = ['com/example/DataComponents'];
+
+            expect(performSearch('dcomp', classes)).toEqual([]);
+            expect(performSearch('Dcomp', classes)).toEqual([]);
+            expect(performSearch('dComp', classes)).toEqual([]);
+        });
+
+        it('should not skip or reorder CamelCase words', () => {
+            const classes = ['com/example/BlockEntityRenderProvider'];
+
+            expect(performSearch('BEntRen', classes)).toEqual(classes);
+            expect(performSearch('BEntPro', classes)).toEqual([]);
+            expect(performSearch('EntB', classes)).toEqual([]);
+        });
+
+        it('should rank word prefixes below name prefixes and above substrings', () => {
+            const classes = [
+                'com/example/SomeDComp',
+                'com/example/DataComponents',
+                'com/example/DComponent',
+                'com/example/DComp',
+            ];
+
+            expect(performSearch('DComp', classes)).toEqual([
+                'com/example/DComp',
+                'com/example/DComponent',
+                'com/example/DataComponents',
+                'com/example/SomeDComp',
+            ]);
+        });
+
         it('should match CamelCase acronyms', () => {
             const classes = [
                 'net/minecraft/server/MinecraftServer',
@@ -67,6 +107,36 @@ describe('Search Algorithm', () => {
             const results = performSearch('player', classes);
             expect(results).toHaveLength(2);
             expect(results).toContain('com/example/EntityPlayer');
+        });
+    });
+
+    describe('Multiple Terms', () => {
+        const classes = [
+            'com/example/BiomePacket',
+            'com/example/PacketBiome',
+            'com/example/BiomeUpdatePacket',
+            'com/example/Biome',
+            'com/example/Packet',
+            'com/biome/PacketHandler',
+        ];
+
+        it('should require every term in the simple class name, regardless of order or case', () => {
+            const expected = classes.slice(0, 3);
+            expect(performSearch('BIOME packet', classes)).toEqual(expect.arrayContaining(expected));
+            expect(performSearch('BIOME packet', classes)).toHaveLength(3);
+            expect(performSearch('packet biome', classes)).toEqual(performSearch('biome packet', classes));
+        });
+
+        it('should ignore surrounding and repeated whitespace', () => {
+            expect(performSearch('  biome \t packet  ', classes)).toEqual(performSearch('biome packet', classes));
+        });
+
+        it('should allow CamelCase matching for each term', () => {
+            expect(performSearch('bup packet', classes)).toEqual(['com/example/BiomeUpdatePacket']);
+        });
+
+        it('should return no results for whitespace', () => {
+            expect(performSearch('   \t ', classes)).toEqual([]);
         });
     });
 

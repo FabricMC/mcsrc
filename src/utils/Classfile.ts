@@ -9,3 +9,7 @@ export function isAbstract(accessFlags: number): boolean {
 export function isEnum(accessFlags: number): boolean {
     return (accessFlags & 0x4000) !== 0;
 }
+
+export function isRecord(accessFlags: number): boolean {
+    return (accessFlags & 0x10000) !== 0;
+}

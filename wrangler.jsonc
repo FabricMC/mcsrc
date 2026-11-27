@@ -6,6 +6,10 @@
     {
       "pattern": "mcsrc.dev",
       "custom_domain": true
+    },
+    {
+      "pattern": "mcsrv.dev",
+      "custom_domain": true
     }
   ],
   "assets": {
@@ -18,6 +22,10 @@
       "routes": [
         {
           "pattern": "beta.mcsrc.dev",
+          "custom_domain": true
+        },
+        {
+          "pattern": "beta.mcsrv.dev",
           "custom_domain": true
         }
       ]

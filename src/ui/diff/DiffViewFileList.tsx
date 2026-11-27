@@ -14,7 +14,8 @@ import { openCodeTab } from "../../logic/tabs";
 import { useObservable } from "../../utils/UseObservable";
 import { pendingDiffJump } from "./DiffNavigation";
 import { withoutClassExtension, type ClassFilePath } from "../../utils/Names";
-import {sortDiff} from "../../logic/Settings.ts";
+import { sortDiff } from "../../logic/Settings.ts";
+import { DiffSortButton } from "./DiffViewActions";
 
 const statusColors: Record<ChangeState, string> = {
     modified: "gold",
@@ -37,14 +38,15 @@ const DiffViewFileList = () => {
 
     return (
         <Flex vertical flex={1} style={{ minHeight: 0 }}>
-            <div style={{ padding: "0 12px 10px" }}>
+            <Flex gap={8} align="center" style={{ padding: "0px 8px 8px" }}>
                 <Input.Search
                     allowClear
                     placeholder="Search"
                     aria-label="Search changed files"
                     onChange={onChange}
                 />
-            </div>
+                <DiffSortButton />
+            </Flex>
             <Divider style={{ margin: 0 }} />
             <DiffChangedFiles />
         </Flex>
@@ -68,7 +70,7 @@ const DiffChangedFiles = () => {
                 });
             }
 
-            nextEntries.sort((first, second) => sortDiffEntries(first, second, sortByChange))
+            nextEntries.sort((first, second) => sortDiffEntries(first, second, sortByChange));
 
             return nextEntries;
         })
@@ -119,7 +121,7 @@ function sortDiffEntries(a: DiffEntry, b: DiffEntry, sortByChange: boolean): num
     }
 }
 
-function changeStateToValue(changeState: ChangeState) : number {
+function changeStateToValue(changeState: ChangeState): number {
     switch (changeState) {
         case "modified": return 0;
         case "added": return 1;
@@ -174,7 +176,7 @@ const DiffFileRow = memo(({ entry, selected, disabled }: DiffFileRowProps) => {
     );
 });
 
-const DiffLineCounts = ({ info }: { info: ChangeInfo }) => {
+const DiffLineCounts = ({ info }: { info: ChangeInfo; }) => {
     if (info.state === "modified" && info.additions === 0 && info.deletions === 0) {
         return <span style={noLineChangesStyle}>No line changes</span>;
     }

@@ -1,103 +1,141 @@
-import { useObservable } from "../utils/UseObservable";
-import { formatReference, goToReference, referenceResults } from "../logic/FindAllReferences";
-import { map, Observable } from "rxjs";
+import { Button, Flex, Typography } from "antd";
+import { useState } from "react";
+import { combineLatest, map } from "rxjs";
+import { goToReference, referenceResults, type ReferenceMatch } from "../logic/FindAllReferences";
+import { hierarchyNavigation } from "../logic/Inheritance";
 import { openCodeTab } from "../logic/tabs";
-import { referencesQuery } from "../logic/State";
-import type { ReferenceString } from "../workers/jar-index/types";
-import { theme } from "antd";
+import { formatDescriptor, parseFieldDescriptor, parseMethodDescriptor, simpleTypeName } from "../utils/JavaDescriptors";
 import { toClassFilePath, toClassName, type ClassName } from "../utils/Names";
+import { useObservable } from "../utils/UseObservable";
+import type { ReferenceKey, ReferenceString } from "../workers/jar-index/types";
+import { ClassDataIcon, JavaIcon } from "./intellij-icons";
 
-function getUsageClass(usage: ReferenceString): ClassName {
-    if (usage.startsWith("m:") || usage.startsWith("f:")) {
-        const parts = usage.slice(2).split(":");
-        return toClassName(parts[0]);
+const rowStyle = {
+    justifyContent: "flex-start",
+    textAlign: "left",
+    fontSize: 12
+} as const;
+
+const singleLineStyle = { overflow: "hidden", whiteSpace: "nowrap" } as const;
+
+function getReferenceLabel(reference: ReferenceString, simpleName: string) {
+    const [, , name, descriptor] = reference.split(":");
+
+    if (reference.startsWith("m:")) {
+        const { parameterTypes, returnType } = parseMethodDescriptor(descriptor);
+        const parameters = parameterTypes.map(simpleTypeName).join(", ");
+        const isConstructor = name === "<init>";
+        return {
+            label: isConstructor ? simpleName : name,
+            signature: isConstructor ? `(${parameters})` : `(${parameters}) → ${simpleTypeName(returnType)}`,
+            title: `${name}${formatDescriptor(descriptor)}`
+        };
     }
 
-    // class usage
-    return toClassName(usage.slice(2));
+    if (reference.startsWith("f:")) {
+        const fieldType = parseFieldDescriptor(descriptor);
+        return {
+            label: name,
+            signature: `: ${simpleTypeName(fieldType)}`,
+            title: `${name}: ${fieldType}`
+        };
+    }
+
+    return { label: "Class declaration", title: simpleName };
 }
 
-interface ReferenceGroup {
-    className: ClassName;
-    references: ReferenceString[];
-}
+const groupedResults = combineLatest([referenceResults, hierarchyNavigation]).pipe(
+    map(([results, navigation]) => {
+        const groups = new Map<ClassName, ReferenceMatch[]>();
 
-const groupedResults: Observable<ReferenceGroup[]> = referenceResults.pipe(
-    map(results => {
-        const groups = new Map<ClassName, ReferenceString[]>();
+        for (const match of results) {
+            const [, owner] = match.reference.split(":");
+            const className = toClassName(owner);
+            const references = groups.get(className);
 
-        for (const usage of results) {
-            const className = getUsageClass(usage);
-            const references = groups.get(className) || [];
-            references.push(usage);
-            groups.set(className, references);
+            if (references) {
+                references.push(match);
+            } else {
+                groups.set(className, [match]);
+            }
         }
 
-        return Array.from(groups.entries()).map(([className, references]) => ({
-            className,
-            references
-        }));
+        return Array.from(groups, ([className, references]) => {
+            const packageEnd = className.lastIndexOf("/");
+            const simpleName = className.slice(packageEnd + 1);
+            const packageName = packageEnd < 0 ? "" : className.slice(0, packageEnd).replaceAll("/", ".");
+
+            return {
+                className,
+                simpleName,
+                packageName,
+                classData: navigation?.index.getClassData(className),
+                references: references.map(match => ({ ...match, ...getReferenceLabel(match.reference, simpleName) })),
+            };
+        });
     })
 );
 
-interface UsageGroupItemProps {
-    group: ReferenceGroup;
-}
-
-const UsageGroupItem = ({ group }: UsageGroupItemProps) => {
-    const query = useObservable(referencesQuery)!;
-    const { token } = theme.useToken();
+const ReferenceResults = ({ query }: { query: ReferenceKey }) => {
+    const [selectedReference, setSelectedReference] = useState<ReferenceString>();
+    const groups = useObservable(groupedResults) ?? [];
 
     return (
-        <div style={{ marginBottom: "4px" }}>
-            <div
-                onClick={() => openCodeTab(toClassFilePath(group.className))}
-                style={{
-                    cursor: "pointer",
-                    fontSize: "13px",
-                    fontWeight: "bold",
-                    transition: "background-color 0.2s",
-                    borderRadius: "4px"
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-            >
-                {group.className}
-            </div>
-            <div style={{ paddingLeft: "16px" }}>
-                {group.references.map((reference, index) => (
-                    <div
-                        key={index}
-                        onClick={() => {
-                            if (query) goToReference(query, reference);
-                        }}
-                        style={{
-                            cursor: "pointer",
-                            fontSize: "12px",
-                            transition: "background-color 0.2s",
-                            color: token.colorTextSecondary
-                        }}
-                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.05)'}
-                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+        <Flex vertical gap="small">
+            {groups.map(({ className, simpleName, packageName, classData, references }) => (
+                <section key={className} aria-label={className}>
+                    <Button
+                        block
+                        size="small"
+                        color="default"
+                        variant="filled"
+                        icon={classData
+                            ? <ClassDataIcon data={classData} aria-hidden style={{ fontSize: 16 }} />
+                            : <JavaIcon aria-hidden style={{ fontSize: 16 }} />}
+                        title={className}
+                        style={rowStyle}
+                        onClick={() => openCodeTab(toClassFilePath(className))}
                     >
-                        {formatReference(reference)}
+                        <span style={{ ...singleLineStyle, textOverflow: "ellipsis" }}>
+                            <strong style={{ fontSize: 13 }}>{simpleName}</strong>
+                            {packageName && (
+                                <Typography.Text type="secondary" style={{ marginInlineStart: 8, fontSize: "inherit" }}>
+                                    {packageName}
+                                </Typography.Text>
+                            )}
+                        </span>
+                    </Button>
+                    <div style={{ paddingInlineStart: 12 }}>
+                        {references.map(({ reference, queries, label, signature, title }) => {
+                            const selected = reference === selectedReference;
+
+                            return (
+                                <Button
+                                    key={reference}
+                                    block
+                                    size="small"
+                                    color={selected ? "primary" : "default"}
+                                    variant={selected ? "filled" : "text"}
+                                    title={title}
+                                    aria-current={selected ? "location" : undefined}
+                                    style={rowStyle}
+                                    onClick={() => {
+                                        setSelectedReference(reference);
+                                        goToReference(query, reference, queries);
+                                    }}
+                                >
+                                    <span style={singleLineStyle}>
+                                        <strong>{label}</strong>
+                                        {signature && <Typography.Text type="secondary" style={{ fontSize: "inherit" }}>{signature}</Typography.Text>}
+                                    </span>
+                                </Button>
+                            );
+                        })}
                     </div>
-                ))}
-            </div>
-        </div>
-    );
-};
-
-const UsageResults = () => {
-    const results = useObservable(groupedResults) || [];
-
-    return (
-        <div style={{ padding: "8px" }}>
-            {results.map((group, index) => (
-                <UsageGroupItem key={index} group={group} />
+                </section>
             ))}
-        </div>
+        </Flex>
     );
 };
 
-export default UsageResults;
+export default ReferenceResults;

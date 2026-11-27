@@ -21,6 +21,10 @@ export function toClassName(value: string): ClassName {
 export function classNameFromDottedClassName(value: DottedClassName | string): ClassName {
     return value.replaceAll(".", "/") as ClassName;
 }
+// net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplate$StructureEntityInfo -> net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplate.StructureEntityInfo
+export function dollarToDottedClassName(value: DottedClassName): DottedClassName {
+    return value.replaceAll("$", ".") as DottedClassName;
+}
 
 // net.minecraft.ChatFormatting -> net.minecraft.ChatFormatting
 export function toDottedClassName(value: string): DottedClassName {
@@ -64,7 +68,16 @@ export function withoutClassExtension(path: ClassFilePath | string): string {
 
 // net/minecraft/world/level/Level$ExplosionInteraction -> net/minecraft/world/level/Level
 export function outerClassName(className: ClassName): ClassName {
-    return className.split("$")[0] as ClassName;
+    let start = 0;
+
+    while (true) {
+        const separator = className.indexOf("$", start);
+        if (separator < 0) return className;
+        if (separator > 0 && className[separator - 1] !== "/") {
+            return className.slice(0, separator) as ClassName;
+        }
+        start = separator + 1;
+    }
 }
 
 // net/minecraft/world/level/Level$ExplosionInteraction.class -> net/minecraft/world/level/Level.class

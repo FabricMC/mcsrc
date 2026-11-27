@@ -68,6 +68,8 @@ async function setupNetworkMocking(page: Page) {
     });
 
     for (let i = 1; i <= 3; i++) {
+        const jarPath = path.join(__dirname, `../java/build/libs/dummy${i}.jar`);
+        const jarBuffer = fs.readFileSync(jarPath);
         await page.route(`http://localhost:4173/test-data/dummy${i}-manifest.json`, async (route) => {
             await route.fulfill({
                 status: 200,
@@ -76,7 +78,8 @@ async function setupNetworkMocking(page: Page) {
                     id: `26.1-mock-${i}`,
                     downloads: {
                         client: {
-                            url: `http://localhost:4173/test-data/dummy${i}.jar`
+                            url: `http://localhost:4173/test-data/dummy${i}.jar`,
+                            size: jarBuffer.length
                         }
                     }
                 })
@@ -84,12 +87,12 @@ async function setupNetworkMocking(page: Page) {
         });
 
         await page.route(`http://localhost:4173/test-data/dummy${i}.jar`, async (route) => {
-            const jarPath = path.join(__dirname, `../java/build/libs/dummy${i}.jar`);
-            const jarBuffer = fs.readFileSync(jarPath);
+            const range = route.request().headers().range?.match(/^bytes=(\d+)-(\d+)$/);
+            const body = range ? jarBuffer.subarray(Number(range[1]), Number(range[2]) + 1) : jarBuffer;
             await route.fulfill({
-                status: 200,
+                status: range ? 206 : 200,
                 contentType: 'application/java-archive',
-                body: jarBuffer
+                body
             });
         });
     }

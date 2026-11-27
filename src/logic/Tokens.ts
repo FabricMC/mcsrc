@@ -23,10 +23,18 @@ export interface MemberToken extends BaseToken {
 }
 
 interface NonMethodToken extends BaseToken {
-    type: 'class' | 'parameter' | 'local';
+    type: 'class' | 'local';
 }
 
-export type Token = MemberToken | NonMethodToken;
+export interface ParameterToken extends BaseToken {
+    type: 'parameter';
+    methodName: string;
+    methodDescriptor: string;
+    index: number;
+    name: string;
+}
+
+export type Token = MemberToken | NonMethodToken | ParameterToken;
 
 export interface TokenLocation {
     line: number,
@@ -36,7 +44,7 @@ export interface TokenLocation {
 
 export function getTokenLocation(result: DecompileResult, token: Token): TokenLocation {
     const sourceUpTo = result.source.slice(0, token.start);
-    const line = sourceUpTo.match(/\n/g)!.length + 1;
+    const line = (sourceUpTo.match(/\n/g)?.length ?? 0) + 1;
     const column = sourceUpTo.length - sourceUpTo.lastIndexOf("\n");
     return { line, column, length: token.length };
 }

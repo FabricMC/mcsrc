@@ -7,66 +7,84 @@ export function matchesCamelCase(className: string, query: string): boolean {
     return acronym.toLowerCase().startsWith(query.toLowerCase());
 }
 
-// Vibe coded mess that no one other than copilot or should read or touch :D
-export function performSearch<T extends string>(query: string, classes: T[], getSearchText: (item: T) => string = item => item): T[] {
-    if (query.length === 0) {
+function matchesCamelCasePrefixes(className: string, query: string): boolean {
+    const queryWords = query.match(/[A-Z][^A-Z]*/g);
+    if (!queryWords || queryWords.join('') !== query) {
+        return false;
+    }
+
+    const classWords = className.match(/[A-Z][^A-Z]*/g) ?? [];
+    if (queryWords.length > classWords.length) {
+        return false;
+    }
+
+    return queryWords.every((word, index) => classWords[index].startsWith(word));
+}
+
+function getMatchScore(simpleClassName: string, query: string): number | undefined {
+    const lowerName = simpleClassName.toLowerCase();
+    const lowerQuery = query.toLowerCase();
+
+    if (lowerName === lowerQuery) {
+        return 0;
+    }
+    if (lowerName.startsWith(lowerQuery)) {
+        return 1;
+    }
+    if (getCamelCaseAcronym(simpleClassName).toLowerCase() === lowerQuery) {
+        return 2;
+    }
+    if (matchesCamelCase(simpleClassName, query)) {
+        return 3;
+    }
+    if (matchesCamelCasePrefixes(simpleClassName, query)) {
+        return 4;
+    }
+
+    const position = lowerName.indexOf(lowerQuery);
+    if (position !== -1) {
+        return 5 + position;
+    }
+    return undefined;
+}
+
+export function performSearch<T>(query: string, classes: T[], getSearchText: (item: T) => string = item => String(item)): T[] {
+    const terms = query.match(/\S+/g) ?? [];
+    if (terms.length === 0) {
         return [];
     }
 
-    const lowerQuery = query.toLowerCase();
+    const results: { className: T; simpleClassName: string; score: number }[] = [];
+    for (const className of classes) {
+        const searchText = getSearchText(className);
+        const simpleClassName = searchText.split('/').pop() || searchText;
+        let score = 0;
+        let matchesAllTerms = true;
 
-    const results = classes
-        .filter(className => {
-            const searchText = getSearchText(className);
-            const simpleClassName = searchText.split('/').pop() || searchText;
-            const lowerSimpleName = simpleClassName.toLowerCase();
+        for (const term of terms) {
+            const termScore = getMatchScore(simpleClassName, term);
+            if (termScore === undefined) {
+                matchesAllTerms = false;
+                break;
+            }
+            score += termScore;
+        }
 
-            return lowerSimpleName.includes(lowerQuery) || matchesCamelCase(simpleClassName, query);
-        })
-        .map(className => {
-            const searchText = getSearchText(className);
-            const simpleClassName = searchText.split('/').pop() || searchText;
-            const lowerSimpleName = simpleClassName.toLowerCase();
+        if (matchesAllTerms) {
+            results.push({ className, simpleClassName, score });
+        }
+    }
 
-            let score = 0;
-
-            if (lowerSimpleName === lowerQuery) {
-                score = 0;
-            }
-            else if (lowerSimpleName.startsWith(lowerQuery)) {
-                score = 1;
-            }
-            else if (getCamelCaseAcronym(simpleClassName).toLowerCase() === lowerQuery) {
-                score = 2;
-            }
-            else if (matchesCamelCase(simpleClassName, query)) {
-                score = 3;
-            }
-            else {
-                score = 4 + lowerSimpleName.indexOf(lowerQuery);
-            }
-
-            return { className, score };
-        })
+    return results
         .sort((a, b) => {
             if (a.score !== b.score) {
                 return a.score - b.score;
             }
-
-            const aText = getSearchText(a.className);
-            const bText = getSearchText(b.className);
-            const aSimple = aText.split('/').pop() || aText;
-            const bSimple = bText.split('/').pop() || bText;
-            if (aSimple.length !== bSimple.length) {
-                return aSimple.length - bSimple.length;
+            if (a.simpleClassName.length !== b.simpleClassName.length) {
+                return a.simpleClassName.length - b.simpleClassName.length;
             }
-
-            return aSimple.localeCompare(bSimple);
+            return a.simpleClassName.localeCompare(b.simpleClassName);
         })
         .slice(0, 100)
         .map(result => result.className);
-
-    return results;
 }
-
-import type { ClassFilePath } from "../utils/Names";

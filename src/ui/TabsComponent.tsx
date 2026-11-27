@@ -219,7 +219,6 @@ export const TabsComponent = () => {
                         key: tab.key,
                         label: (
                             <div
-                                onMouseDown={(e) => { handleMouseDown(e, tab.key); }}
                                 onContextMenu={(e) => { handleContextMenu(e, tab.key); }}
                                 ref={(el) => { tabRefs.current[tab.key] = el; }}
                                 style={{ userSelect: "none", display: "inline" }}
@@ -234,7 +233,7 @@ export const TabsComponent = () => {
                     renderTabBar={(tabBarProps, DefaultTabBar) => (
                         <DefaultTabBar {...tabBarProps}>
                             {(node) => (
-                                <div style={borderStyle(String(node.key))}>
+                                <div style={borderStyle(String(node.key))} onMouseDown={(e) => handleMouseDown(e, node.key!)}>
                                     {node}
                                 </div>
                             )}
@@ -249,13 +248,13 @@ export const TabsComponent = () => {
                         position: "fixed",
                         top: contextMenu.y,
                         left: contextMenu.x,
-                        background: "#1f1f1f",
-                        border: "1px solid #454545",
+                        background: "var(--ant-color-bg-elevated)",
+                        border: "1px solid var(--ant-color-border-secondary)",
                         borderRadius: "4px",
                         padding: "4px 0",
                         zIndex: 1000,
                         minWidth: "160px",
-                        boxShadow: "0 2px 8px rgba(0,0,0,0.5)"
+                        boxShadow: "var(--ant-box-shadow-secondary)"
                     }}
                     onClick={(e) => e.stopPropagation()}
                 >
@@ -264,11 +263,11 @@ export const TabsComponent = () => {
                         style={{
                             padding: "6px 12px",
                             cursor: "pointer",
-                            color: "#cccccc",
+                            color: "var(--ant-color-text)",
                             fontSize: "13px"
                         }}
                         onMouseEnter={(e) => {
-                            e.currentTarget.style.background = "#2a2a2a";
+                            e.currentTarget.style.background = "var(--ant-control-item-bg-hover)";
                         }}
                         onMouseLeave={(e) => {
                             e.currentTarget.style.background = "transparent";

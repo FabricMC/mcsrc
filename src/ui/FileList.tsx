@@ -11,7 +11,7 @@ import { openCodeTab } from '../logic/tabs';
 import { minecraftJar, type MinecraftJar } from '../logic/MinecraftApi';
 import { decompileClass, getDecompilerOptions } from '../logic/Decompiler';
 import { selectedFile, referencesQuery } from '../logic/State';
-import { autoJarIndex, compactPackages, displayLambdas } from '../logic/Settings';
+import { autoJarIndex, compactPackages, displayLambdas, supportsPermalinking } from '../logic/Settings';
 import { setOptions } from '../workers/decompile/client';
 import { jarIndex, type ClassData } from '../workers/jar-index/client';
 import { ClassDataIcon, JavaIcon, PackageIcon } from './intellij-icons';
@@ -149,7 +149,8 @@ interface ContextMenuInfo {
 const getMenuItems = (
     contextMenu: ContextMenuInfo | null,
     handleCopyItem: (path: ClassFilePath) => void,
-    jar: MinecraftJar | undefined
+    jar: MinecraftJar | undefined,
+    permalinkingSupported: boolean,
 ): MenuProps['items'] => {
     if (!contextMenu) return [];
 
@@ -158,7 +159,7 @@ const getMenuItems = (
     const packagePath = isFile ? dottedClassNameFromClassName(classNameFromClassFilePath(path)) : withoutClassExtension(path);
     const filename = path.split('/').pop() || '';
     const linkPath = withoutClassExtension(path);
-    const link = jar ? `https://mcsrc.dev/${vineflowerVersionToPermalinkVersion(DEFAULT_VERSION)}/${jar.version}/${linkPath}` : '';
+    const link = jar && permalinkingSupported ? `https://mcsrc.dev/${vineflowerVersionToPermalinkVersion(DEFAULT_VERSION)}/${jar.version}/${linkPath}` : '';
 
     const renderLabel = (title: string, value: string) => (
         <div style={{ display: 'flex', gap: '24px', justifyContent: 'space-between', alignItems: 'center', minWidth: '300px' }}>
@@ -238,6 +239,7 @@ const FileList = () => {
     const [contextMenu, setContextMenu] = useState<ContextMenuInfo | null>(null);
 
     const jar = useObservable(minecraftJar);
+    const permalinkingSupported = useObservable(supportsPermalinking);
     const selectedKeys = useObservable(selectedFileKeys);
     const classes = useObservable(classesList);
     const onSelect: TreeProps['onSelect'] = useCallback((selectedKeys: Key[]) => {
@@ -288,7 +290,7 @@ const FileList = () => {
         if (jar) {
             void handleCopyContent(path, jar);
         }
-    }, jar), [contextMenu, jar]);
+    }, jar, permalinkingSupported), [contextMenu, jar, permalinkingSupported]);
 
     return (
         <>

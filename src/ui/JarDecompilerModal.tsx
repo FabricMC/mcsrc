@@ -1,7 +1,7 @@
 import { Alert, Button, Flex, Form, message, Modal, Popconfirm, Progress } from "antd";
 import { BehaviorSubject } from "rxjs";
 import { useObservable } from "../utils/UseObservable";
-import { BooleanOption, NumberOption } from "./SettingsModal";
+import { BooleanOption, NumberOption } from "./settings/SettingsControls";
 import { decompilerSplits, decompilerThreads, displayLambdas, MAX_THREADS, preferWasmDecompiler } from "../logic/Settings";
 import { getDecompilerOptions } from "../logic/Decompiler";
 import { decompileEntireJar, deleteCache, setOptions, type DecompileEntireJarTask } from "../workers/decompile/client";

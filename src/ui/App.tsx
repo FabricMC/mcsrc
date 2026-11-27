@@ -14,6 +14,7 @@ import Modals from './Modals.tsx';
 import { EmptyState } from './EmptyState.tsx';
 import { CodeTab, InheritanceViewTab } from '../logic/tabs';
 import { InheritanceView } from './inheritance/InheritanceView.tsx';
+import { UnpickSplitView } from '../unpick/UnpickView';
 
 const App = () => {
     const darkMode = useObservable(isDarkMode);
@@ -48,11 +49,13 @@ const MainView = () => {
     const tabs = useObservable(openTabs);
     const currentTab = useObservable(openTab);
 
-    if (!tabs || tabs.length == 0) return <EmptyState />;
+    if (tabs?.length && currentTab instanceof InheritanceViewTab) return <InheritanceView tab={currentTab} />;
 
-    if (currentTab instanceof CodeTab) return <Code />;
-    else if (currentTab instanceof InheritanceViewTab) return <InheritanceView tab={currentTab} />;
-    else return <EmptyState />;
+    return (
+        <UnpickSplitView>
+            {tabs?.length && currentTab instanceof CodeTab ? <Code /> : <EmptyState />}
+        </UnpickSplitView>
+    );
 };
 
 const LargeApp = () => {
@@ -68,7 +71,7 @@ const LargeApp = () => {
                 <Flex vertical style={{ height: "100%", overflow: "hidden", }}>
                     {tabsEnabled && <TabsComponent />}
                     <FilepathHeader />
-                    <div style={{ height: "100%" }}>
+                    <div style={{ flex: 1, minHeight: 0 }}>
                         <MainView />
                     </div>
                 </Flex>
@@ -121,7 +124,7 @@ const MobileApp = () => {
                 }
             </Flex>
             <FilepathHeader />
-            <div style={{ flexGrow: 1, overflow: "auto" }}>
+            <div style={{ flex: 1, minHeight: 0 }}>
                 <MainView />
             </div>
         </Flex>

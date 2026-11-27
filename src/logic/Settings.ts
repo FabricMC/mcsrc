@@ -1,5 +1,6 @@
 // oxlint-disable typescript/no-redundant-type-constituents
 import { BehaviorSubject, combineLatest, distinctUntilChanged, map, Observable, switchMap } from "rxjs";
+import { activeJavadocFile, javadocAltersDecompileOutput } from "../javadoc/JavadocState";
 import * as decompiler from "../workers/decompile/client";
 
 
@@ -68,14 +69,14 @@ export class NumberSetting extends Setting<number> {
 export class StringSetting<T extends string = string> extends Setting<T> {
     constructor(key: string, defaultValue: T, validValues?: readonly T[]) {
         super(
-            key, 
-            defaultValue, 
+            key,
+            defaultValue,
             (s) => {
                 if (validValues && !validValues.includes(s as T)) {
                     return defaultValue;
                 }
                 return s as T;
-            }, 
+            },
             v => v
         );
     }
@@ -157,9 +158,16 @@ export type ThemeMode = 'light' | 'dark' | 'system';
 export const theme = new StringSetting<ThemeMode>('theme', 'system', ['light', 'dark', 'system'] as const);
 
 export const agreedEula = new BooleanSetting('eula', false);
+export const showAnnotaterShortcut = new BooleanSetting('show_annotater_shortcut', false);
+export const renderJavadoc = new BooleanSetting('render_javadoc', true);
 export const enableTabs = new BooleanSetting('enable_tabs', true);
+export const tabPersistance = new BooleanSetting('tab_persistance', true);
+export const showInheritanceIcons = new BooleanSetting('show_inheritance_icons', true);
+export const showClassHistoryIcons = new BooleanSetting('show_class_history_icons', true);
+export const includeMethodHierarchy = new BooleanSetting('include_method_hierarchy', true);
 export const compactPackages = new BooleanSetting('compact_packages', true);
 export const autoJarIndex = new BooleanSetting('auto_jar_index', true);
+export const editorFontZoom = new NumberSetting('editor_font_zoom', 0);
 export const displayLambdas = new BooleanSetting('display_lambdas', false);
 export const bytecode = new BooleanSetting('bytecode', false);
 export const unifiedDiff = new BooleanSetting('unified_diff', false);
@@ -178,9 +186,13 @@ export const MAX_THREADS = navigator.hardwareConcurrency || 4;
 export const decompilerThreads = new NumberSetting("decompiler_threads", Math.max(MAX_THREADS / 2, 1));
 export const decompilerSplits = new NumberSetting("decompiler_splits", 100);
 
-export const supportsPermalinking = combineLatest([displayLambdas.observable, bytecode.observable]).pipe(
-    map(([lambdaDisplay, bytecode]) => {
-        if (lambdaDisplay || bytecode) {
+export const supportsPermalinking = combineLatest([
+    displayLambdas.observable,
+    bytecode.observable,
+    activeJavadocFile,
+]).pipe(
+    map(([lambdaDisplay, bytecode, javadoc]) => {
+        if (lambdaDisplay || bytecode || javadocAltersDecompileOutput(javadoc)) {
             // Alters the decompilation output, so permalinks are not stable
             return false;
         }

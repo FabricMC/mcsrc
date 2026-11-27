@@ -1,11 +1,245 @@
-import type { Token } from "../logic/Tokens";
-import type { ClassName } from "../utils/Names";
-import type { JavadocData, JavadocString } from "./Javadoc";
+import { defer, firstValueFrom, shareReplay, tap } from "rxjs";
+import { load } from "../../java/build/generated/teavm/wasm-gc/mcsrc.wasm-runtime.js";
+import mappingsWasm from "../../java/build/generated/teavm/wasm-gc/mcsrc.wasm?url";
+import type { ClassMember } from "../../java/build/generated/teavm/js/mcsrc.js";
+import { collectFiles, isNotFoundError, writeFile } from "./DirectoryFiles";
+import type { RuntimeLibrariesConfig } from "./RuntimeLibraries";
+import type { UnpickConfig, UnpickValidationBridge } from "../unpick/UnpickDefinitions";
+import type { DeclarationMetadata } from "./editor/JavadocDeclaration";
+import { outerClassName, type ClassName } from "../utils/Names";
 
-export async function readJavadoc(_className: ClassName): Promise<JavadocData> {
-    return { classes: {} };
+export type JavadocFormat = "tiny2" | "enigma";
+export const JavadocElementKind = {
+    Class: 0,
+    Field: 1,
+    Method: 2,
+} as const;
+export type JavadocElementKind = typeof JavadocElementKind[keyof typeof JavadocElementKind];
+
+export interface JavadocTarget {
+    kind: JavadocElementKind;
+    owner: ClassName;
+    name: string;
+    descriptor: string;
 }
 
-export async function writeJavadoc(_token: Token, _javadoc: JavadocString): Promise<void> {
-    console.log(`Writing Javadoc for token: ${_token.className} - ${_token.className} - ${_token.declaration}`);
+export interface JavadocFileSource {
+    kind: "file";
+    handle: FileSystemFileHandle;
+    format: JavadocFormat;
+}
+
+export interface JavadocDirectorySource {
+    kind: "directory";
+    handle: FileSystemDirectoryHandle;
+    files: Map<string, string[]>;
+    unpickDirectory?: FileSystemDirectoryHandle;
+    unpick?: UnpickConfig;
+    runtimeLibraries?: RuntimeLibrariesConfig;
+}
+
+export type JavadocSource = JavadocFileSource | JavadocDirectorySource;
+
+interface JavadocMappingsBridge extends UnpickValidationBridge {
+    readClassMembers(classBytes: ArrayBuffer): ClassMember[];
+    getDeclarationMetadata(classBytes: ArrayBuffer, methodName: string, descriptor: string): DeclarationMetadata;
+    readJavadocs(data: ArrayBuffer): string;
+    beginJavadocDirectory(): void;
+    readJavadocDirectoryFile(data: ArrayBuffer, path: string): string;
+    finishJavadocDirectory(): void;
+    abortJavadocDirectory(): void;
+    writeJavadocs(format: JavadocFormat): Int8Array;
+    writeJavadocClass(owner: string): Int8Array;
+    createJavadocs(format: JavadocFormat): Int8Array;
+    resetJavadocs(): void;
+    getJavadoc(
+        kind: JavadocElementKind,
+        owner: string,
+        name: string,
+        descriptor: string,
+    ): string | null;
+    setJavadoc(
+        kind: JavadocElementKind,
+        owner: string,
+        name: string,
+        descriptor: string,
+        comment: string | null,
+    ): void;
+}
+
+let bridge: JavadocMappingsBridge | null = null;
+
+export function getUnpickValidationBridge(): Promise<UnpickValidationBridge> {
+    return getBridge();
+}
+
+export async function readClassMembers(classBytes: ArrayBuffer): Promise<ClassMember[]> {
+    return (await getBridge()).readClassMembers(classBytes);
+}
+
+/** Queries class or method declaration metadata using the existing Javadoc runtime. */
+export async function readJavadocDeclarationMetadata(classBytes: ArrayBuffer, methodName = "", descriptor = ""): Promise<DeclarationMetadata> {
+    const mappingsBridge = await getBridge();
+    return mappingsBridge.getDeclarationMetadata(classBytes, methodName, descriptor);
+}
+
+export async function readJavadocFile(handle: FileSystemFileHandle): Promise<JavadocFileSource> {
+    const selectedFile = await handle.getFile();
+    const data = await selectedFile.arrayBuffer();
+    const mappingsBridge = await getBridge();
+
+    if (data.byteLength === 0 && !handle.name.toLowerCase().endsWith(".tiny")) {
+        mappingsBridge.resetJavadocs();
+        return { kind: "file", handle, format: "enigma" };
+    }
+
+    const format = mappingsBridge.readJavadocs(data);
+    if (format !== "tiny2" && format !== "enigma") {
+        throw new Error("Invalid Javadoc mapping format");
+    }
+
+    return { kind: "file", handle, format };
+}
+
+export async function readJavadocDirectory(handle: FileSystemDirectoryHandle): Promise<JavadocDirectorySource> {
+    const mappingFiles = await collectFiles(handle, ".mapping");
+    const mappingsBridge = await getBridge();
+    const files = new Map<string, string[]>();
+    mappingsBridge.beginJavadocDirectory();
+
+    try {
+        for (const mappingFile of mappingFiles) {
+            const data = await (await mappingFile.handle.getFile()).arrayBuffer();
+            const owner = mappingsBridge.readJavadocDirectoryFile(data, mappingFile.path.join("/"));
+            files.set(owner, mappingFile.path);
+        }
+
+        mappingsBridge.finishJavadocDirectory();
+    } catch (error) {
+        mappingsBridge.abortJavadocDirectory();
+        throw error;
+    }
+
+    return { kind: "directory", handle, files };
+}
+
+export async function createJavadocFile(
+    handle: FileSystemFileHandle,
+    format: JavadocFormat,
+): Promise<JavadocFileSource> {
+    const mappingsBridge = await getBridge();
+    await writeBytes(handle, mappingsBridge.createJavadocs(format));
+    mappingsBridge.resetJavadocs();
+    return { kind: "file", handle, format };
+}
+
+export async function writeJavadocSource(source: JavadocSource, owner: ClassName): Promise<void> {
+    if (source.kind === "file") {
+        await writeBytes(source.handle, requireBridge().writeJavadocs(source.format));
+        return;
+    }
+
+    const outerOwner = outerClassName(owner);
+    const bytes = requireBridge().writeJavadocClass(outerOwner);
+    const existingPath = source.files.get(outerOwner);
+
+    if (bytes.byteLength === 0) {
+        if (existingPath) {
+            await deleteFile(source.handle, existingPath);
+            source.files.delete(outerOwner);
+        }
+        return;
+    }
+
+    const path = existingPath ?? `${outerOwner}.mapping`.split("/");
+    let created = false;
+
+    if (!existingPath) {
+        try {
+            await getFileHandle(source.handle, path, false);
+            throw new Error(`Mapping file ${path.join("/")} already exists`);
+        } catch (error) {
+            if (!isNotFoundError(error)) throw error;
+        }
+
+        created = true;
+    }
+
+    const handle = await getFileHandle(source.handle, path, true);
+
+    try {
+        await writeBytes(handle, bytes);
+    } catch (error) {
+        if (created) await deleteFile(source.handle, path).catch(() => {});
+        throw error;
+    }
+
+    source.files.set(outerOwner, path);
+}
+
+export function getStoredJavadoc(target: JavadocTarget): string | null {
+    return requireBridge().getJavadoc(target.kind, target.owner, target.name, target.descriptor);
+}
+
+export function setStoredJavadoc(
+    target: JavadocTarget,
+    comment: string | null,
+): void {
+    requireBridge().setJavadoc(target.kind, target.owner, target.name, target.descriptor, comment);
+}
+
+async function writeBytes(handle: FileSystemFileHandle, bytes: Int8Array): Promise<void> {
+    const output = new Uint8Array(bytes.byteLength);
+    output.set(bytes);
+    await writeFile(handle, output);
+}
+
+async function getFileHandle(
+    root: FileSystemDirectoryHandle,
+    path: string[],
+    create: boolean,
+): Promise<FileSystemFileHandle> {
+    if (path.length === 0) throw new Error("Mapping file path is empty");
+
+    let directory = root;
+    for (const part of path.slice(0, -1)) {
+        directory = await directory.getDirectoryHandle(part, { create });
+    }
+
+    return directory.getFileHandle(path[path.length - 1], { create });
+}
+
+async function deleteFile(root: FileSystemDirectoryHandle, path: string[]): Promise<void> {
+    if (path.length === 0) throw new Error("Mapping file path is empty");
+
+    let directory = root;
+    for (const part of path.slice(0, -1)) {
+        directory = await directory.getDirectoryHandle(part);
+    }
+
+    await directory.removeEntry(path[path.length - 1]);
+}
+
+const bridgeLoad = defer(async () => {
+    try {
+        const teavm = await load(mappingsWasm);
+        return teavm.exports as JavadocMappingsBridge;
+    } catch (error) {
+        console.warn("Failed to load Javadoc mappings WASM, falling back to JavaScript", error);
+        return await import("../../java/build/generated/teavm/js/mcsrc.js") as unknown as JavadocMappingsBridge;
+    }
+}).pipe(
+    tap(instance => {
+        bridge = instance;
+    }),
+    shareReplay({ bufferSize: 1, refCount: false }),
+);
+
+function getBridge(): Promise<JavadocMappingsBridge> {
+    return firstValueFrom(bridgeLoad);
+}
+
+function requireBridge(): JavadocMappingsBridge {
+    if (!bridge) throw new Error("Javadoc mappings are not loaded");
+    return bridge;
 }

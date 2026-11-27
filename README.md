@@ -19,6 +19,7 @@ Then you can run the web app:
 
 Libraries and tools used:
 
+- Constant uninlining: [Unpick](https://github.com/FabricMC/unpick)
 - Decompiler: [Vineflower](https://github.com/Vineflower/vineflower)
 - Wasm compilation of Vineflower: [@run-slicer/vf](https://www.npmjs.com/package/@run-slicer/vf)
 

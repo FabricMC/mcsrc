@@ -9,6 +9,7 @@ version = version + (ENV.GITHUB_ACTIONS ? "" : "+local")
 
 repositories {
     mavenCentral()
+    maven { url = "https://maven.fabricmc.net/" }
 }
 
 sourceSets {
@@ -21,18 +22,34 @@ sourceSets {
 
 dependencies {
     api libs.asm
+    implementation libs.unpick
+    implementation libs.unpick.format.utils
     api libs.asm.commons
     api libs.asm.util
     api libs.mapping.io
     api libs.mapping.io.extras
+    teavmImplementation libs.teavm.core
     wasmImplementation sourceSets.main.output
+    wasmImplementation libs.mapping.io
+    wasmImplementation libs.unpick.format.utils
     wasmImplementation libs.teavm.jso
+    testImplementation sourceSets.wasm.output
+    testImplementation libs.junit
+    testRuntimeOnly libs.junit.platform.launcher
 }
 
 java {
     toolchain {
         languageVersion = JavaLanguageVersion.of(25)
     }
+}
+
+tasks.test {
+    useJUnitPlatform()
+}
+
+tasks.compileTestJava {
+    options.compilerArgs += '-parameters'
 }
 
 tasks.register('dummy1Jar', Jar) {

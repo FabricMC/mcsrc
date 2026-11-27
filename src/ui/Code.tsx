@@ -1,7 +1,9 @@
+import { HierarchyGutter } from './HierarchyGutter';
+import { ClassHistoryGutter } from './ClassHistoryGutter';
 import Editor, { useMonaco } from '@monaco-editor/react';
 import { useObservable } from '../utils/UseObservable';
 import { currentResult, isDecompiling } from '../logic/Decompiler';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { editor, Range } from "monaco-editor";
 import { isDarkMode, isThin } from '../logic/Browser';
 import { classesList } from '../logic/JarFile';
@@ -11,8 +13,7 @@ import { LoadingOutlined } from '@ant-design/icons';
 import { getTokenLocation } from '../logic/Tokens';
 import { getNextJumpToken, nextReferenceNavigation } from '../logic/FindAllReferences';
 import { setupJavaBytecodeLanguage } from '../utils/JavaBytecode';
-import { applyJavadocCodeExtensions } from '../javadoc/JavadocCodeExtensions';
-import { ENABLE_JAVADOC_EDITOR } from '../javadoc/JavadocConfig';
+import { activeJavadocFile } from '../javadoc/Javadoc';
 import { selectedInheritanceClassName } from '../logic/Inheritance';
 import { createHoverProvider } from './CodeHoverProvider';
 import { findTokenAtPosition } from './CodeUtils';
@@ -21,9 +22,12 @@ import {
     createCopyAwAction,
     createCopyAtAction,
     createCopyMixinAction,
+    createCopyQualifiedNameAction,
     createFindAllReferencesAction,
     createViewInheritanceAction,
-    createCopyPermalinkAction
+    createCopyPermalinkAction,
+    createCopySymbolPermalinkAction,
+    installSymbolContextKeys
 } from './CodeContextActions';
 import {
     clearTokenJump,
@@ -34,10 +38,11 @@ import {
     pendingTokenJump
 } from './CodeExtensions';
 import { bytecode } from '../logic/Settings';
-import { selectedFile, diffView, openTabs, selectedLines, tabHistory, referencesQuery, mobileDrawerOpen } from '../logic/State';
-import { toClassFilePath } from '../utils/Names';
+import { selectedFile, diffView, openTabs, selectedLines, initialSymbol, tabHistory, referencesQuery, mobileDrawerOpen } from '../logic/State';
+import { toClassFilePath, toClassName } from '../utils/Names';
 import { concat, debounceTime, distinctUntilChanged, of, skip, switchMap, take } from 'rxjs';
 
+const JavadocCode = lazy(() => import('../javadoc/JavadocCode'));
 const IS_ANDROID_CHROME = /Android/.test(navigator.userAgent) && /Chrome/.test(navigator.userAgent);
 
 const Code = () => {
@@ -45,6 +50,7 @@ const Code = () => {
 
     const decompileResult = useObservable(currentResult);
     const classList = useObservable(classesList);
+    const [codeEditor, setCodeEditor] = useState<editor.IStandaloneCodeEditor | null>(null);
     const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
     const hideMinimap = useObservable(isThin);
     const darkMode = useObservable(isDarkMode);
@@ -73,12 +79,14 @@ const Code = () => {
     const selectedLine = useObservable(selectedLines);
     const nextReference = useObservable(nextReferenceNavigation);
     const tokenJump = useObservable(pendingTokenJump);
+    const javadocFile = useObservable(activeJavadocFile);
 
     const decorationsCollectionRef = useRef<editor.IEditorDecorationsCollection | null>(null);
     const lineHighlightRef = useRef<editor.IEditorDecorationsCollection | null>(null);
     const decompileResultRef = useRef(decompileResult);
     const classListRef = useRef(classList);
     const selectedLineRef = useRef(selectedLine);
+    const initialSymbolRef = useRef(initialSymbol);
 
     const [messageApi, contextHolder] = message.useMessage();
 
@@ -143,6 +151,8 @@ const Code = () => {
         );
 
         const copyLink = monaco.editor.addEditorAction(createCopyPermalinkAction(messageApi));
+        const copyMethodLink = monaco.editor.addEditorAction(createCopySymbolPermalinkAction(decompileResultRef, classListRef, messageApi, 'method'));
+        const copyFieldLink = monaco.editor.addEditorAction(createCopySymbolPermalinkAction(decompileResultRef, classListRef, messageApi, 'field'));
 
         const copyAw = monaco.editor.addEditorAction(
             createCopyAwAction(decompileResultRef, classListRef, messageApi)
@@ -154,6 +164,10 @@ const Code = () => {
 
         const copyMixin = monaco.editor.addEditorAction(
             createCopyMixinAction(decompileResultRef, classListRef, messageApi)
+        );
+
+        const copyQualifiedName = monaco.editor.addEditorAction(
+            createCopyQualifiedNameAction(decompileResultRef, classListRef, messageApi)
         );
 
         const viewAllReferences = monaco.editor.addEditorAction(
@@ -174,9 +188,12 @@ const Code = () => {
             bytecode.dispose();
             viewInheritance.dispose();
             viewAllReferences.dispose();
+            copyQualifiedName.dispose();
             copyMixin.dispose();
             copyAt.dispose();
             copyAw.dispose();
+            copyFieldLink.dispose();
+            copyMethodLink.dispose();
             copyLink.dispose();
             foldingRange.dispose();
             editorOpener.dispose();
@@ -185,18 +202,10 @@ const Code = () => {
         };
     }, [monaco, decompileResult, classList, resetViewTrigger, messageApi]);
 
-    if (ENABLE_JAVADOC_EDITOR) {
-        useEffect(() => {
-            if (!monaco || !editorRef.current || !decompileResult) return;
-
-            const extensions = applyJavadocCodeExtensions(monaco, editorRef.current, decompileResult);
-
-            return () => {
-                extensions.dispose();
-            };
-            // oxlint-disable-next-line eslint-plugin-react-hooks/exhaustive-deps
-        }, [monaco, editorRef.current, decompileResult]);
-    }
+    useEffect(() => {
+        if (!codeEditor) return;
+        return installSymbolContextKeys(codeEditor, decompileResultRef, classListRef);
+    }, [codeEditor, decompileResult, classList]);
 
     // Scroll to top when source changes, or to specific line if specified
     useEffect(() => {
@@ -296,7 +305,11 @@ const Code = () => {
         // so this is quite important to keep!
         if (!tab.key.includes(decompileResult.className)) return;
 
-        tab.editorRef = editorRef.current;
+        const currentEditor = editorRef.current;
+        tab.editorRef = currentEditor;
+        const previousViewState = javadocFile && tab.model && currentEditor?.getModel() === tab.model
+            ? currentEditor.saveViewState()
+            : null;
 
         // Set new model with the current decompilation source
         tab.setModel(monaco.editor.createModel(
@@ -304,6 +317,7 @@ const Code = () => {
             bytecode.value ? "bytecode" : "java",
             monaco.Uri.parse(`inmemory://${Date.now()}`)
         ));
+        if (previousViewState) tab.viewState = previousViewState;
 
         // Only restore view state if there's no line to jump to
         // Otherwise the line highlighting effect will handle scrolling
@@ -326,14 +340,33 @@ const Code = () => {
         if (!editorRef.current || !decompileResult || !tokenJump) return;
 
         if (toClassFilePath(decompileResult.className) === tokenJump.className) {
-            requestAnimationFrame(() => {
-                if (editorRef.current && decompileResult) {
-                    jumpToToken(decompileResult, tokenJump.targetType, tokenJump.target, editorRef.current);
+            const frame = requestAnimationFrame(() => {
+                if (pendingTokenJump.value !== tokenJump || selectedFile.value !== tokenJump.className) return;
+                if (editorRef.current?.getModel()?.getValue() === decompileResult.source) {
+                    jumpToToken(decompileResult, tokenJump.targetType, tokenJump.target, editorRef.current, tokenJump.owner);
                     clearTokenJump();
                 }
             });
+            return () => cancelAnimationFrame(frame);
         }
     }, [decompileResult, tokenJump]);
+
+    useEffect(() => {
+        const symbol = initialSymbolRef.current;
+        if (!symbol || !decompileResult || !editorRef.current) return;
+        if (toClassFilePath(decompileResult.className) !== selectedFile.value) return;
+
+        const frame = requestAnimationFrame(() => {
+            if (initialSymbolRef.current !== symbol || editorRef.current?.getModel()?.getValue() !== decompileResult.source) return;
+            let target = symbol.name;
+            if (symbol.type === 'method') {
+                target = `${symbol.name}(${symbol.parameterTypes.join(',')})`;
+            }
+            initialSymbolRef.current = undefined;
+            jumpToToken(decompileResult, symbol.type, target, editorRef.current, symbol.owner ? toClassName(symbol.owner) : undefined);
+        });
+        return () => cancelAnimationFrame(frame);
+    }, [decompileResult]);
 
     // Handle gutter clicks for line linking
     useEffect(() => {
@@ -345,6 +378,7 @@ const Code = () => {
         const codeEditor = editorRef.current;
 
         const onMouseDown = codeEditor.onMouseDown((e) => {
+            if (e.target.element?.closest(".hierarchy-glyph, .class-history-glyph")) return;
             if (e.target.type === editor.MouseTargetType.GUTTER_LINE_NUMBERS ||
                 e.target.type === editor.MouseTargetType.GUTTER_GLYPH_MARGIN) {
                 const lineNumber = e.target.position?.lineNumber;
@@ -384,6 +418,13 @@ const Code = () => {
             }}
         >
             {contextHolder}
+            {javadocFile && codeEditor && decompileResult?.language === 'java' && (
+                <Suspense fallback={null}>
+                    <JavadocCode codeEditor={codeEditor} result={decompileResult} />
+                </Suspense>
+            )}
+            <HierarchyGutter codeEditor={codeEditor} result={decompileResult} />
+            <ClassHistoryGutter codeEditor={codeEditor} result={decompileResult} />
             <Editor
                 defaultLanguage={"java"}
                 language={decompileResult?.language}
@@ -391,9 +432,11 @@ const Code = () => {
                 options={{
                     readOnly: true,
                     domReadOnly: true,
+                    codeLens: javadocFile !== null,
                     tabSize: 3,
                     minimap: { enabled: !hideMinimap },
                     glyphMargin: true,
+                    lineNumbersMinChars: 3,
                     foldingImportsByDefault: true,
                     foldingHighlight: false,
                     scrollBeyondLastLine: false,
@@ -402,6 +445,7 @@ const Code = () => {
                 }}
                 onMount={(codeEditor) => {
                     editorRef.current = codeEditor;
+                    setCodeEditor(codeEditor);
 
                     // Update context key when cursor position changes
                     // We use this to know when to show the options to copy AW/Mixin strings

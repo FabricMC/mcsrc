@@ -1,21 +1,35 @@
 package mcsrc;
 
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
+import mcsrc.javadoc.DeclarationMetadata;
+
+import net.fabricmc.mappingio.format.MappingFormat;
+
 import org.teavm.jso.JSExport;
+import org.teavm.jso.JSExceptions;
+import org.teavm.jso.JSFunctor;
+import org.teavm.jso.JSBody;
+import org.teavm.jso.JSObject;
+import org.teavm.jso.core.JSBoolean;
 import org.teavm.jso.core.JSMap;
 import org.teavm.jso.core.JSString;
+import org.teavm.jso.core.JSPromise;
 import org.teavm.jso.typedarrays.ArrayBuffer;
 import org.teavm.jso.typedarrays.Int8Array;
 
 public final class WasmInterface {
     private static final Indexer INDEXER = new Indexer();
+    private static final JavadocMappings JAVADOC_MAPPINGS = new JavadocMappings();
     private static ClassFileRemapper remapper;
+    private static Unpick unpick;
 
     private WasmInterface() {
     }
@@ -32,11 +46,12 @@ public final class WasmInterface {
 
     @JSExport
     public static String[] getReference(String key) {
-        return INDEXER.references(key).toArray(String[]::new);
+        return INDEXER.referenceArray(key);
     }
 
     @JSExport
     public static int getReferenceSize() {
+        INDEXER.finish();
         return INDEXER.referenceCount();
     }
 
@@ -50,17 +65,42 @@ public final class WasmInterface {
 
     @JSExport
     public static String[] getMemberData() {
-        return INDEXER.data().members().values().stream()
+        return INDEXER.memberData()
                 .map(WasmInterface::serialize)
                 .toArray(String[]::new);
     }
 
     @JSExport
     public static String[] getClassData() {
-        return INDEXER.data().classes().values().stream()
+        return INDEXER.classData()
                 .map(WasmInterface::serialize)
                 .toArray(String[]::new);
     }
+
+    @JSExport
+    public static JSObject[] readClassMembers(ArrayBuffer classBytes) {
+        return ClassMemberReader.read(toBytes(classBytes)).stream()
+                .map(member -> classMember(member.kind().name().toLowerCase(Locale.ROOT), member.name(), member.descriptor(),
+                        member.isStatic(), member.parameterNames().toArray(String[]::new)))
+                .toArray(JSObject[]::new);
+    }
+
+    @JSBody(params = { "kind", "name", "descriptor", "isStatic", "parameterNames" },
+            script = "return { kind: kind, name: name, descriptor: descriptor, isStatic: isStatic, parameterNames: parameterNames };")
+    private static native JSObject classMember(String kind, String name, String descriptor, boolean isStatic, String[] parameterNames);
+
+    @JSExport
+    public static JSObject getDeclarationMetadata(ArrayBuffer classBytes, String methodName, String descriptor) {
+        DeclarationMetadata metadata = DeclarationMetadata.read(toBytes(classBytes), methodName, descriptor);
+        return declarationMetadata(
+                metadata.typeParameters().toArray(String[]::new),
+                metadata.exceptions().toArray(String[]::new),
+                metadata.recordComponents().toArray(String[]::new));
+    }
+
+    @JSBody(params = { "typeParameters", "exceptions", "recordComponents" },
+            script = "return { typeParameters: typeParameters, exceptions: exceptions, recordComponents: recordComponents };")
+    private static native JSObject declarationMetadata(String[] typeParameters, String[] exceptions, String[] recordComponents);
 
     @JSExport
     public static void loadMappings(ArrayBuffer mappings) {
@@ -70,6 +110,11 @@ public final class WasmInterface {
     @JSExport
     public static void clearIndex() {
         INDEXER.clear();
+    }
+
+    @JSExport
+    public static void clearDeclarations() {
+        INDEXER.clearDeclarations();
     }
 
     @JSExport
@@ -100,9 +145,155 @@ public final class WasmInterface {
     @JSExport
     public static Int8Array remapEntry(ArrayBuffer entry) {
         byte[] remappedBytes = requireRemapper().remap(toBytes(entry));
-        var result = new Int8Array(remappedBytes.length);
-        result.set(remappedBytes);
-        return result;
+        return toInt8Array(remappedBytes);
+    }
+
+    @JSExport
+    public static String readJavadocs(ArrayBuffer mappings) throws IOException {
+        return switch (JAVADOC_MAPPINGS.read(toBytes(mappings))) {
+            case TINY_2_FILE -> "tiny2";
+            case ENIGMA_FILE -> "enigma";
+            default -> throw new IllegalStateException("Unsupported Javadoc mapping format");
+        };
+    }
+
+    @JSExport
+    public static void beginJavadocDirectory() {
+        JAVADOC_MAPPINGS.beginDirectory();
+    }
+
+    @JSExport
+    public static String readJavadocDirectoryFile(ArrayBuffer mappings, String path) throws IOException {
+        return JAVADOC_MAPPINGS.readDirectoryFile(toBytes(mappings), path);
+    }
+
+    @JSExport
+    public static void finishJavadocDirectory() {
+        JAVADOC_MAPPINGS.finishDirectory();
+    }
+
+    @JSExport
+    public static void abortJavadocDirectory() {
+        JAVADOC_MAPPINGS.abortDirectory();
+    }
+
+    @JSExport
+    public static Int8Array writeJavadocs(String format) throws IOException {
+        return toInt8Array(JAVADOC_MAPPINGS.write(javadocFormat(format)));
+    }
+
+    @JSExport
+    public static Int8Array writeJavadocClass(String owner) throws IOException {
+        return toInt8Array(JAVADOC_MAPPINGS.writeClass(owner));
+    }
+
+    @JSExport
+    public static Int8Array createJavadocs(String format) throws IOException {
+        return toInt8Array(new JavadocMappings().write(javadocFormat(format)));
+    }
+
+    @JSExport
+    public static void resetJavadocs() {
+        JAVADOC_MAPPINGS.reset();
+    }
+
+    @JSExport
+    public static String getJavadoc(int kind, String owner, String name, String descriptor) {
+        return JAVADOC_MAPPINGS.get(javadocElementKind(kind), owner, name, descriptor);
+    }
+
+    @JSExport
+    public static void setJavadoc(int kind, String owner, String name, String descriptor, String comment) throws IOException {
+        JAVADOC_MAPPINGS.set(javadocElementKind(kind), owner, name, descriptor, comment);
+    }
+
+    @JSFunctor
+    public interface UnpickClassSource extends JSObject {
+        JSPromise<ArrayBuffer> source(String name);
+    }
+
+    @JSFunctor
+    public interface UnpickPackageLookup extends JSObject {
+        JSPromise<JSBoolean> hasPackage(String name);
+    }
+
+    @JSExport
+    public static void resetUnpick() {
+        unpick = null;
+    }
+
+    @JSExport
+    public static JSPromise<JSObject> loadUnpickDefinitions(String[] definitions, UnpickClassSource source) {
+        return JSPromise.callAsync(() -> {
+            var instance = createUnpick(source);
+            instance.loadDefinitions(definitions);
+            unpick = instance;
+            return null;
+        });
+    }
+
+    @JSExport
+    public static JSPromise<JSObject> validateUnpickDefinitions(String[] definitions, UnpickClassSource source, UnpickPackageLookup packages) {
+        return JSPromise.callAsync(() -> {
+            var error = createUnpick(source).validateDefinitions(definitions, name -> packages.hasPackage(name).await().booleanValue());
+            if (error == null) {
+                return null;
+            }
+
+            var exception = error.exception();
+            var line = exception.getLineNumber();
+            var column = exception.getColumnNumber();
+            return unpickDiagnostic(error.definitionIndex(), line == null ? 0 : line,
+                    column == null ? 0 : column, exception.getMessage());
+        });
+    }
+
+    private static Unpick createUnpick(UnpickClassSource source) {
+        return new Unpick(name -> {
+            ArrayBuffer bytes = source.source(name).<ArrayBuffer>flatCatchError(error -> {
+                String message = logUnpickClassError(name, error);
+                var failure = new IllegalStateException("Unable to read Unpick class " + name + ": " + message);
+                return JSPromise.reject(JSExceptions.getJSException(failure));
+            }).await();
+            return bytes == null ? null : toBytes(bytes);
+        });
+    }
+
+    @JSBody(params = { "name", "error" }, script = """
+            console.error("Unable to read Unpick class " + name, error);
+            return String(error);
+            """)
+    private static native String logUnpickClassError(String name, Object error);
+
+    @JSBody(params = { "definitionIndex", "lineNumber", "columnNumber", "message" },
+            script = "return { definitionIndex: definitionIndex < 0 ? null : definitionIndex, lineNumber: lineNumber || null, columnNumber: columnNumber || null, message: message };")
+    private static native JSObject unpickDiagnostic(int definitionIndex, int lineNumber, int columnNumber, String message);
+
+    @JSExport
+    public static JSPromise<Int8Array> applyUnpick(ArrayBuffer bytes) {
+        return JSPromise.callAsync(() -> {
+            if (unpick == null) {
+                throw new IllegalStateException("Unpick definitions have not been loaded");
+            }
+            return toInt8Array(unpick.apply(toBytes(bytes)));
+        });
+    }
+
+    private static MappingFormat javadocFormat(String format) throws IOException {
+        return switch (format) {
+            case "tiny2" -> MappingFormat.TINY_2_FILE;
+            case "enigma" -> MappingFormat.ENIGMA_FILE;
+            default -> throw new IOException("Unsupported Javadoc mapping format: " + format);
+        };
+    }
+
+    private static JavadocMappings.ElementKind javadocElementKind(int kind) {
+        return switch (kind) {
+            case 0 -> JavadocMappings.ElementKind.CLASS;
+            case 1 -> JavadocMappings.ElementKind.FIELD;
+            case 2 -> JavadocMappings.ElementKind.METHOD;
+            default -> throw new IllegalArgumentException("Unsupported Javadoc element kind: " + kind);
+        };
     }
 
     private static ClassFileRemapper requireRemapper() {
@@ -117,18 +308,66 @@ public final class WasmInterface {
         return new Int8Array(buffer).copyToJavaArray();
     }
 
+    private static Int8Array toInt8Array(byte[] bytes) {
+        var result = new Int8Array(bytes.length);
+        result.set(bytes);
+        return result;
+    }
+
     private static String serialize(ClassData data) {
-        return "%s|%s|%d|%s".formatted(
-                data.name(),
-                data.superName() == null ? "" : data.superName(),
-                data.access(),
-                String.join(",", data.interfaces()));
+        String superName = data.superName() == null ? "" : data.superName();
+        return data.name() + "|" + superName + "|" + data.access() + "|" + String.join(",", data.interfaces());
     }
 
     private static String serialize(MemberData data) {
-        String methods = String.join(",", data.methods().stream().map(Entry.Method::str).toList());
-        String fields = String.join(",", data.fields().stream().map(Entry.Field::str).toList());
-        return "%s|%s|%s".formatted(data.className(), methods, fields);
+        // Sections: className|methods|fields|methodAccess|methodBridges; entries are comma-separated.
+        StringBuilder result = new StringBuilder(data.className()).append('|');
+
+        // Methods: owner:name:descriptor, e.g. Example:get:()I
+        String separator = "";
+        for (Entry.Method method : data.methods()) {
+            result.append(separator);
+            appendMethod(result, method);
+            separator = ",";
+        }
+
+        // Fields: owner:name:descriptor, e.g. Example:value:I
+        result.append('|');
+        separator = "";
+        for (Entry.Field field : data.fields()) {
+            result.append(separator)
+                    .append(field.owner()).append(':')
+                    .append(field.name()).append(':')
+                    .append(field.desc());
+            separator = ",";
+        }
+
+        // Method access flags: owner:name:descriptor:access, e.g. Example:get:()I:1 (public)
+        result.append('|');
+        separator = "";
+        for (Map.Entry<Entry.Method, Integer> entry : data.methodAccess().entrySet()) {
+            result.append(separator);
+            appendMethod(result, entry.getKey());
+            result.append(':').append(entry.getValue());
+            separator = ",";
+        }
+
+        // Bridge to implementation: e.g. Example:get:()Ljava/lang/Object;=Example:get:()Ljava/lang/String;
+        result.append('|');
+        separator = "";
+        for (Map.Entry<Entry.Method, Entry.Method> entry : data.methodBridges().entrySet()) {
+            result.append(separator);
+            appendMethod(result, entry.getKey());
+            result.append('=');
+            appendMethod(result, entry.getValue());
+            separator = ",";
+        }
+
+        return result.toString();
+    }
+
+    private static void appendMethod(StringBuilder result, Entry.Method method) {
+        result.append(method.owner()).append(':').append(method.name()).append(':').append(method.desc());
     }
 
     private static IndexData deserialize(String[] classes, String[] members) {

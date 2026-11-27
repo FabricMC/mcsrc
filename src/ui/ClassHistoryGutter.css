@@ -1,0 +1,29 @@
+.class-history-glyph {
+    cursor: pointer;
+    background-image: url('./intellij-icons/changes.svg');
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: 16px 16px;
+    border-radius: 3px;
+}
+
+:root[data-theme="dark"] .class-history-glyph {
+    background-image: url('./intellij-icons/changes_dark.svg');
+}
+
+.class-history-glyph:hover {
+    background-color: rgba(128, 128, 128, 0.2);
+}
+
+.class-history-entries {
+    max-height: min(300px, 45dvh);
+    overflow: auto;
+    overscroll-behavior: contain;
+    touch-action: pan-y;
+    scrollbar-gutter: stable;
+    margin-top: 8px;
+}
+
+.class-history-current.ant-btn:disabled {
+    background: var(--ant-color-primary-bg);
+}
