@@ -7,6 +7,7 @@ import org.objectweb.asm.Handle;
 import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.RecordComponentVisitor;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.TypePath;
 
@@ -33,25 +34,6 @@ final class ClassIndexVisitor extends ClassVisitor {
 		return new IndexReferenceFieldVisitor(api, field);
 	}
 
-	private class IndexReferenceFieldVisitor extends FieldVisitor {
-		private final Entry.Field field;
-
-		IndexReferenceFieldVisitor(int api, Entry.Field field) {
-			super(api);
-			this.field = field;
-		}
-
-		@Override
-		public AnnotationVisitor visitAnnotation(String descriptor, boolean visible) {
-			return indexAnnotation(indexer.referenceId(field), descriptor);
-		}
-
-		@Override
-		public AnnotationVisitor visitTypeAnnotation(int typeRef, TypePath typePath, String descriptor, boolean visible) {
-			return indexAnnotation(indexer.referenceId(field), descriptor);
-		}
-	}
-
 	@Override
 	public MethodVisitor visitMethod(int access, String name, String desc, String signature, String[] exceptions) {
 		Entry.Method method = indexer.addMethod(new Entry.Method(this.name, name, desc), access);
@@ -68,6 +50,11 @@ final class ClassIndexVisitor extends ClassVisitor {
 	@Override
 	public AnnotationVisitor visitTypeAnnotation(int typeRef, TypePath typePath, String descriptor, boolean visible) {
 		return indexAnnotation(indexer.referenceId(new Entry.Class(name)), descriptor);
+	}
+
+	@Override
+	public RecordComponentVisitor visitRecordComponent(String name, String descriptor, String signature) {
+		return new IndexReferenceRecordComponentVisitor(api, new Entry.Field(this.name, name, descriptor));
 	}
 
 	private class IndexReferenceMethodVisitor extends MethodVisitor {
@@ -298,6 +285,45 @@ final class ClassIndexVisitor extends ClassVisitor {
 		@Override
 		public AnnotationVisitor visitArray(String name) {
 			return this;
+		}
+	}
+
+	private class IndexReferenceRecordComponentVisitor extends RecordComponentVisitor {
+		private final Entry.Field field;
+
+		IndexReferenceRecordComponentVisitor(int api, Entry.Field field) {
+			super(api);
+			this.field = field;
+		}
+
+		@Override
+		public AnnotationVisitor visitAnnotation(String descriptor, boolean visible) {
+			return indexAnnotation(indexer.referenceId(field), descriptor);
+		}
+
+		@Override
+		public AnnotationVisitor visitTypeAnnotation(int typeRef, TypePath typePath, String descriptor, boolean visible) {
+			return indexAnnotation(indexer.referenceId(field), descriptor);
+		}
+
+	}
+
+	private class IndexReferenceFieldVisitor extends FieldVisitor {
+		private final Entry.Field field;
+
+		IndexReferenceFieldVisitor(int api, Entry.Field field) {
+			super(api);
+			this.field = field;
+		}
+
+		@Override
+		public AnnotationVisitor visitAnnotation(String descriptor, boolean visible) {
+			return indexAnnotation(indexer.referenceId(field), descriptor);
+		}
+
+		@Override
+		public AnnotationVisitor visitTypeAnnotation(int typeRef, TypePath typePath, String descriptor, boolean visible) {
+			return indexAnnotation(indexer.referenceId(field), descriptor);
 		}
 	}
 }
