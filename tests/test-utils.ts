@@ -16,12 +16,19 @@ export async function waitForDecompiledContent(page: Page, expectedText: string)
 }
 
 export async function selectMinecraftVersion(page: Page, version: string, selectorIndex = 0) {
+    const listboxes = page.getByRole('listbox', { name: 'Minecraft versions' });
+
+    // antd keeps a closing popover in the DOM (and exposed to the accessibility tree) until
+    // its leave transition finishes. Open the next selector only once the previous popover
+    // is gone, otherwise two listboxes match and strict mode fails.
+    await expect(listboxes).toHaveCount(0);
+
     const selector = page.locator('button:has(.anticon-down)').nth(selectorIndex);
     await selector.click();
 
-    const listbox = page.getByRole('listbox', { name: 'Minecraft versions' });
-    await expect(listbox).toBeVisible();
-    await listbox.getByRole('option').filter({ hasText: version }).click();
+    await expect(listboxes).toHaveCount(1);
+    await expect(listboxes).toBeVisible();
+    await listboxes.getByRole('option').filter({ hasText: version }).click();
 }
 
 export async function waitForBlockingModalToClose(page: Page) {
